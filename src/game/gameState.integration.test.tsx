@@ -13,6 +13,7 @@ const CombatProbe = () => {
     return (
         <>
             <div data-testid="floor">{state.floor}</div>
+            <div data-testid="enemy-count">{state.enemies.length}</div>
             <div data-testid="warrior-hp">{warrior?.currentHp.toString()}</div>
             <div data-testid="warrior-progress">{warrior?.actionProgress.toString()}</div>
             <div data-testid="cleric-skill">{cleric?.activeSkill ?? ""}</div>
@@ -98,7 +99,7 @@ describe("GameProvider integration", () => {
         expect(Number(screen.getByTestId("warrior-progress").textContent)).toBe(40);
     });
 
-    it("does not auto-advance floors when autoadvance is disabled", () => {
+    it("restarts the same floor instead of stalling when autoadvance is disabled", () => {
         render(
             <GameProvider
                 initialState={{
@@ -118,5 +119,7 @@ describe("GameProvider integration", () => {
         });
 
         expect(screen.getByTestId("floor").textContent).toBe("4");
+        expect(screen.getByTestId("enemy-count").textContent).toBe("1");
+        expect(screen.getByText(/repeating floor 4/i)).toBeInTheDocument();
     });
 });
