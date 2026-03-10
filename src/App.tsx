@@ -1,8 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { Shield, Swords } from 'lucide-react';
 import { GameProvider, useGame } from './game/gameState';
 import { MainGameView } from './components/MainGameView';
 import { CharacterCreation } from './components/CharacterCreation';
+import { ShopView } from './components/ShopView';
+import { Button } from './components/ui/button';
 import { formatNumber } from './utils/format';
+
+type AppSection = 'dungeon' | 'shop';
 
 const AppHeader: React.FC = () => {
   const { state } = useGame();
@@ -22,6 +27,7 @@ const AppHeader: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { state } = useGame();
+  const [activeSection, setActiveSection] = useState<AppSection>('dungeon');
 
   if (state.party.length === 0) {
     return <CharacterCreation />;
@@ -30,8 +36,28 @@ const AppContent: React.FC = () => {
   return (
     <div className="flex flex-col h-screen w-screen bg-slate-950 font-sans text-slate-50 overflow-hidden">
       <AppHeader />
+      <div className="flex items-center gap-2 px-4 lg:px-8 py-3 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
+        <Button
+          variant={activeSection === 'dungeon' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('dungeon')}
+          className="rounded-full font-bold uppercase tracking-[0.2em]"
+          aria-pressed={activeSection === 'dungeon'}
+        >
+          <Swords className="size-4" />
+          Dungeon
+        </Button>
+        <Button
+          variant={activeSection === 'shop' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('shop')}
+          className="rounded-full font-bold uppercase tracking-[0.2em]"
+          aria-pressed={activeSection === 'shop'}
+        >
+          <Shield className="size-4" />
+          Upgrade Shop
+        </Button>
+      </div>
       <div className="flex flex-1 overflow-hidden">
-        <MainGameView />
+        {activeSection === 'dungeon' ? <MainGameView /> : <ShopView />}
       </div>
     </div>
   );

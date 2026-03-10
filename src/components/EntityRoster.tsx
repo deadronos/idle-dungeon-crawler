@@ -26,8 +26,13 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight }) =
                                 <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>
                             </div>
 
-                            <div className="w-full h-16 sm:h-20 flex justify-center items-center my-2">
+                            <div className="relative w-full h-16 sm:h-20 flex justify-center items-center my-2">
                                 <img src={entity.image} alt={entity.name} className="h-full object-contain drop-shadow-md" />
+                                {entity.activeSkill && (
+                                    <span className="absolute -top-2 rounded-full border border-amber-300/30 bg-slate-950/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-amber-200 shadow-lg">
+                                        {entity.activeSkill}
+                                    </span>
+                                )}
                             </div>
 
                             <div className="text-center text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">
@@ -68,18 +73,20 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight }) =
                             </div>
 
                             {/* Experience and Stats */}
-                            {!entity.isEnemy && (
-                                <div className="mt-3 pt-2 border-t border-slate-700/50">
+                            <div className="mt-3 pt-2 border-t border-slate-700/50">
+                                {!entity.isEnemy && (
                                     <div className="h-1 w-full bg-slate-900 rounded overflow-hidden mb-2">
                                         <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, entity.exp.dividedBy(entity.expToNext).times(100).toNumber())}%` }} />
                                     </div>
-                                    <div className={`flex justify-between text-[10px] text-slate-400 font-mono ${alignRight ? 'flex-row-reverse' : ''}`}>
-                                        <span>STR:{entity.attributes.str}</span>
-                                        <span>DEX:{entity.attributes.dex}</span>
-                                        <span>INT:{entity.attributes.int}</span>
-                                    </div>
+                                )}
+                                <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-slate-400 font-mono text-center">
+                                    <span>VIT:{entity.attributes.vit}</span>
+                                    <span>STR:{entity.attributes.str}</span>
+                                    <span>DEX:{entity.attributes.dex}</span>
+                                    <span>INT:{entity.attributes.int}</span>
+                                    <span>WIS:{entity.attributes.wis}</span>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </Card>
                 ))}

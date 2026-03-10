@@ -3,6 +3,7 @@ import { useGame } from "../game/gameState";
 import { EntityRoster } from "./EntityRoster";
 import { CombatLog } from "./CombatLog";
 import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const MainGameView: React.FC = () => {
     const { state, actions } = useGame();
@@ -15,19 +16,51 @@ export const MainGameView: React.FC = () => {
 
                 {/* Center: Action / Floor Info */}
                 <div className="flex-1 lg:flex-2 min-w-[300px] flex flex-col items-center relative order-first lg:order-none">
-                    <div className="text-2xl lg:text-4xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] shadow-[0_0_20px_rgba(99,102,241,0.5)] bg-slate-900/60 py-2 px-6 lg:py-3 lg:px-10 rounded-2xl border border-white/10 my-4 lg:my-6">
-                        Floor {state.floor}
+                    <div className="flex items-center gap-3 text-2xl lg:text-4xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] shadow-[0_0_20px_rgba(99,102,241,0.5)] bg-slate-900/60 py-2 px-4 lg:py-3 lg:px-6 rounded-2xl border border-white/10 my-4 lg:my-6">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Previous floor"
+                            className="rounded-full border-white/15 bg-slate-900/70 text-white hover:bg-slate-800 disabled:opacity-40"
+                            disabled={state.floor <= 1}
+                            onClick={actions.previousFloor}
+                        >
+                            <ChevronLeft className="size-5" />
+                        </Button>
+                        <span>Floor {state.floor}</span>
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            aria-label="Next floor"
+                            className="rounded-full border-white/15 bg-slate-900/70 text-white hover:bg-slate-800"
+                            onClick={actions.nextFloor}
+                        >
+                            <ChevronRight className="size-5" />
+                        </Button>
                     </div>
 
-                    <div className="mb-8">
-                        <Button
-                            variant={state.autoProgress ? "default" : "outline"}
-                            size="lg"
-                            className={`rounded-full font-bold uppercase tracking-widest transition-all ${state.autoProgress ? 'bg-green-500/20 text-green-400 border-green-500 hover:bg-green-500/30' : 'bg-slate-800/80 text-white border-white/20'}`}
-                            onClick={actions.toggleAutoProgress}
-                        >
-                            Auto-Progress: {state.autoProgress ? "ON" : "OFF"}
-                        </Button>
+                    <div className="mb-8 flex items-center gap-3 rounded-full border border-white/10 bg-slate-900/70 px-4 py-3 text-sm font-bold uppercase tracking-[0.2em] text-slate-200">
+                        <input
+                            id="autofight-toggle"
+                            type="checkbox"
+                            checked={state.autoFight}
+                            onChange={actions.toggleAutoFight}
+                            className="size-4 rounded border-white/20 bg-slate-950 accent-green-500"
+                        />
+                        <label htmlFor="autofight-toggle" className="cursor-pointer select-none">
+                            Autofight
+                        </label>
+                        <span className="text-slate-600">|</span>
+                        <input
+                            id="autoadvance-toggle"
+                            type="checkbox"
+                            checked={state.autoAdvance}
+                            onChange={actions.toggleAutoAdvance}
+                            className="size-4 rounded border-white/20 bg-slate-950 accent-amber-500"
+                        />
+                        <label htmlFor="autoadvance-toggle" className="cursor-pointer select-none">
+                            Autoadvance
+                        </label>
                     </div>
 
                     {/* Show a representative enemy sprite */}
