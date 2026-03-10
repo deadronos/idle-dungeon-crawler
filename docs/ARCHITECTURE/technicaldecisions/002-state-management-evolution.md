@@ -87,7 +87,7 @@ The implementation is now split roughly as follows:
 
 * `src/game/entity.ts` — entity construction and stat derivation
 * `src/game/engine/` — pure combat helpers such as target selection, damage resolution, reward distribution, and tick stepping
-* `src/game/store/` — `zustand` store setup, slice-oriented state types, provider compatibility, and selectors
+* `src/game/store/` — `zustand` store setup, slice-oriented state types, provider compatibility, and selectors (currently split into `hotSimulationSlice.ts`, `progressionSlice.ts`, and `uiSlice.ts`)
 * `src/components/` — UI that subscribes to narrow selectors instead of the whole game object
 
 ## Implementation Notes

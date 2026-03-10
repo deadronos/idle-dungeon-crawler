@@ -1,4 +1,5 @@
 import type Decimal from "decimal.js";
+import type { StateCreator } from "zustand";
 
 import type { Entity, MetaUpgrades } from "../entity";
 
@@ -24,7 +25,7 @@ export interface UiSlice {
 
 export type GameState = HotSimulationSlice & ProgressionSlice & UiSlice;
 
-export interface GameActions {
+export interface HotSimulationActions {
     toggleAutoFight: () => void;
     toggleAutoAdvance: () => void;
     nextFloor: () => void;
@@ -32,14 +33,26 @@ export interface GameActions {
     appendCombatLog: (message: string) => void;
     addMessage: (message: string) => void;
     initializeParty: (party: Entity[]) => void;
-    setActiveSection: (section: AppSection) => void;
     handlePartyWipe: () => void;
     stepSimulation: (deltaMs?: number) => void;
+}
+
+export interface ProgressionActions {
     getTrainingUpgradeCost: () => Decimal;
     buyTrainingUpgrade: () => void;
     getFortificationUpgradeCost: () => Decimal;
     buyFortificationUpgrade: () => void;
+}
+
+export interface UiActions {
+    setActiveSection: (section: AppSection) => void;
+}
+
+export interface StoreLifecycleActions {
     reset: (overrides?: Partial<GameState>) => void;
 }
 
+export type GameActions = HotSimulationActions & ProgressionActions & UiActions & StoreLifecycleActions;
 export type GameStore = GameState & GameActions;
+
+export type GameStateCreator<TSlice> = StateCreator<GameStore, [], [], TSlice>;

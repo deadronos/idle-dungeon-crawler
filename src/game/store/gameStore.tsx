@@ -3,131 +3,21 @@ import type { ReactNode } from "react";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 
-import {
-    GAME_TICK_MS,
-    createInitialGameState,
-    getFloorTransitionState,
-    getInitializedPartyState,
-    getPartyWipeState,
-    prependCombatMessages,
-    recalculateParty,
-    simulateTick,
-} from "../engine/simulation";
-import { getFortificationUpgradeCost as calculateFortificationUpgradeCost, getTrainingUpgradeCost as calculateTrainingUpgradeCost } from "../upgrades";
-import type { AppSection, GameActions, GameState, GameStore } from "./types";
+import { GAME_TICK_MS, createInitialGameState } from "../engine/simulation";
+import { createHotSimulationSlice, selectHotSimulationState } from "./hotSimulationSlice";
+import { createProgressionSlice, selectProgressionState } from "./progressionSlice";
+import type { GameActions, GameState, GameStore } from "./types";
+import { createUiSlice, selectUiState } from "./uiSlice";
 
 const GameStoreContext = createContext<ReturnType<typeof createGameStore> | null>(null);
 
-const selectGameState = (store: GameStore): GameState => ({
-    party: store.party,
-    enemies: store.enemies,
-    gold: store.gold,
-    floor: store.floor,
-    autoFight: store.autoFight,
-    autoAdvance: store.autoAdvance,
-    combatLog: store.combatLog,
-    metaUpgrades: store.metaUpgrades,
-    activeSection: store.activeSection,
-});
-
 export const createGameStore = (initialState?: Partial<GameState>) => {
-    return createStore<GameStore>()((set, get) => ({
-        ...createInitialGameState(initialState),
-        toggleAutoFight: () => {
-            set((state) => ({ autoFight: !state.autoFight }));
-        },
-        toggleAutoAdvance: () => {
-            set((state) => ({ autoAdvance: !state.autoAdvance }));
-        },
-        nextFloor: () => {
-            set((state) => getFloorTransitionState(state, state.floor + 1));
-        },
-        previousFloor: () => {
-            const { floor } = get();
-            if (floor <= 1) {
-                return;
-            }
+    const resolvedInitialState = createInitialGameState(initialState);
 
-            set((state) => getFloorTransitionState(state, state.floor - 1));
-        },
-        appendCombatLog: (message: string) => {
-            set((state) => ({ combatLog: prependCombatMessages(state.combatLog, message) }));
-        },
-        addMessage: (message: string) => {
-            get().appendCombatLog(message);
-        },
-        initializeParty: (party) => {
-            set((state) => getInitializedPartyState(state, party));
-        },
-        setActiveSection: (section: AppSection) => {
-            set({ activeSection: section });
-        },
-        handlePartyWipe: () => {
-            set((state) => getPartyWipeState(state));
-        },
-        stepSimulation: (deltaMs = GAME_TICK_MS) => {
-            const stepCount = Math.max(1, Math.floor(deltaMs / GAME_TICK_MS));
-
-            let nextState = selectGameState(get());
-            for (let stepIndex = 0; stepIndex < stepCount; stepIndex += 1) {
-                const result = simulateTick(nextState);
-                nextState = result.state;
-
-                if (result.outcome === "party-wipe") {
-                    nextState = { ...nextState, ...getPartyWipeState(nextState) };
-                    break;
-                }
-
-                if (result.outcome === "victory") {
-                    if (nextState.autoAdvance) {
-                        nextState = { ...nextState, ...getFloorTransitionState(nextState, nextState.floor + 1) };
-                    }
-                    break;
-                }
-            }
-
-            set(nextState);
-        },
-        getTrainingUpgradeCost: () => {
-            return calculateTrainingUpgradeCost(get().metaUpgrades.training);
-        },
-        buyTrainingUpgrade: () => {
-            set((state) => {
-                const cost = calculateTrainingUpgradeCost(state.metaUpgrades.training);
-                if (state.gold.lt(cost)) {
-                    return {};
-                }
-
-                const nextUpgrades = { ...state.metaUpgrades, training: state.metaUpgrades.training + 1 };
-
-                return {
-                    gold: state.gold.minus(cost),
-                    metaUpgrades: nextUpgrades,
-                    party: recalculateParty(state.party, nextUpgrades),
-                    combatLog: prependCombatMessages(state.combatLog, `Battle Drills improved to Lv ${nextUpgrades.training}.`),
-                };
-            });
-        },
-        getFortificationUpgradeCost: () => {
-            return calculateFortificationUpgradeCost(get().metaUpgrades.fortification);
-        },
-        buyFortificationUpgrade: () => {
-            set((state) => {
-                const cost = calculateFortificationUpgradeCost(state.metaUpgrades.fortification);
-                if (state.gold.lt(cost)) {
-                    return {};
-                }
-
-                const nextUpgrades = { ...state.metaUpgrades, fortification: state.metaUpgrades.fortification + 1 };
-
-                return {
-                    gold: state.gold.minus(cost),
-                    metaUpgrades: nextUpgrades,
-                    party: recalculateParty(state.party, nextUpgrades),
-                    combatLog: prependCombatMessages(state.combatLog, `Fortification improved to Lv ${nextUpgrades.fortification}.`),
-                };
-            });
-        },
+    return createStore<GameStore>()((set, get, api) => ({
+        ...createHotSimulationSlice(selectHotSimulationState(resolvedInitialState))(set, get, api),
+        ...createProgressionSlice(selectProgressionState(resolvedInitialState))(set, get, api),
+        ...createUiSlice(selectUiState(resolvedInitialState))(set, get, api),
         reset: (overrides) => {
             set(createInitialGameState(overrides));
         },
