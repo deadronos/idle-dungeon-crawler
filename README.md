@@ -42,7 +42,7 @@ npm run test:watch
 
 ## Deployment
 
-Deploys automatically to GitHub Pages at `https://deadronos.github.io/idle-dungeon-crawler/` when a tag matching `v*` is pushed. Edit the `base` field in `vite.config.ts` or the workflow if the repository path changes.
+Deploys automatically to GitHub Pages at `https://deadronos.github.io/idle-dungeon-crawler/` when a tag matching `v*` is pushed (or via manual workflow dispatch). The workflow now uses `actions/configure-pages` and `actions/deploy-pages` for reliability; authentication is granted via scoped permissions in the YAML. Edit the `base` field in `vite.config.ts` or adjust the workflow if the repository path changes.
 
 Tag and push to release:
 
