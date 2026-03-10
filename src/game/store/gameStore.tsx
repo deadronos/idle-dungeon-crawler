@@ -70,6 +70,9 @@ export const useGame = () => {
         autoAdvance: useGameStore((store) => store.autoAdvance),
         combatLog: useGameStore((store) => store.combatLog),
         metaUpgrades: useGameStore((store) => store.metaUpgrades),
+        partyCapacity: useGameStore((store) => store.partyCapacity),
+        maxPartySize: useGameStore((store) => store.maxPartySize),
+        highestFloorCleared: useGameStore((store) => store.highestFloorCleared),
         activeSection: useGameStore((store) => store.activeSection),
     };
 
@@ -88,6 +91,10 @@ export const useGame = () => {
         buyTrainingUpgrade: useGameStore((store) => store.buyTrainingUpgrade),
         getFortificationUpgradeCost: useGameStore((store) => store.getFortificationUpgradeCost),
         buyFortificationUpgrade: useGameStore((store) => store.buyFortificationUpgrade),
+        getNextPartySlotUnlock: useGameStore((store) => store.getNextPartySlotUnlock),
+        unlockPartySlot: useGameStore((store) => store.unlockPartySlot),
+        getRecruitCost: useGameStore((store) => store.getRecruitCost),
+        recruitHero: useGameStore((store) => store.recruitHero),
         reset: useGameStore((store) => store.reset),
     };
 

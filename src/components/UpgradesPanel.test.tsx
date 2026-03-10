@@ -28,4 +28,32 @@ describe("UpgradesPanel", () => {
         expect(screen.getByText("Lv 1")).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /upgrade \(40 gold\)/i })).toBeInTheDocument();
     });
+
+    it("unlocks a party slot and recruits a new adventurer when requirements are met", async () => {
+        const user = userEvent.setup();
+
+        render(
+            <GameProvider
+                initialState={{
+                    gold: new Decimal(100),
+                    party: createStarterParty("Ayla", "Warrior"),
+                    highestFloorCleared: 5,
+                }}
+            >
+                <UpgradesPanel />
+            </GameProvider>,
+        );
+
+        await user.click(screen.getByRole("button", { name: /unlock slot \(60 gold\)/i }));
+
+        const recruitWarriorButton = screen.getByRole("button", { name: /recruit warrior/i });
+        expect(recruitWarriorButton).toBeEnabled();
+        expect(screen.getByText(/open slots: 1/i)).toBeInTheDocument();
+
+        await user.click(recruitWarriorButton);
+
+        expect(screen.getByText(/open slots: 0/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /recruit warrior/i })).toBeDisabled();
+        expect(screen.getByText(/current recruit cost: 90 gold/i)).toBeInTheDocument();
+    });
 });

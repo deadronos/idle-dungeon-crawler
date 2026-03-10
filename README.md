@@ -8,7 +8,8 @@ A browser-based incremental RPG where you manage a party of heroes fighting thro
 
 ## Features
 
-- Three-hero starter party with distinct classes
+- Solo hero start with expandable party growth up to five adventurers
+- Shop-based party slot unlocks and class-based recruitment
 - Active Time Battle (ATB) simulation
 - Selector-based `zustand` game store with compatibility provider support
 - Separate toggles for Autofight and Autoadvance to enable strategic farming

@@ -30,16 +30,26 @@ When an EXP threshold is reached, the hero levels up, deducting the required amo
 
 ### Persistent Gold Upgrades
 
-Gold can be invested into persistent party-wide upgrades before a wipe occurs. The current implementation supports two upgrade tracks:
+Gold can be invested into persistent party-wide upgrades before a wipe occurs. The current implementation supports both stat upgrades and long-term party growth through the **Upgrade Shop**.
 
 * **Battle Drills:** Increases all hero damage by `10%` per level.
 * **Fortification:** Increases all hero armor by `10%` per level.
+* **Party Slot Expansion:** Active party capacity starts at `1` and can be permanently increased to `5` by clearing milestone floors and then purchasing the next slot in the shop.
+  * Capacity `2`: clear Floor `5`, then pay `60` Gold
+  * Capacity `3`: clear Floor `10`, then pay `180` Gold
+  * Capacity `4`: clear Floor `20`, then pay `500` Gold
+  * Capacity `5`: clear Floor `35`, then pay `1200` Gold
+* **Recruitment:** After an empty slot is available, the player can recruit a new active hero in the shop and choose that hero's class. Duplicate classes are allowed. Recruit costs scale with current party size:
+  * Party size `1` → recruit cost `30` Gold
+  * Party size `2` → recruit cost `90` Gold
+  * Party size `3` → recruit cost `220` Gold
+  * Party size `4` → recruit cost `550` Gold
 
 These upgrades persist through wipes, but unspent Gold is still lost on party defeat. They are purchased from a dedicated **Upgrade Shop** section rather than directly inside the dungeon combat view so the player can deliberately switch between fighting and progression planning.
 
 ### Enemy Scaling
 
-Dungeon generation spawns between 1 to 3 enemies per floor (scaling gently up to 3 as floors increase up to Floor 15).
+Dungeon generation spawns between `1` and the current active party size in enemies per floor, capped at `5` total enemies. The floor still acts as the pacing gate, with encounter size increasing gradually as floors rise.
 Instead of tracking separate enemy classes, standard monsters scale their internal attributes directly based on the floor number (represented as `level` internally during generation):
 
 * `VIT: 5 + (Level * 2)`
@@ -51,7 +61,7 @@ Every 10th floor is flagged as a Boss floor. The generated enemy on this floor h
 
 ### Party Wipe & Hard Reset
 
-If all party members reach 0 HP, a wipe is triggered. The party is fully healed, but they are forcibly returned to Floor 1, and the collected Gold is reset to `0`. Levels and purchased persistent upgrades are retained, forming the core "Idle Loop" where the low floors become exponentially faster to clear due to accumulated power.
+If all party members reach 0 HP, a wipe is triggered. The party is fully healed, but they are forcibly returned to Floor 1, and the collected Gold is reset to `0`. Levels, purchased persistent upgrades, the highest cleared floor, unlocked party slots, and recruited heroes are retained, forming the core "Idle Loop" where the low floors become exponentially faster to clear due to accumulated power.
 
 ## Consequences
 

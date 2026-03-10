@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 
 // Basic Types
 export type EntityClass = "Warrior" | "Cleric" | "Archer" | "Monster";
+export type HeroClass = Exclude<EntityClass, "Monster">;
 
 export interface MetaUpgrades {
     training: number;
@@ -67,12 +68,12 @@ export const BASE_META_UPGRADES: MetaUpgrades = {
     fortification: 0,
 };
 
-const PARTY_CLASS_ORDER: EntityClass[] = ["Warrior", "Cleric", "Archer"];
+export const HERO_CLASSES: HeroClass[] = ["Warrior", "Cleric", "Archer"];
 
-const COMPANION_NAMES: Record<Exclude<EntityClass, "Monster">, string> = {
-    Warrior: "Brom",
-    Cleric: "Lyra",
-    Archer: "Kestrel",
+const HERO_NAME_POOLS: Record<HeroClass, string[]> = {
+    Warrior: ["Brom", "Tarin", "Mira", "Hale", "Sable"],
+    Cleric: ["Lyra", "Seren", "Ione", "Thess", "Aster"],
+    Archer: ["Kestrel", "Nyx", "Corin", "Vera", "Pike"],
 };
 
 // Global Stat Multipliers
@@ -175,7 +176,7 @@ export const recalculateEntity = (entity: Entity, upgrades: MetaUpgrades = BASE_
 export const createHero = (
     id: string,
     name: string,
-    entityClass: EntityClass,
+    entityClass: HeroClass,
     upgrades: MetaUpgrades = BASE_META_UPGRADES,
 ): Entity => {
     let hero: Entity = {
@@ -208,17 +209,58 @@ export const createHero = (
 
 export const createStarterParty = (
     leaderName: string,
-    leaderClass: Exclude<EntityClass, "Monster">,
+    leaderClass: HeroClass,
     upgrades: MetaUpgrades = BASE_META_UPGRADES,
 ): Entity[] => {
-    const companionClasses = PARTY_CLASS_ORDER.filter((entityClass) => entityClass !== leaderClass) as Exclude<EntityClass, "Monster">[];
+    return [createHero("hero_1", leaderName, leaderClass, upgrades)];
+};
 
-    const party = [
-        createHero("hero_1", leaderName, leaderClass, upgrades),
-        ...companionClasses.map((entityClass, index) => createHero(`hero_${index + 2}`, COMPANION_NAMES[entityClass], entityClass, upgrades)),
-    ];
+const getNextHeroId = (heroes: Entity[]): string => {
+    const nextId = heroes.reduce((highestId, hero) => {
+        const match = hero.id.match(/^hero_(\d+)$/);
+        if (!match) {
+            return highestId;
+        }
 
-    return party;
+        return Math.max(highestId, Number(match[1]));
+    }, 0) + 1;
+
+    return `hero_${nextId}`;
+};
+
+const getGeneratedHeroName = (entityClass: HeroClass, heroes: Entity[]): string => {
+    const existingNames = new Set(heroes.map((hero) => hero.name));
+    const namePool = HERO_NAME_POOLS[entityClass];
+
+    for (const candidate of namePool) {
+        if (!existingNames.has(candidate)) {
+            return candidate;
+        }
+    }
+
+    const baseName = namePool[0];
+    let suffix = 2;
+    let candidateName = `${baseName} ${suffix}`;
+
+    while (existingNames.has(candidateName)) {
+        suffix += 1;
+        candidateName = `${baseName} ${suffix}`;
+    }
+
+    return candidateName;
+};
+
+export const createRecruitHero = (
+    entityClass: HeroClass,
+    heroes: Entity[],
+    upgrades: MetaUpgrades = BASE_META_UPGRADES,
+): Entity => {
+    return createHero(
+        getNextHeroId(heroes),
+        getGeneratedHeroName(entityClass, heroes),
+        entityClass,
+        upgrades,
+    );
 };
 
 // Enemy generation (simple for now)

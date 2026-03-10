@@ -8,6 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const ShopView: React.FC = () => {
     const trainingLevel = useGameStore((state) => state.metaUpgrades.training);
     const fortificationLevel = useGameStore((state) => state.metaUpgrades.fortification);
+    const partySize = useGameStore((state) => state.party.length);
+    const partyCapacity = useGameStore((state) => state.partyCapacity);
+    const maxPartySize = useGameStore((state) => state.maxPartySize);
+    const highestFloorCleared = useGameStore((state) => state.highestFloorCleared);
 
     return (
         <div className="flex flex-1 items-center justify-center w-full h-full bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.92)] overflow-y-auto p-4 lg:p-8">
@@ -18,7 +22,7 @@ export const ShopView: React.FC = () => {
                             Upgrade Shop
                         </CardTitle>
                         <p className="text-sm text-slate-400">
-                            Spend hard-earned gold on permanent improvements before your next wipe.
+                            Spend hard-earned gold on permanent improvements and party growth before your next wipe.
                         </p>
                     </CardHeader>
                     <CardContent className="space-y-4 text-sm text-slate-300">
@@ -37,6 +41,15 @@ export const ShopView: React.FC = () => {
                             </div>
                             <p>Increase all hero armor by 10% per level.</p>
                             <p className="mt-2 text-xs uppercase tracking-wider text-slate-400">Current Level: {fortificationLevel}</p>
+                        </div>
+                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/70 p-4">
+                            <div className="flex items-center justify-between gap-2 font-bold text-emerald-300 mb-2">
+                                <span>Party Expansion</span>
+                                <span className="text-xs uppercase tracking-wider text-slate-400">{partySize}/{partyCapacity} Active</span>
+                            </div>
+                            <p>Start with a lone hero and grow the roster over time through slot unlocks and recruitment.</p>
+                            <p className="mt-2 text-xs uppercase tracking-wider text-slate-400">Highest Floor Cleared: {highestFloorCleared}</p>
+                            <p className="mt-1 text-xs uppercase tracking-wider text-slate-400">Current Capacity: {partyCapacity} / {maxPartySize}</p>
                         </div>
                     </CardContent>
                 </Card>
