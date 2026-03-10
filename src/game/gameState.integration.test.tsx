@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { createEnemy, createStarterParty } from "./entity";
+import { createEnemy, createRecruitHero, createStarterParty } from "./entity";
 import { GameProvider, useGame } from "./gameState";
 
 const CombatProbe = () => {
@@ -34,6 +34,7 @@ describe("GameProvider integration", () => {
 
     it("lets clerics heal injured allies during the ATB loop", () => {
         const party = createStarterParty("Ayla", "Cleric");
+        party.push(createRecruitHero("Warrior", party));
         const warrior = party.find((hero) => hero.class === "Warrior");
         const cleric = party.find((hero) => hero.class === "Cleric");
 

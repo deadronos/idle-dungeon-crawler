@@ -6,6 +6,8 @@ import {
     prependCombatMessages,
     simulateTick,
 } from "../engine/simulation";
+import { getNextPartySlotUnlock } from "../partyProgression";
+import { selectProgressionState } from "./progressionSlice";
 import type { GameState, GameStateCreator, HotSimulationActions, HotSimulationSlice } from "./types";
 
 export const selectHotSimulationState = (state: GameState): HotSimulationSlice => ({
@@ -57,7 +59,7 @@ export const createHotSimulationSlice = (
 
             let nextState: GameState = {
                 ...selectHotSimulationState(get()),
-                metaUpgrades: get().metaUpgrades,
+                ...selectProgressionState(get()),
                 activeSection: get().activeSection,
             };
 
@@ -71,6 +73,22 @@ export const createHotSimulationSlice = (
                 }
 
                 if (result.outcome === "victory") {
+                    const clearedFloor = nextState.floor;
+                    const highestFloorCleared = Math.max(nextState.highestFloorCleared, clearedFloor);
+
+                    if (highestFloorCleared !== nextState.highestFloorCleared) {
+                        const nextUnlock = getNextPartySlotUnlock(nextState.partyCapacity);
+                        const hasUnlockedNextSlot = nextUnlock && highestFloorCleared >= nextUnlock.milestoneFloor;
+
+                        nextState = {
+                            ...nextState,
+                            highestFloorCleared,
+                            combatLog: hasUnlockedNextSlot
+                                ? prependCombatMessages(nextState.combatLog, `A new party slot can now be unlocked in the shop.`)
+                                : nextState.combatLog,
+                        };
+                    }
+
                     if (nextState.autoAdvance) {
                         nextState = { ...nextState, ...getFloorTransitionState(nextState, nextState.floor + 1) };
                     }

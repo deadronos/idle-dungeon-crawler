@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { EntityClass } from '../game/entity';
+import type { HeroClass } from '../game/entity';
 import { createStarterParty } from '../game/entity';
 import { useGameStore } from '../game/store/gameStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,10 +10,10 @@ import { Label } from '@/components/ui/label';
 export const CharacterCreation: React.FC = () => {
     const initializeParty = useGameStore((state) => state.initializeParty);
     const [name, setName] = useState("Hero");
-    const [selectedClass, setSelectedClass] = useState<EntityClass>("Warrior");
+    const [selectedClass, setSelectedClass] = useState<HeroClass>("Warrior");
 
     const handleCreate = () => {
-        const party = createStarterParty(name.trim() || "Hero", selectedClass as Exclude<EntityClass, "Monster">);
+        const party = createStarterParty(name.trim() || "Hero", selectedClass);
         initializeParty(party);
     };
 
@@ -72,7 +72,7 @@ export const CharacterCreation: React.FC = () => {
                     </div>
 
                     <p className="text-center text-xs text-slate-400">
-                        Your chosen hero leads a three-person starter party into the dungeon.
+                        Begin with one adventurer, then expand the party in the shop as your dungeon runs grow stronger.
                     </p>
 
                     <Button

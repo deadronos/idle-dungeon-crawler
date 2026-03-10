@@ -17,7 +17,7 @@ We use a format inspired by Architecture Decision Records (ADRs) to document sig
 - [002 - Attributes and Derived Stats](gamedecisions/002-attributes-and-stats.md)
 - [003 - Combat Loop and ATB Mechanics](gamedecisions/003-combat-and-atb.md)
 - [004 - Progression, Leveling, and Scaling](gamedecisions/004-progression-and-scaling.md)
-- [005 - Expandable Party System](gamedecisions/005-expandable-party-system.md) *(Proposed)*
+- [005 - Expandable Party System](gamedecisions/005-expandable-party-system.md)
 
 ### Technical Decisions
 

@@ -5,10 +5,10 @@ import { describe, expect, it } from "vitest";
 import App from "./App";
 
 describe("App integration", () => {
-    it("creates a starter party and supports dungeon and shop sections", async () => {
+    it("creates a solo starter party and exposes party expansion in the shop", async () => {
         const user = userEvent.setup();
 
-        render(<App />);
+        const { unmount } = render(<App />);
 
         await user.clear(screen.getByLabelText(/hero name/i));
         await user.type(screen.getByLabelText(/hero name/i), "Ayla");
@@ -16,17 +16,16 @@ describe("App integration", () => {
         await user.click(screen.getByRole("button", { name: /start journey/i }));
 
         expect(screen.getByText("Ayla")).toBeInTheDocument();
-        expect(screen.getByText("Brom")).toBeInTheDocument();
-        expect(screen.getByText("Kestrel")).toBeInTheDocument();
+        expect(screen.queryByText("Brom")).not.toBeInTheDocument();
         expect(screen.getByLabelText(/autofight/i)).toBeChecked();
         expect(screen.getByLabelText(/autoadvance/i)).toBeChecked();
         expect(screen.getByRole("button", { name: /previous floor/i })).toBeDisabled();
         expect(screen.getByRole("button", { name: /next floor/i })).toBeInTheDocument();
-        expect(screen.getAllByText(/VIT:/i)).toHaveLength(4);
-        expect(screen.getAllByText(/STR:/i)).toHaveLength(4);
-        expect(screen.getAllByText(/DEX:/i)).toHaveLength(4);
-        expect(screen.getAllByText(/INT:/i)).toHaveLength(4);
-        expect(screen.getAllByText(/WIS:/i)).toHaveLength(4);
+        expect(screen.getAllByText(/VIT:/i)).toHaveLength(2);
+        expect(screen.getAllByText(/STR:/i)).toHaveLength(2);
+        expect(screen.getAllByText(/DEX:/i)).toHaveLength(2);
+        expect(screen.getAllByText(/INT:/i)).toHaveLength(2);
+        expect(screen.getAllByText(/WIS:/i)).toHaveLength(2);
 
         await user.click(screen.getByRole("button", { name: /next floor/i }));
 
@@ -36,7 +35,12 @@ describe("App integration", () => {
         await user.click(screen.getByRole("button", { name: /upgrade shop/i }));
 
         expect(screen.getByText(/sanctum upgrades/i)).toBeInTheDocument();
+        expect(screen.getByText(/party expansion/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /unlock slot \(60 gold\)/i })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /recruit warrior/i })).toBeDisabled();
         expect(screen.queryByRole("button", { name: /previous floor/i })).not.toBeInTheDocument();
         expect(screen.getByRole("button", { name: /dungeon/i })).toBeInTheDocument();
+
+        unmount();
     });
 });

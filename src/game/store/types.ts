@@ -1,7 +1,8 @@
 import type Decimal from "decimal.js";
 import type { StateCreator } from "zustand";
 
-import type { Entity, MetaUpgrades } from "../entity";
+import type { Entity, HeroClass, MetaUpgrades } from "../entity";
+import type { PartySlotUnlock } from "../partyProgression";
 
 export type AppSection = "dungeon" | "shop";
 
@@ -17,6 +18,9 @@ export interface HotSimulationSlice {
 
 export interface ProgressionSlice {
     metaUpgrades: MetaUpgrades;
+    partyCapacity: number;
+    maxPartySize: number;
+    highestFloorCleared: number;
 }
 
 export interface UiSlice {
@@ -42,6 +46,10 @@ export interface ProgressionActions {
     buyTrainingUpgrade: () => void;
     getFortificationUpgradeCost: () => Decimal;
     buyFortificationUpgrade: () => void;
+    getNextPartySlotUnlock: () => PartySlotUnlock | null;
+    unlockPartySlot: () => void;
+    getRecruitCost: () => Decimal;
+    recruitHero: (heroClass: HeroClass) => void;
 }
 
 export interface UiActions {

@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
 
-import { createStarterParty, createEnemy } from "@/game/entity";
+import { createEnemy, createRecruitHero, createStarterParty } from "@/game/entity";
 
 import { createGameStore } from "./gameStore";
 
@@ -13,8 +13,10 @@ describe("createGameStore", () => {
 
         const state = store.getState();
 
-        expect(state.party).toHaveLength(3);
+        expect(state.party).toHaveLength(1);
         expect(state.enemies).toHaveLength(1);
+        expect(state.partyCapacity).toBe(1);
+        expect(state.highestFloorCleared).toBe(0);
         expect(state.combatLog[0]).toMatch(/ayla leads the party into the dungeon/i);
         expect(state.activeSection).toBe("dungeon");
     });
@@ -43,6 +45,7 @@ describe("createGameStore", () => {
 
     it("lets clerics heal injured allies through stepSimulation", () => {
         const party = createStarterParty("Ayla", "Cleric");
+        party.push(createRecruitHero("Warrior", party));
         const warrior = party.find((hero) => hero.class === "Warrior");
         const cleric = party.find((hero) => hero.class === "Cleric");
 
@@ -67,6 +70,52 @@ describe("createGameStore", () => {
 
         expect(nextWarrior?.currentHp.gt(startingHp)).toBe(true);
         expect(store.getState().combatLog[0]).toMatch(/casts mend/i);
+    });
+
+    it("unlocks party slots and recruits duplicate classes after milestone clears", () => {
+        const store = createGameStore({
+            gold: new Decimal(500),
+            party: createStarterParty("Ayla", "Warrior"),
+            highestFloorCleared: 10,
+        });
+
+        store.getState().unlockPartySlot();
+
+        let state = store.getState();
+        expect(state.partyCapacity).toBe(2);
+        expect(state.gold.toString()).toBe("440");
+
+        store.getState().recruitHero("Warrior");
+
+        state = store.getState();
+        expect(state.party).toHaveLength(2);
+        expect(state.party.every((hero) => hero.class === "Warrior")).toBe(true);
+        expect(state.gold.toString()).toBe("410");
+    });
+
+    it("preserves recruited heroes and unlocked slots through a party wipe", () => {
+        const starterParty = createStarterParty("Ayla", "Warrior");
+        const recruit = createRecruitHero("Cleric", starterParty);
+
+        const store = createGameStore({
+            gold: new Decimal(123),
+            floor: 7,
+            party: [...starterParty, recruit],
+            partyCapacity: 2,
+            highestFloorCleared: 5,
+            enemies: [createEnemy(7, "enemy_7")],
+        });
+
+        store.getState().handlePartyWipe();
+
+        const state = store.getState();
+
+        expect(state.floor).toBe(1);
+        expect(state.gold.toString()).toBe("0");
+        expect(state.partyCapacity).toBe(2);
+        expect(state.highestFloorCleared).toBe(5);
+        expect(state.party).toHaveLength(2);
+        expect(state.party.every((hero) => hero.currentHp.eq(hero.maxHp))).toBe(true);
     });
 
     it("buys training upgrades and recalculates party damage", () => {

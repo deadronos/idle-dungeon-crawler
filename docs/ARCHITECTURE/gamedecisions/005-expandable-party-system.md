@@ -1,7 +1,7 @@
 # 005 - Expandable Party System
 
 **Date:** 2026-03-10
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 
@@ -15,9 +15,9 @@ Issue [#4](https://github.com/deadronos/idle-dungeon-crawler/issues/4) proposes 
 
 This proposal shifts party composition from a static starting-state decision into a long-term progression system. That impacts character creation, the upgrade shop, run persistence, balance expectations, and the existing assumptions captured in [004 - Progression, Leveling, and Scaling](004-progression-and-scaling.md).
 
-## Proposed Decision
+## Decision
 
-We propose replacing the fixed three-hero starter party with an expandable party system that begins with one hero and grows through permanent progression.
+We replaced the fixed three-hero starter party with an expandable party system that begins with one hero and grows through permanent progression.
 
 ### Starting Party and Party Cap
 
@@ -30,11 +30,11 @@ We propose replacing the fixed three-hero starter party with an expandable party
 
 Additional party slots are unlocked through a combination of progression milestones and gold spending.
 
-* A slot cannot be purchased until the player has reached the required milestone floor at least once.
+* A slot cannot be purchased until the player has cleared the required milestone floor at least once.
 * Reaching the milestone alone is not enough; the player must also pay gold in the shop to permanently unlock the slot.
 * Unlocked slots persist across wipes.
 
-The initial proposed slot ladder is:
+The slot ladder is:
 
 | Unlocks Capacity | Milestone Floor Reached | Gold Cost |
 | --- | --- | --- |
@@ -43,7 +43,14 @@ The initial proposed slot ladder is:
 | 4 heroes | Floor 20 | 500 |
 | 5 heroes | Floor 35 | 1200 |
 
-These numbers are **provisional** and should be treated as playtesting targets rather than final balance commitments.
+Recruitment is a separate purchase from capacity. Recruit costs scale with current party size:
+
+| Current Party Size | Recruit Cost |
+| --- | --- |
+| 1 hero | 30 |
+| 2 heroes | 90 |
+| 3 heroes | 220 |
+| 4 heroes | 550 |
 
 ### Recruitment
 
@@ -69,16 +76,16 @@ After a party wipe:
 * Unlocked party slots remain intact.
 * Recruited heroes remain in the active party.
 
-To support milestone-gated slot unlocks, the game should track the highest floor reached as persistent progression state.
+To support milestone-gated slot unlocks without making manual floor navigation an exploit, the game tracks the highest cleared floor as persistent progression state.
 
 ### Relationship to Existing Decisions
 
-If this proposal is accepted and implemented, it will amend the following accepted decisions:
+This decision amends the following earlier decisions:
 
 * [001 - Player Classes and Party System](001-player-classes.md) — specifically the assumption that every run begins with a balanced three-hero starter party.
 * [004 - Progression, Leveling, and Scaling](004-progression-and-scaling.md) — specifically the definition of persistent progression and the role of the shop in party growth.
 
-Until implementation is complete and this decision is accepted, those earlier records remain the source of truth for shipped behavior.
+Those earlier records remain useful historical context, but this record defines the shipped party-growth model.
 
 ### First-Version Scope Boundaries
 
