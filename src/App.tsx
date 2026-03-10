@@ -1,7 +1,7 @@
 import React from 'react';
 import { GameProvider, useGame } from './game/gameState';
 import { MainGameView } from './components/MainGameView';
-import { UpgradesPanel } from './components/UpgradesPanel';
+import { CharacterCreation } from './components/CharacterCreation';
 import { formatNumber } from './utils/format';
 
 const AppHeader: React.FC = () => {
@@ -13,8 +13,25 @@ const AppHeader: React.FC = () => {
         {formatNumber(state.gold)} Gold
       </div>
       <div className="dps-display">
-        <span className="dps-label">Current DPS</span>
-        <span className="dps-value">{formatNumber(state.dps)}</span>
+        <span className="dps-label">Floor</span>
+        <span className="dps-value">{state.floor}</span>
+      </div>
+    </div>
+  );
+};
+
+const AppContent: React.FC = () => {
+  const { state } = useGame();
+
+  if (state.party.length === 0) {
+    return <CharacterCreation />;
+  }
+
+  return (
+    <div className="app-container">
+      <AppHeader />
+      <div className="main-content">
+        <MainGameView />
       </div>
     </div>
   );
@@ -23,13 +40,7 @@ const AppHeader: React.FC = () => {
 function App() {
   return (
     <GameProvider>
-      <div className="app-container">
-        <AppHeader />
-        <div className="main-content">
-          <MainGameView />
-          <UpgradesPanel />
-        </div>
-      </div>
+      <AppContent />
     </GameProvider>
   );
 }
