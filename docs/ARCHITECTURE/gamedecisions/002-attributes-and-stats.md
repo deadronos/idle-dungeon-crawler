@@ -17,6 +17,15 @@ The game uses five primary attributes:
 *   **Intelligence (INT):** Dictates magical prowess, influencing magic damage and maximum magical resource pools.
 *   **Wisdom (WIS):** Reflects spiritual/mental defense, increasing elemental resistances and cleric mana regeneration.
 
+### Starting Attribute Templates
+Each hero class begins with a predefined spread of attributes to reinforce its role. These base values are applied when a new hero is created and before any level‑up allocations:
+
+* **Warrior:** VIT 10, STR 10, DEX 5, INT 3, WIS 3
+* **Cleric:** VIT 7, STR 4, DEX 4, INT 8, WIS 10
+* **Archer:** VIT 6, STR 5, DEX 12, INT 4, WIS 4
+
+Monsters use a simple base of 5 in each attribute, which is then scaled by floor level during encounter generation.  Documenting the starting templates helps designers understand baseline differences between classes.
+
 ### Derived Stat Formulas
 When a unit is created or levels up, their total attributes are summed and used to calculate derived stats:
 

@@ -32,17 +32,20 @@ Currently, action resolution uses a lightweight class-aware ruleset:
 
 1. **Target Selection:** The acting unit selects a random living target from the opposing side.
 2. **Class Skill Check:**
-   * Clerics first check for a badly injured ally and, if sufficient Mana is available, cast a heal instead of attacking.
-   * Warriors spend Rage on `Rage Strike` once they have enough stored resource.
-   * Archers spend Cunning on `Piercing Shot` once they have enough stored resource.
+   * Clerics first check for a badly injured ally and, if sufficient Mana is available, cast a heal instead of attacking (Mend costs **35 Mana**).
+   * Warriors spend Rage on `Rage Strike` once they have enough stored resource (50 Rage for a 2× damage attack; warriors gain 10 Rage when hitting and 5 Rage when hit).
+   * Archers spend Cunning on `Piercing Shot` once they have enough stored resource (25 Cunning for 1.6× damage and +25% crit chance).
+   * Resource regeneration is handled per tick: clerics regain `WIS * 0.5` Mana, archers regain `2` Cunning, and warriors generate Rage only through combat triggers. Warriors start runs with 0 Rage, while clerics and archers begin with full resource pools.
 3. **Damage Roll:**
    * Clerics use their `Magic Damage` stat when attacking.
    * Warriors and Archers use their `Physical Damage` stat.
 4. **Critical Hit Check:** The unit's `Crit Chance` (base 5%, boosted by DEX) is rolled. If successful, damage is multiplied.
    * Archers have a `2.0x` Crit Multiplier.
    * All other classes have a `1.5x` Crit Multiplier.
+
+> *Note:* elemental resistances are calculated and capped at 75% but are still not applied to basic attacks; this reminder persists for future enhancements.
+
 5. **Mitigation:** The final incoming damage is reduced by subtracting the target's `Armor` value (minimum 1 damage).
-   * *Note: Elemental resistances are currently defined in the attributes but not yet applied to basic attacks.*
 6. **Resource Triggers:** If a Warrior gives or receives a hit, they generate Rage.
 
 ### Combat Readability
