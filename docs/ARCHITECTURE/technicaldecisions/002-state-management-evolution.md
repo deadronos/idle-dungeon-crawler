@@ -1,11 +1,11 @@
 # 002 - State Management Evolution
 
 **Date:** 2026-03-10
-**Status:** Proposed
+**Status:** Accepted
 
 ## Context
 
-The current prototype keeps all gameplay state inside a single React context provider in `src/game/gameState.tsx`. This works well for the present scope: one hero, one to three enemies, a small number of panels, and a straightforward ATB loop.
+The original prototype kept all gameplay state inside a single React context provider in `src/game/gameState.tsx`. That worked for the initial scope: one hero, one to three enemies, a small number of panels, and a straightforward ATB loop.
 
 However, the game loop updates ATB and resource bars every tick. That means React context consumers are observing hot simulation state directly, which will become progressively more expensive as we add:
 
@@ -19,20 +19,20 @@ We want an incremental next step that preserves the current entity model and com
 
 ## Decision
 
-When the prototype expands past the current single-hero auto-battler scope, we should move hot gameplay state to **`zustand`**.
+We moved hot gameplay state to **`zustand`**.
 
-`zustand` is the preferred next step because it offers:
+`zustand` was chosen because it offers:
 
 1. **Selector-based subscriptions** so React components only rerender when the specific slice they use changes.
 2. **Low ceremony** compared with Redux-class solutions, which keeps the codebase approachable for a small game project.
 3. **A good fit for simulation-style updates** where the engine can mutate a draft-like next state and publish it once per tick.
 4. **Incremental adoption** without forcing an immediate rewrite of the `Entity` model or combat formulas.
 
-We are **not** adopting an ECS library such as `miniplex` at this stage. The current game model does not yet have enough entity/component variety to justify that additional architectural complexity.
+We are **not** adopting an ECS library such as `miniplex` at this stage. The current game model still does not have enough entity/component variety to justify that additional architectural complexity.
 
 ## Recommended Store Shape
 
-We should keep the domain model centered on `Entity`, but split the store by update frequency and responsibility.
+We kept the domain model centered on `Entity`, while splitting the store by update frequency and responsibility.
 
 ### Hot simulation slice
 
@@ -66,31 +66,43 @@ State that is purely presentational and should not be mixed into the combat engi
 
 ## Recommended Action Layout
 
-The store should expose small, explicit actions rather than one giant reducer-shaped API.
+The store exposes small, explicit actions rather than one giant reducer-shaped API.
 
-Suggested high-level actions:
+Implemented high-level actions:
 
 * `initializeParty(hero)`
-* `toggleAutoProgress()`
+* `toggleAutoAdvance()`
 * `nextFloor()`
+* `previousFloor()`
 * `handlePartyWipe()`
 * `appendCombatLog(message)`
 * `stepSimulation(deltaMs)`
+* `setActiveSection(section)`
 
-The `stepSimulation` action should delegate most math and rules to pure engine helpers so the store remains orchestration-focused rather than becoming a monolithic rules file.
+The `stepSimulation` action delegates combat math and rules to pure engine helpers in `src/game/engine/simulation.ts`, keeping the store orchestration-focused rather than turning it into a monolithic rules file.
 
 ## Recommended Module Boundaries
 
-To keep the architecture readable, split the system roughly as follows:
+The implementation is now split roughly as follows:
 
 * `src/game/entity.ts` — entity construction and stat derivation
 * `src/game/engine/` — pure combat helpers such as target selection, damage resolution, reward distribution, and tick stepping
-* `src/game/store/` — `zustand` store setup, slices, and selectors
+* `src/game/store/` — `zustand` store setup, slice-oriented state types, provider compatibility, and selectors (currently split into `hotSimulationSlice.ts`, `progressionSlice.ts`, and `uiSlice.ts`)
 * `src/components/` — UI that subscribes to narrow selectors instead of the whole game object
+
+## Implementation Notes
+
+The migration landed with a compatibility path:
+
+* `GameProvider` still exists so the app root and existing tests can mount an isolated game instance per render.
+* `useGame` is retained as a compatibility hook for legacy callers.
+* New and migrated UI components subscribe through `useGameStore(selector)` so unrelated panels do not rerender on every ATB tick.
+
+The first concrete UI slice stores section navigation (`dungeon` vs `shop`) separately from combat state, which keeps presentational concerns out of the simulation loop.
 
 ## Consequences
 
-* **Easier:** Components such as `EntityRoster`, the header gold display, and the combat log can subscribe only to the state they actually render. This should reduce unnecessary rerenders as the game becomes more complex.
-* **Easier:** The combat engine can become more testable because the rules can move into pure helper modules instead of living entirely inside a React effect.
-* **Difficult:** We will need a careful migration path from the current `GameProvider` to the store to avoid breaking the prototype while features are still moving quickly.
+* **Easier:** Components such as the header gold display, shop panels, and combat log now subscribe only to the slices they actually render, reducing unrelated rerenders during combat ticks.
+* **Easier:** The combat engine is more testable because simulation rules live in pure helpers and the store can be exercised directly without rendering React.
+* **Easier:** The compatibility `GameProvider` keeps incremental rollout and test isolation straightforward while the rest of the codebase migrates to selector-based hooks.
 * **Difficult:** `zustand` helps with subscription granularity, but it does not magically solve every architecture problem. If the combat model eventually grows into many orthogonal systems (auras, summons, projectiles, status effects), we should revisit whether an ECS architecture is justified at that time.

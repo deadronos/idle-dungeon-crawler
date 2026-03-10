@@ -2,10 +2,15 @@
 
 A browser-based incremental RPG where you manage a party of heroes fighting through dungeon floors. The project uses React + TypeScript + Vite and is structured with explicit architecture documentation in `docs/ARCHITECTURE`.
 
+## Demo Screenshot
+
+![Demo Screenshot](https://raw.githubusercontent.com/deadronos/idle-dungeon-crawler/main/image.png)
+
 ## Features
 
 - Three-hero starter party with distinct classes
 - Active Time Battle (ATB) simulation
+- Selector-based `zustand` game store with compatibility provider support
 - Separate toggles for Autofight and Autoadvance to enable strategic farming
 - Persistent gold-upgrades via an in-game shop
 - Live combat log and per-unit skill banners

@@ -51,7 +51,7 @@ Whenever an entity resolves an action, the UI displays a short-lived skill banne
 
 ### State Updates
 
-The current React implementation commits updated game state every tick so ATB bars and regenerating resources remain visually in sync with the simulation. This is acceptable for the current prototype scale, but it also means the state container is doing more render work than the original design intended. For the next architecture step, see [002 - State Management Evolution](../technicaldecisions/002-state-management-evolution.md).
+The combat loop now advances through a provider-backed `zustand` store action (`stepSimulation`) while the combat math itself lives in pure engine helpers under `src/game/engine/`. This keeps ATB bars and regenerating resources visually in sync without forcing unrelated UI panels to subscribe to every tick. For the architectural rationale behind the migration, see [002 - State Management Evolution](../technicaldecisions/002-state-management-evolution.md).
 
 ## Consequences
 

@@ -1,18 +1,26 @@
 import React from "react";
-import { useGame } from "../game/gameState";
+import { useGameStore } from "../game/store/gameStore";
 import { EntityRoster } from "./EntityRoster";
 import { CombatLog } from "./CombatLog";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 export const MainGameView: React.FC = () => {
-    const { state, actions } = useGame();
+    const party = useGameStore((state) => state.party);
+    const enemies = useGameStore((state) => state.enemies);
+    const floor = useGameStore((state) => state.floor);
+    const autoFight = useGameStore((state) => state.autoFight);
+    const autoAdvance = useGameStore((state) => state.autoAdvance);
+    const previousFloor = useGameStore((state) => state.previousFloor);
+    const nextFloor = useGameStore((state) => state.nextFloor);
+    const toggleAutoFight = useGameStore((state) => state.toggleAutoFight);
+    const toggleAutoAdvance = useGameStore((state) => state.toggleAutoAdvance);
 
     return (
         <div className="flex-2 flex flex-col items-center justify-center relative w-full h-full bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] overflow-hidden">
             <div className="flex w-full h-full p-4 lg:p-8 gap-4 lg:gap-8 justify-between items-stretch flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-y-hidden">
                 {/* Left Side: Party */}
-                <EntityRoster title="The Party" entities={state.party} />
+                <EntityRoster title="The Party" entities={party} />
 
                 {/* Center: Action / Floor Info */}
                 <div className="flex-1 lg:flex-2 min-w-[300px] flex flex-col items-center relative order-first lg:order-none">
@@ -22,18 +30,18 @@ export const MainGameView: React.FC = () => {
                             size="icon"
                             aria-label="Previous floor"
                             className="rounded-full border-white/15 bg-slate-900/70 text-white hover:bg-slate-800 disabled:opacity-40"
-                            disabled={state.floor <= 1}
-                            onClick={actions.previousFloor}
+                            disabled={floor <= 1}
+                            onClick={previousFloor}
                         >
                             <ChevronLeft className="size-5" />
                         </Button>
-                        <span>Floor {state.floor}</span>
+                        <span>Floor {floor}</span>
                         <Button
                             variant="outline"
                             size="icon"
                             aria-label="Next floor"
                             className="rounded-full border-white/15 bg-slate-900/70 text-white hover:bg-slate-800"
-                            onClick={actions.nextFloor}
+                            onClick={nextFloor}
                         >
                             <ChevronRight className="size-5" />
                         </Button>
@@ -43,8 +51,8 @@ export const MainGameView: React.FC = () => {
                         <input
                             id="autofight-toggle"
                             type="checkbox"
-                            checked={state.autoFight}
-                            onChange={actions.toggleAutoFight}
+                            checked={autoFight}
+                            onChange={toggleAutoFight}
                             className="size-4 rounded border-white/20 bg-slate-950 accent-green-500"
                         />
                         <label htmlFor="autofight-toggle" className="cursor-pointer select-none">
@@ -54,8 +62,8 @@ export const MainGameView: React.FC = () => {
                         <input
                             id="autoadvance-toggle"
                             type="checkbox"
-                            checked={state.autoAdvance}
-                            onChange={actions.toggleAutoAdvance}
+                            checked={autoAdvance}
+                            onChange={toggleAutoAdvance}
                             className="size-4 rounded border-white/20 bg-slate-950 accent-amber-500"
                         />
                         <label htmlFor="autoadvance-toggle" className="cursor-pointer select-none">
@@ -64,10 +72,10 @@ export const MainGameView: React.FC = () => {
                     </div>
 
                     {/* Show a representative enemy sprite */}
-                    {state.enemies.length > 0 && state.enemies[0].currentHp.gt(0) && (
+                    {enemies.length > 0 && enemies[0].currentHp.gt(0) && (
                         <div className="flex justify-center items-center flex-1 w-full p-4 lg:p-8">
                             <img
-                                src={state.enemies[0].image}
+                                src={enemies[0].image}
                                 alt="Enemy"
                                 className="w-full max-w-[280px] h-auto object-contain drop-shadow-[0_0_25px_rgba(0,0,0,0.8)] animate-[idle-float_3s_ease-in-out_infinite]"
                                 draggable={false}
@@ -79,7 +87,7 @@ export const MainGameView: React.FC = () => {
                 </div>
 
                 {/* Right Side: Enemies */}
-                <EntityRoster title="Enemies" entities={state.enemies} alignRight={true} />
+                <EntityRoster title="Enemies" entities={enemies} alignRight={true} />
             </div>
         </div>
     );
