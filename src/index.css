@@ -120,19 +120,6 @@ body {
   user-select: none;
 }
 
-button {
-  font-family: inherit;
-  cursor: pointer;
-  border: none;
-  background: none;
-  outline: none;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
 /* All generic UI logic has been stripped to favor inline Tailwind Utility Classes and Shadcn Configuration */
 
 :root {
