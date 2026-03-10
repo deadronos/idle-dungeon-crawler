@@ -23,7 +23,7 @@ const toPartialGameState = (value: unknown): Partial<GameState> => {
     }
 
     if (typeof value.gold === "string" || typeof value.gold === "number") {
-        candidate.gold = value.gold as GameState["gold"];
+        candidate.gold = value.gold as unknown as GameState["gold"];
     }
 
     if (typeof value.floor === "number") {
@@ -69,21 +69,7 @@ const toPartialGameState = (value: unknown): Partial<GameState> => {
     return candidate;
 };
 
-export const getGameStateSnapshot = (state: GameState): GameState =>
-    createInitialGameState({
-        party: state.party,
-        enemies: state.enemies,
-        gold: state.gold,
-        floor: state.floor,
-        autoFight: state.autoFight,
-        autoAdvance: state.autoAdvance,
-        combatLog: state.combatLog,
-        metaUpgrades: state.metaUpgrades,
-        partyCapacity: state.partyCapacity,
-        maxPartySize: state.maxPartySize,
-        highestFloorCleared: state.highestFloorCleared,
-        activeSection: state.activeSection,
-    });
+export const getGameStateSnapshot = (state: GameState): GameState => createInitialGameState(state);
 
 export const serializeGameState = (state: GameState) =>
     JSON.stringify(
@@ -97,10 +83,25 @@ export const serializeGameState = (state: GameState) =>
     );
 
 export const deserializeGameState = (serializedState: string): GameState => {
-    const parsed = JSON.parse(serializedState) as unknown;
+    let parsed: unknown;
+
+    try {
+        parsed = JSON.parse(serializedState) as unknown;
+    } catch {
+        throw new Error("Save file is not valid JSON.");
+    }
+
     const rawState = isRecord(parsed) && "state" in parsed ? parsed.state : parsed;
 
-    return createInitialGameState(toPartialGameState(rawState));
+    try {
+        return createInitialGameState(toPartialGameState(rawState));
+    } catch (error) {
+        if (error instanceof Error) {
+            throw error;
+        }
+
+        throw new Error("Save file is missing required game-state data.");
+    }
 };
 
 export const loadGameStateFromStorage = (storage: Pick<Storage, "getItem">) => {

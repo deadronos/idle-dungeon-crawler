@@ -9,6 +9,21 @@ import { Button } from "./ui/button";
 
 const STATUS_TIMEOUT_MS = 3_000;
 
+const formatSaveFileDate = () => {
+    const now = new Date();
+    const pad = (value: number) => value.toString().padStart(2, "0");
+
+    return [
+        now.getUTCFullYear(),
+        pad(now.getUTCMonth() + 1),
+        pad(now.getUTCDate()),
+        "-",
+        pad(now.getUTCHours()),
+        pad(now.getUTCMinutes()),
+        pad(now.getUTCSeconds()),
+    ].join("");
+};
+
 export const SaveControls: React.FC = () => {
     const store = useGameStoreApi();
     const hasParty = useGameStore((state) => state.party.length > 0);
@@ -32,7 +47,7 @@ export const SaveControls: React.FC = () => {
         const link = document.createElement("a");
 
         link.href = url;
-        link.download = `idle-dungeon-crawler-save-${new Date().toISOString().replaceAll(/[:.]/g, "-")}.json`;
+        link.download = `idle-dungeon-crawler-save-${formatSaveFileDate()}.json`;
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -57,8 +72,8 @@ export const SaveControls: React.FC = () => {
             }
 
             setStatusMessage("Save imported.");
-        } catch {
-            setStatusMessage("Import failed.");
+        } catch (error) {
+            setStatusMessage(error instanceof Error ? error.message : "Import failed.");
         } finally {
             if (fileInputRef.current) {
                 fileInputRef.current.value = "";
@@ -86,6 +101,9 @@ export const SaveControls: React.FC = () => {
                     onChange={handleImport}
                     className="sr-only"
                 />
+                <label htmlFor={inputId} className="sr-only">
+                    Import save file
+                </label>
                 <Button
                     type="button"
                     variant="outline"
@@ -95,9 +113,6 @@ export const SaveControls: React.FC = () => {
                     <Upload className="size-4" />
                     Import Save
                 </Button>
-                <label htmlFor={inputId} className="sr-only">
-                    Import save file
-                </label>
             </div>
             <div
                 role="status"
