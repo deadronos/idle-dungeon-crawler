@@ -81,6 +81,11 @@ export const getFloorTransitionState = (state: GameState, floor: number): Partia
     combatLog: prependCombatMessages(state.combatLog, `Moved to floor ${floor}...`),
 });
 
+export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
+    enemies: createEncounter(state.floor, state.party.length),
+    combatLog: prependCombatMessages(state.combatLog, `Repeating floor ${state.floor}...`),
+});
+
 export const getPartyWipeState = (state: GameState): Partial<GameState> => {
     const healedParty = state.party.map((hero) => {
         const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades);

@@ -1,5 +1,6 @@
 import {
     GAME_TICK_MS,
+    getFloorReplayState,
     getFloorTransitionState,
     getInitializedPartyState,
     getPartyWipeState,
@@ -91,6 +92,8 @@ export const createHotSimulationSlice = (
 
                     if (nextState.autoAdvance) {
                         nextState = { ...nextState, ...getFloorTransitionState(nextState, nextState.floor + 1) };
+                    } else {
+                        nextState = { ...nextState, ...getFloorReplayState(nextState) };
                     }
                     break;
                 }

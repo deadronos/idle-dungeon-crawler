@@ -72,6 +72,27 @@ describe("createGameStore", () => {
         expect(store.getState().combatLog[0]).toMatch(/casts mend/i);
     });
 
+    it("restarts the current floor when autoadvance is disabled", () => {
+        const store = createGameStore({
+            party: createStarterParty("Ayla", "Warrior"),
+            enemies: [],
+            floor: 4,
+            autoFight: true,
+            autoAdvance: false,
+            highestFloorCleared: 2,
+            combatLog: [],
+        });
+
+        store.getState().stepSimulation();
+
+        const state = store.getState();
+
+        expect(state.floor).toBe(4);
+        expect(state.enemies).toHaveLength(1);
+        expect(state.highestFloorCleared).toBe(4);
+        expect(state.combatLog[0]).toMatch(/repeating floor 4/i);
+    });
+
     it("unlocks party slots and recruits duplicate classes after milestone clears", () => {
         const store = createGameStore({
             gold: new Decimal(500),

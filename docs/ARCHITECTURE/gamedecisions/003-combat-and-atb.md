@@ -19,7 +19,7 @@ Every tick, all living entities (both party heroes and enemies) increase their `
 
 If `Autofight` is disabled, the simulation pauses in place: ATB does not fill, actions do not resolve, and the current encounter remains visible until the player re-enables automatic fighting or changes floors manually.
 
-`Autoadvance` is a separate control. When enabled, the party moves to the next floor after winning an encounter. When disabled, the party stays on the cleared floor, allowing the player to deliberately farm a target floor by manually stepping back and forth as needed.
+`Autoadvance` is a separate control. When enabled, the party moves to the next floor after winning an encounter. When disabled, the party immediately starts a fresh encounter on the same floor, allowing the player to continuously farm a target floor without climbing past it.
 
 * **Base ATB Rate:** `2.0` per tick.
 * **Speed Bonus:** Dexterity provides a speed bonus calculation: `+ (DEX * 0.1)` per tick.
