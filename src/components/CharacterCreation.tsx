@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useGame } from '../game/gameState';
 import type { EntityClass } from '../game/entity';
-import { createHero } from '../game/entity';
+import { createStarterParty } from '../game/entity';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,8 +13,8 @@ export const CharacterCreation: React.FC = () => {
     const [selectedClass, setSelectedClass] = useState<EntityClass>("Warrior");
 
     const handleCreate = () => {
-        const hero = createHero("hero_1", name, selectedClass);
-        actions.initializeParty(hero);
+        const party = createStarterParty(name.trim() || "Hero", selectedClass as Exclude<EntityClass, "Monster">);
+        actions.initializeParty(party);
     };
 
     return (
@@ -44,7 +44,7 @@ export const CharacterCreation: React.FC = () => {
                             <img src="/assets/hero_warrior.png" alt="Warrior" className="w-20 h-20 object-contain drop-shadow-md" />
                             <div className="text-center">
                                 <h3 className="font-bold text-slate-50 text-lg mb-1">Warrior</h3>
-                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High HP, uses Rage for big physical damage.</p>
+                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High HP, builds Rage into crushing weapon skills.</p>
                             </div>
                         </Button>
                         <Button
@@ -55,7 +55,7 @@ export const CharacterCreation: React.FC = () => {
                             <img src="/assets/hero_cleric.png" alt="Cleric" className="w-20 h-20 object-contain drop-shadow-md" />
                             <div className="text-center">
                                 <h3 className="font-bold text-slate-50 text-lg mb-1">Cleric</h3>
-                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High Wisdom, heals the party with Mana.</p>
+                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">Uses Mana to smite enemies and heal injured allies.</p>
                             </div>
                         </Button>
                         <Button
@@ -66,10 +66,14 @@ export const CharacterCreation: React.FC = () => {
                             <img src="/assets/hero_archer.png" alt="Archer" className="w-20 h-20 object-contain drop-shadow-md" />
                             <div className="text-center">
                                 <h3 className="font-bold text-slate-50 text-lg mb-1">Archer</h3>
-                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High Dexterity, uses Cunning for massive crits.</p>
+                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">Uses Cunning for precision shots and lethal crits.</p>
                             </div>
                         </Button>
                     </div>
+
+                    <p className="text-center text-xs text-slate-400">
+                        Your chosen hero leads a three-person starter party into the dungeon.
+                    </p>
 
                     <Button
                         size="lg"

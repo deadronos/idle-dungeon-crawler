@@ -2,10 +2,12 @@ import React from "react";
 import { useGame } from "../game/gameState";
 import { EntityRoster } from "./EntityRoster";
 import { CombatLog } from "./CombatLog";
+import { UpgradesPanel } from "./UpgradesPanel";
 import { Button } from "@/components/ui/button";
 
 export const MainGameView: React.FC = () => {
     const { state, actions } = useGame();
+    const roomCleared = state.enemies.length > 0 && state.enemies.every((enemy) => enemy.currentHp.lte(0));
 
     return (
         <div className="flex-2 flex flex-col items-center justify-center relative w-full h-full bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] overflow-hidden">
@@ -30,6 +32,18 @@ export const MainGameView: React.FC = () => {
                         </Button>
                     </div>
 
+                    {!state.autoProgress && roomCleared && (
+                        <div className="mb-6">
+                            <Button
+                                size="lg"
+                                className="rounded-full font-bold uppercase tracking-widest bg-amber-500 hover:bg-amber-400 text-amber-950"
+                                onClick={actions.nextFloor}
+                            >
+                                Advance Floor
+                            </Button>
+                        </div>
+                    )}
+
                     {/* Show a representative enemy sprite */}
                     {state.enemies.length > 0 && state.enemies[0].currentHp.gt(0) && (
                         <div className="flex justify-center items-center flex-1 w-full p-4 lg:p-8">
@@ -42,6 +56,7 @@ export const MainGameView: React.FC = () => {
                         </div>
                     )}
 
+                    <UpgradesPanel />
                     <CombatLog />
                 </div>
 

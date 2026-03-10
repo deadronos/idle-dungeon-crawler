@@ -3,6 +3,11 @@ import Decimal from "decimal.js";
 // Basic Types
 export type EntityClass = "Warrior" | "Cleric" | "Archer" | "Monster";
 
+export interface MetaUpgrades {
+    training: number;
+    fortification: number;
+}
+
 export interface Attributes {
     vit: number; // Constitution/Vitality
     str: number; // Strength
@@ -54,6 +59,19 @@ export interface Entity {
     // Combat State
     actionProgress: number; // 0 to 100
 }
+
+export const BASE_META_UPGRADES: MetaUpgrades = {
+    training: 0,
+    fortification: 0,
+};
+
+const PARTY_CLASS_ORDER: EntityClass[] = ["Warrior", "Cleric", "Archer"];
+
+const COMPANION_NAMES: Record<Exclude<EntityClass, "Monster">, string> = {
+    Warrior: "Brom",
+    Cleric: "Lyra",
+    Archer: "Kestrel",
+};
 
 // Global Stat Multipliers
 export const STAT_MULTS = {
@@ -122,7 +140,42 @@ export const calculateDerivedStats = (entity: Entity): Entity => {
     return entity;
 };
 
-export const createHero = (id: string, name: string, entityClass: EntityClass): Entity => {
+export const applyMetaUpgrades = (entity: Entity, upgrades: MetaUpgrades = BASE_META_UPGRADES): Entity => {
+    if (entity.isEnemy) {
+        return entity;
+    }
+
+    const damageMultiplier = 1 + (upgrades.training * 0.1);
+    const armorMultiplier = 1 + (upgrades.fortification * 0.1);
+
+    entity.physicalDamage = entity.physicalDamage.times(damageMultiplier);
+    entity.magicDamage = entity.magicDamage.times(damageMultiplier);
+    entity.armor = entity.armor.times(armorMultiplier);
+
+    return entity;
+};
+
+export const recalculateEntity = (entity: Entity, upgrades: MetaUpgrades = BASE_META_UPGRADES): Entity => {
+    calculateDerivedStats(entity);
+    applyMetaUpgrades(entity, upgrades);
+
+    if (entity.currentHp.gt(entity.maxHp)) {
+        entity.currentHp = entity.maxHp;
+    }
+
+    if (entity.currentResource.gt(entity.maxResource)) {
+        entity.currentResource = entity.maxResource;
+    }
+
+    return entity;
+};
+
+export const createHero = (
+    id: string,
+    name: string,
+    entityClass: EntityClass,
+    upgrades: MetaUpgrades = BASE_META_UPGRADES,
+): Entity => {
     let hero: Entity = {
         id, name, class: entityClass,
         isEnemy: false,
@@ -139,7 +192,7 @@ export const createHero = (id: string, name: string, entityClass: EntityClass): 
         actionProgress: 0
     };
 
-    hero = calculateDerivedStats(hero);
+    hero = recalculateEntity(hero, upgrades);
     // Fill resources (except warrior rage)
     if (entityClass === "Cleric" || entityClass === "Archer") {
         hero.currentResource = hero.maxResource;
@@ -147,6 +200,21 @@ export const createHero = (id: string, name: string, entityClass: EntityClass): 
     hero.currentHp = hero.maxHp;
 
     return hero;
+};
+
+export const createStarterParty = (
+    leaderName: string,
+    leaderClass: Exclude<EntityClass, "Monster">,
+    upgrades: MetaUpgrades = BASE_META_UPGRADES,
+): Entity[] => {
+    const companionClasses = PARTY_CLASS_ORDER.filter((entityClass) => entityClass !== leaderClass) as Exclude<EntityClass, "Monster">[];
+
+    const party = [
+        createHero("hero_1", leaderName, leaderClass, upgrades),
+        ...companionClasses.map((entityClass, index) => createHero(`hero_${index + 2}`, COMPANION_NAMES[entityClass], entityClass, upgrades)),
+    ];
+
+    return party;
 };
 
 // Enemy generation (simple for now)
@@ -183,7 +251,7 @@ export const createEnemy = (level: number, id: string): Entity => {
         enemy.name = `Boss: ${enemy.name}`;
     }
 
-    enemy = calculateDerivedStats(enemy);
+    enemy = recalculateEntity(enemy);
     enemy.currentHp = enemy.maxHp;
 
     return enemy;

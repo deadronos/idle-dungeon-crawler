@@ -24,18 +24,22 @@ When an entity's `actionProgress` reaches or exceeds `100`, they consume their b
 
 ### Turn Resolution (Auto-Attack)
 
-Currently, action resolution relies on basic logic:
+Currently, action resolution uses a lightweight class-aware ruleset:
 
 1. **Target Selection:** The acting unit selects a random living target from the opposing side.
-2. **Damage Roll:**
-   * Clerics use their `Magic Damage` stat.
+2. **Class Skill Check:**
+   * Clerics first check for a badly injured ally and, if sufficient Mana is available, cast a heal instead of attacking.
+   * Warriors spend Rage on `Rage Strike` once they have enough stored resource.
+   * Archers spend Cunning on `Piercing Shot` once they have enough stored resource.
+3. **Damage Roll:**
+   * Clerics use their `Magic Damage` stat when attacking.
    * Warriors and Archers use their `Physical Damage` stat.
-3. **Critical Hit Check:** The unit's `Crit Chance` (base 5%, boosted by DEX) is rolled. If successful, damage is multiplied.
+4. **Critical Hit Check:** The unit's `Crit Chance` (base 5%, boosted by DEX) is rolled. If successful, damage is multiplied.
    * Archers have a `2.0x` Crit Multiplier.
    * All other classes have a `1.5x` Crit Multiplier.
-4. **Mitigation:** The final incoming damage is reduced by subtracting the target's `Armor` value (minimum 1 damage).
+5. **Mitigation:** The final incoming damage is reduced by subtracting the target's `Armor` value (minimum 1 damage).
    * *Note: Elemental resistances are currently defined in the attributes but not yet applied to basic attacks.*
-5. **Resource Triggers:** If a Warrior gives or receives a hit, they generate Rage.
+6. **Resource Triggers:** If a Warrior gives or receives a hit, they generate Rage.
 
 ### State Updates
 
@@ -44,4 +48,4 @@ The current React implementation commits updated game state every tick so ATB ba
 ## Consequences
 
 * **Easier:** Dexterity intrinsically scales combat effectiveness by directly increasing the frequency of attacks in real-time, alongside its buffs to Crit Chance.
-* **Difficult:** The target selection is purely random. Without threat mechanics (taunt, aggro), squishy heroes like Archers and Clerics have the same probability of being targeted as tank-focused Warriors, meaning defensive stat allocation is required across the entire party row.
+* **Difficult:** Enemy target selection is still purely random. Without threat mechanics (taunt, aggro), squishy heroes like Archers and Clerics have the same probability of being targeted as tank-focused Warriors, meaning defensive stat allocation is required across the entire party row.
