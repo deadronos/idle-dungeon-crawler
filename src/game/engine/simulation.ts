@@ -19,13 +19,19 @@ export interface SimulationResult {
     outcome: SimulationOutcome;
 }
 
-export const getEncounterSize = (floor: number, partySize: number) => {
+export const isBossFloor = (floor: number) => floor % 10 === 0;
+
+export const getEncounterSize = (floor: number) => {
+    if (isBossFloor(floor)) {
+        return 1;
+    }
+
     const floorCap = Math.max(1, Math.min(MAX_PARTY_SIZE, Math.ceil(floor / 5)));
-    return Math.max(1, Math.min(partySize, floorCap));
+    return floorCap;
 };
 
-export const createEncounter = (floor: number, partySize: number) => {
-    return Array.from({ length: getEncounterSize(floor, partySize) }, (_, index) => createEnemy(floor, `enemy_${floor}_${index}`));
+export const createEncounter = (floor: number) => {
+    return Array.from({ length: getEncounterSize(floor) }, (_, index) => createEnemy(floor, `enemy_${floor}_${index}`));
 };
 
 export const cloneEntity = (entity: Entity): Entity => ({
@@ -70,19 +76,19 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
 
 export const getInitializedPartyState = (state: GameState, party: Entity[]): Partial<GameState> => ({
     party: recalculateParty(party, state.metaUpgrades),
-    enemies: createEncounter(1, party.length),
+    enemies: createEncounter(1),
     combatLog: [`${party[0]?.name ?? "The party"} leads the party into the dungeon...`],
     activeSection: "dungeon",
 });
 
 export const getFloorTransitionState = (state: GameState, floor: number): Partial<GameState> => ({
     floor,
-    enemies: createEncounter(floor, state.party.length),
+    enemies: createEncounter(floor),
     combatLog: prependCombatMessages(state.combatLog, `Moved to floor ${floor}...`),
 });
 
 export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
-    enemies: createEncounter(state.floor, state.party.length),
+    enemies: createEncounter(state.floor),
     combatLog: prependCombatMessages(state.combatLog, `Repeating floor ${state.floor}...`),
 });
 
@@ -98,7 +104,7 @@ export const getPartyWipeState = (state: GameState): Partial<GameState> => {
         floor: 1,
         gold: new Decimal(0),
         party: healedParty,
-        enemies: createEncounter(1, healedParty.length),
+        enemies: createEncounter(1),
         combatLog: prependCombatMessages(state.combatLog, "The party was wiped out! Resetting to Floor 1..."),
     };
 };

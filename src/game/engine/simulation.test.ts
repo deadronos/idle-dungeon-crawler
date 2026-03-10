@@ -3,9 +3,26 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createEnemy, createHero } from "../entity";
 
-import { createInitialGameState, simulateTick } from "./simulation";
+import { createEncounter, createInitialGameState, getEncounterSize, isBossFloor, simulateTick } from "./simulation";
 
 describe("simulation engine", () => {
+    it("scales standard encounters by floor instead of player party size", () => {
+        expect(getEncounterSize(1)).toBe(1);
+        expect(getEncounterSize(6)).toBe(2);
+        expect(getEncounterSize(14)).toBe(3);
+        expect(getEncounterSize(24)).toBe(5);
+    });
+
+    it("keeps boss floors to a single boss encounter", () => {
+        expect(isBossFloor(20)).toBe(true);
+        expect(getEncounterSize(20)).toBe(1);
+
+        const encounter = createEncounter(20);
+
+        expect(encounter).toHaveLength(1);
+        expect(encounter[0]?.name.startsWith("Boss:")).toBe(true);
+    });
+
     it("applies light resistance to cleric smite damage", () => {
         const cleric = createHero("hero_1", "Ayla", "Cleric");
         cleric.actionProgress = 99;

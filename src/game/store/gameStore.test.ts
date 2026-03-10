@@ -139,6 +139,29 @@ describe("createGameStore", () => {
         expect(state.party.every((hero) => hero.currentHp.eq(hero.maxHp))).toBe(true);
     });
 
+    it("does not scale boss-floor encounter size with additional recruited heroes", () => {
+        const party = createStarterParty("Ayla", "Warrior");
+        party.push(createRecruitHero("Cleric", party));
+        party.push(createRecruitHero("Archer", party));
+        party.push(createRecruitHero("Warrior", party));
+
+        const store = createGameStore({
+            floor: 19,
+            party,
+            enemies: [createEnemy(19, "enemy_19")],
+            combatLog: [],
+        });
+
+        store.getState().nextFloor();
+
+        const state = store.getState();
+
+        expect(state.floor).toBe(20);
+        expect(state.party).toHaveLength(4);
+        expect(state.enemies).toHaveLength(1);
+        expect(state.enemies[0]?.name.startsWith("Boss:")).toBe(true);
+    });
+
     it("buys training upgrades and recalculates party damage", () => {
         const store = createGameStore({
             gold: new Decimal(100),
