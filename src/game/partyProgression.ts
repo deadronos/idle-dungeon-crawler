@@ -13,7 +13,7 @@ export const MAX_PARTY_SIZE = 5;
 export const RECRUITABLE_CLASSES: HeroClass[] = ["Warrior", "Cleric", "Archer"];
 
 export const PARTY_SLOT_UNLOCKS: PartySlotUnlock[] = [
-    { capacity: 2, milestoneFloor: 5, cost: 60 },
+    { capacity: 2, milestoneFloor: 3, cost: 60 },
     { capacity: 3, milestoneFloor: 10, cost: 180 },
     { capacity: 4, milestoneFloor: 20, cost: 500 },
     { capacity: 5, milestoneFloor: 35, cost: 1200 },

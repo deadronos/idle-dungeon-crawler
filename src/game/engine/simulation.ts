@@ -201,19 +201,30 @@ export const simulateTick = (state: GameState): SimulationResult => {
 
         const target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
 
-        let actionName = entity.class === "Cleric" ? "Smite" : "Attack";
+        type DamageElement = "physical" | keyof Entity["resistances"];
+
+        let actionName = "Attack";
         let critChance = entity.critChance;
-        let damage = entity.class === "Cleric" ? entity.magicDamage : entity.physicalDamage;
+        let damage = entity.physicalDamage;
+        let damageElement: DamageElement = "physical";
+
+        if (entity.class === "Cleric") {
+            actionName = "Smite";
+            damage = entity.magicDamage;
+            damageElement = "light";
+        }
 
         if (!entity.isEnemy && entity.class === "Warrior" && entity.currentResource.gte(50)) {
             entity.currentResource = entity.currentResource.minus(50);
             damage = entity.physicalDamage.times(2);
             actionName = "Rage Strike";
+            damageElement = "physical";
         } else if (!entity.isEnemy && entity.class === "Archer" && entity.currentResource.gte(25)) {
             entity.currentResource = entity.currentResource.minus(25);
             damage = entity.physicalDamage.times(1.6);
             critChance = Math.min(1, entity.critChance + 0.25);
             actionName = "Piercing Shot";
+            damageElement = "physical";
         }
 
         setActiveSkill(entity, actionName);
@@ -223,7 +234,13 @@ export const simulateTick = (state: GameState): SimulationResult => {
             damage = damage.times(entity.critDamage);
         }
 
-        const finalDamage = Decimal.max(1, damage.minus(target.armor));
+        let finalDamage = damage;
+        if (damageElement === "physical") {
+            finalDamage = damage.minus(target.armor);
+        } else {
+            finalDamage = damage.times(1 - target.resistances[damageElement]);
+        }
+        finalDamage = Decimal.max(1, finalDamage);
         target.currentHp = Decimal.max(0, target.currentHp.minus(finalDamage));
 
         if (entity.class === "Warrior") {
@@ -243,7 +260,7 @@ export const simulateTick = (state: GameState): SimulationResult => {
         logMessages.push(`${target.name} was defeated!`);
 
         const experienceReward = new Decimal(draft.floor).times(10).plus(target.attributes.vit);
-        const goldReward = new Decimal(draft.floor).times(2);
+        const goldReward = new Decimal(draft.floor).times(2).plus(5);
         draft.gold = draft.gold.plus(goldReward);
 
         draft.party.forEach((hero, index) => {

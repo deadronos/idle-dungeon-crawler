@@ -38,7 +38,7 @@ The slot ladder is:
 
 | Unlocks Capacity | Milestone Floor Reached | Gold Cost |
 | --- | --- | --- |
-| 2 heroes | Floor 5 | 60 |
+| 2 heroes | Floor 3 | 60 |
 | 3 heroes | Floor 10 | 180 |
 | 4 heroes | Floor 20 | 500 |
 | 5 heroes | Floor 35 | 1200 |
