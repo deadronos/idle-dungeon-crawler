@@ -26,8 +26,13 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight }) =
                                 <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>
                             </div>
 
-                            <div className="w-full h-16 sm:h-20 flex justify-center items-center my-2">
+                            <div className="relative w-full h-16 sm:h-20 flex justify-center items-center my-2">
                                 <img src={entity.image} alt={entity.name} className="h-full object-contain drop-shadow-md" />
+                                {entity.activeSkill && (
+                                    <span className="absolute -top-2 rounded-full border border-amber-300/30 bg-slate-950/90 px-2 py-1 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-amber-200 shadow-lg">
+                                        {entity.activeSkill}
+                                    </span>
+                                )}
                             </div>
 
                             <div className="text-center text-slate-400 text-xs font-semibold uppercase tracking-wider mb-3">

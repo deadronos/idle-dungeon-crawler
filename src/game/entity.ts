@@ -58,6 +58,8 @@ export interface Entity {
 
     // Combat State
     actionProgress: number; // 0 to 100
+    activeSkill: string | null;
+    activeSkillTicks: number;
 }
 
 export const BASE_META_UPGRADES: MetaUpgrades = {
@@ -189,7 +191,9 @@ export const createHero = (
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
         critChance: 0.05, critDamage: 1.5,
         resistances: { fire: 0, water: 0, earth: 0, air: 0, light: 0, shadow: 0 },
-        actionProgress: 0
+        actionProgress: 0,
+        activeSkill: null,
+        activeSkillTicks: 0,
     };
 
     hero = recalculateEntity(hero, upgrades);
@@ -241,7 +245,9 @@ export const createEnemy = (level: number, id: string): Entity => {
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
         critChance: 0.05, critDamage: 1.5,
         resistances: { fire: 0, water: 0, earth: 0, air: 0, light: 0, shadow: 0 },
-        actionProgress: 0
+        actionProgress: 0,
+        activeSkill: null,
+        activeSkillTicks: 0,
     };
 
     // Boss floor

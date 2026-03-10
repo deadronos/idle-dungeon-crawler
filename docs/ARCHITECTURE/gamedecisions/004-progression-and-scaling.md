@@ -35,7 +35,7 @@ Gold can be invested into persistent party-wide upgrades before a wipe occurs. T
 * **Battle Drills:** Increases all hero damage by `10%` per level.
 * **Fortification:** Increases all hero armor by `10%` per level.
 
-These upgrades persist through wipes, but unspent Gold is still lost on party defeat.
+These upgrades persist through wipes, but unspent Gold is still lost on party defeat. They are purchased from a dedicated **Upgrade Shop** section rather than directly inside the dungeon combat view so the player can deliberately switch between fighting and progression planning.
 
 ### Enemy Scaling
 

@@ -17,6 +17,10 @@ To ensure smooth visual progression of action bars on the UI, the Game Loop oper
 
 Every tick, all living entities (both party heroes and enemies) increase their `actionProgress` (0 to 100).
 
+If `Autofight` is disabled, the simulation pauses in place: ATB does not fill, actions do not resolve, and the current encounter remains visible until the player re-enables automatic fighting or changes floors manually.
+
+`Autoadvance` is a separate control. When enabled, the party moves to the next floor after winning an encounter. When disabled, the party stays on the cleared floor, allowing the player to deliberately farm a target floor by manually stepping back and forth as needed.
+
 * **Base ATB Rate:** `2.0` per tick.
 * **Speed Bonus:** Dexterity provides a speed bonus calculation: `+ (DEX * 0.1)` per tick.
 
@@ -40,6 +44,10 @@ Currently, action resolution uses a lightweight class-aware ruleset:
 5. **Mitigation:** The final incoming damage is reduced by subtracting the target's `Armor` value (minimum 1 damage).
    * *Note: Elemental resistances are currently defined in the attributes but not yet applied to basic attacks.*
 6. **Resource Triggers:** If a Warrior gives or receives a hit, they generate Rage.
+
+### Combat Readability
+
+Whenever an entity resolves an action, the UI displays a short-lived skill banner near that unit's portrait (for example, `Casting Mend` or `Casting Rage Strike`) so the player can read combat intent at a glance without relying only on the combat log.
 
 ### State Updates
 

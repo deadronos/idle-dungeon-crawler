@@ -14,14 +14,17 @@ export interface GameState {
     enemies: Entity[];
     gold: Decimal;
     floor: number;
-    autoProgress: boolean;
+    autoFight: boolean;
+    autoAdvance: boolean;
     combatLog: string[];
     metaUpgrades: MetaUpgrades;
 }
 
 interface GameActions {
-    toggleAutoProgress: () => void;
+    toggleAutoFight: () => void;
+    toggleAutoAdvance: () => void;
     nextFloor: () => void;
+    previousFloor: () => void;
     addMessage: (msg: string) => void;
     initializeParty: (party: Entity[]) => void;
     getTrainingUpgradeCost: () => Decimal;
@@ -35,9 +38,20 @@ const INITIAL_STATE: GameState = {
     enemies: [],
     gold: new Decimal(0),
     floor: 1,
-    autoProgress: true,
+    autoFight: true,
+    autoAdvance: true,
     combatLog: [],
     metaUpgrades: BASE_META_UPGRADES,
+};
+
+const SKILL_BANNER_TICKS = GAME_TICK_RATE;
+
+const getEncounterSize = (floor: number) => {
+    return Math.max(1, Math.min(3, Math.ceil(floor / 5)));
+};
+
+const createEncounter = (floor: number) => {
+    return Array.from({ length: getEncounterSize(floor) }, (_, index) => createEnemy(floor, `enemy_${floor}_${index}`));
 };
 
 const cloneEntity = (entity: Entity): Entity => ({
@@ -53,6 +67,8 @@ const cloneEntity = (entity: Entity): Entity => ({
     physicalDamage: new Decimal(entity.physicalDamage),
     magicDamage: new Decimal(entity.magicDamage),
     resistances: { ...entity.resistances },
+    activeSkill: entity.activeSkill,
+    activeSkillTicks: entity.activeSkillTicks,
 });
 
 const recalculateParty = (party: Entity[], upgrades: MetaUpgrades): Entity[] => {
@@ -64,7 +80,8 @@ const createInitialState = (overrides?: Partial<GameState>): GameState => ({
     enemies: overrides?.enemies ?? INITIAL_STATE.enemies,
     gold: new Decimal(overrides?.gold ?? INITIAL_STATE.gold),
     floor: overrides?.floor ?? INITIAL_STATE.floor,
-    autoProgress: overrides?.autoProgress ?? INITIAL_STATE.autoProgress,
+    autoFight: overrides?.autoFight ?? INITIAL_STATE.autoFight,
+    autoAdvance: overrides?.autoAdvance ?? INITIAL_STATE.autoAdvance,
     combatLog: overrides?.combatLog ?? INITIAL_STATE.combatLog,
     metaUpgrades: { ...BASE_META_UPGRADES, ...overrides?.metaUpgrades },
 });
@@ -77,11 +94,10 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
     });
 
     const initializeParty = useCallback((party: Entity[]) => {
-        const firstEnemy = createEnemy(1, "enemy_1");
         setState((prev) => ({
             ...prev,
             party: recalculateParty(party, prev.metaUpgrades),
-            enemies: [firstEnemy],
+            enemies: createEncounter(1),
             combatLog: [`${party[0]?.name ?? "The party"} leads the party into the dungeon...`]
         }));
     }, []);
@@ -93,8 +109,12 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
         }));
     }, []);
 
-    const toggleAutoProgress = useCallback(() => {
-        setState((prev) => ({ ...prev, autoProgress: !prev.autoProgress }));
+    const toggleAutoFight = useCallback(() => {
+        setState((prev) => ({ ...prev, autoFight: !prev.autoFight }));
+    }, []);
+
+    const toggleAutoAdvance = useCallback(() => {
+        setState((prev) => ({ ...prev, autoAdvance: !prev.autoAdvance }));
     }, []);
 
     const getTrainingCost = useCallback((level: number) => getTrainingUpgradeCost(level), []);
@@ -141,14 +161,27 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
     const nextFloor = useCallback(() => {
         setState((prev) => {
             const nextFlr = prev.floor + 1;
-            // Spawn 1 to 3 enemies based on floor
-            const numEnemies = Math.min(3, Math.ceil(Math.random() * (nextFlr / 5)) || 1);
-            const newEnemies = Array.from({ length: numEnemies }).map((_, i) => createEnemy(nextFlr, `enemy_${nextFlr}_${i}`));
 
             return {
                 ...prev,
                 floor: nextFlr,
-                enemies: newEnemies,
+                enemies: createEncounter(nextFlr),
+                combatLog: [`Moved to floor ${nextFlr}...`, ...prev.combatLog].slice(0, 10),
+            };
+        });
+    }, []);
+
+    const previousFloor = useCallback(() => {
+        setState((prev) => {
+            const nextFlr = Math.max(1, prev.floor - 1);
+            if (nextFlr === prev.floor) {
+                return prev;
+            }
+
+            return {
+                ...prev,
+                floor: nextFlr,
+                enemies: createEncounter(nextFlr),
                 combatLog: [`Moved to floor ${nextFlr}...`, ...prev.combatLog].slice(0, 10),
             };
         });
@@ -169,7 +202,7 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
                 floor: 1,
                 gold: new Decimal(0),
                 party: healedParty,
-                enemies: [createEnemy(1, "enemy_reset")],
+                enemies: createEncounter(1),
                 combatLog: ["The party was wiped out! Resetting to Floor 1...", ...prev.combatLog].slice(0, 10),
             };
         });
@@ -179,10 +212,37 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
     useEffect(() => {
         const interval = setInterval(() => {
             setState((prev) => {
-                const draft = { ...prev, party: [...prev.party], enemies: [...prev.enemies] };
+                const draft = {
+                    ...prev,
+                    party: prev.party.map(cloneEntity),
+                    enemies: prev.enemies.map(cloneEntity),
+                };
 
                 let anyActionTaken = false;
+                let anyVisualUpdate = false;
                 const logMsgs: string[] = [];
+
+                const updateSkillBanner = (entity: Entity) => {
+                    if (entity.activeSkillTicks <= 0) {
+                        return;
+                    }
+
+                    entity.activeSkillTicks -= 1;
+                    anyVisualUpdate = true;
+
+                    if (entity.activeSkillTicks === 0) {
+                        entity.activeSkill = null;
+                    }
+                };
+
+                const setActiveSkill = (entity: Entity, skill: string) => {
+                    entity.activeSkill = `Casting ${skill}`;
+                    entity.activeSkillTicks = SKILL_BANNER_TICKS;
+                    anyVisualUpdate = true;
+                };
+
+                draft.party.forEach(updateSkillBanner);
+                draft.enemies.forEach(updateSkillBanner);
 
                 // Helper to check if combat is over
                 const livingHeroes = draft.party.filter(h => h.currentHp.gt(0));
@@ -196,10 +256,14 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
 
                 if (livingEnemies.length === 0) {
                     // Victory
-                    if (draft.autoProgress) {
+                    if (draft.autoAdvance) {
                         setTimeout(nextFloor, 0);
                     }
-                    return prev;
+                    return anyVisualUpdate ? draft : prev;
+                }
+
+                if (!draft.autoFight) {
+                    return anyVisualUpdate ? draft : prev;
                 }
 
                 // Tick ATB for everyone
@@ -229,6 +293,7 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
 
                             if (healTarget && entity.currentResource.gte(healCost) && healTarget.currentHp.div(healTarget.maxHp).lt(0.65)) {
                                 const healAmount = entity.magicDamage.times(1.75);
+                                setActiveSkill(entity, "Mend");
                                 entity.currentResource = entity.currentResource.minus(healCost);
                                 healTarget.currentHp = Decimal.min(healTarget.maxHp, healTarget.currentHp.plus(healAmount));
                                 logMsgs.push(`${entity.name} casts Mend on ${healTarget.name} for ${healAmount.floor().toString()}!`);
@@ -257,6 +322,8 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
                             critChance = Math.min(1, entity.critChance + 0.25);
                             actionName = "Piercing Shot";
                         }
+
+                        setActiveSkill(entity, actionName);
 
                         // Basic Attack calculation
                         const isCrit = Math.random() < critChance;
@@ -313,19 +380,15 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
                     }
                 };
 
-                draft.party.forEach((h, i) => {
-                    const clonedHero = cloneEntity(h);
-                    draft.party[i] = clonedHero;
-                    tickEntity(clonedHero, draft.party, draft.enemies);
+                draft.party.forEach((h) => {
+                    tickEntity(h, draft.party, draft.enemies);
                 });
 
-                draft.enemies.forEach((e, i) => {
-                    const clonedEnemy = cloneEntity(e);
-                    draft.enemies[i] = clonedEnemy;
-                    tickEntity(clonedEnemy, draft.enemies, draft.party);
+                draft.enemies.forEach((e) => {
+                    tickEntity(e, draft.enemies, draft.party);
                 });
 
-                if (anyActionTaken) {
+                if (anyActionTaken || anyVisualUpdate) {
                     if (logMsgs.length > 0) {
                         draft.combatLog = [...logMsgs, ...draft.combatLog].slice(0, 10);
                     }
@@ -346,8 +409,10 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
             value={{
                 state,
                 actions: {
-                    toggleAutoProgress,
+                    toggleAutoFight,
+                    toggleAutoAdvance,
                     nextFloor,
+                    previousFloor,
                     addMessage,
                     initializeParty,
                     getTrainingUpgradeCost: () => getTrainingCost(state.metaUpgrades.training),

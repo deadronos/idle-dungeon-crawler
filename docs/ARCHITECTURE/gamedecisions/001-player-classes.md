@@ -17,7 +17,7 @@ We implemented a three-hero starter Party System where the player chooses a lead
    * **Archer:** Uses Cunning (rapid regeneration), focuses on Dexterity and critical damage, and spends Cunning on empowered precision shots.
 2. **Attributes:** We defined a core set of attributes: Constitution (VIT), Strength (STR), Dexterity (DEX), Intelligence (INT), and Wisdom (WIS). (See [002 - Attributes and Derived Stats](002-attributes-and-stats.md)).
 3. **Active Time Battle (ATB):** We replaced manual clicking with an ATB system. Every entity (player and enemy) has an action progress bar that fills over time, triggering attacks or skills when full. (See [003 - Combat Loop and ATB Mechanics](003-combat-and-atb.md)).
-4. **Auto-Progress:** We added a toggle to automatically progress to the next dungeon floor upon defeating all enemies in a room.
+4. **Floor Navigation, Autofight, and Autoadvance:** We support explicit floor navigation controls so the player can step backward or forward one floor at a time. `Autofight` determines whether the ATB combat simulation is actively resolving the current encounter. `Autoadvance` separately determines whether a victory should automatically move the party to the next floor. This allows the player to pause on a floor their current party can reliably farm.
 5. **Party Wipe:** If the entire party dies, they are fully healed but reset to Floor 1, losing all current gold (a rogue-lite prestige mechanic foundation). (See [004 - Progression, Leveling, and Scaling](004-progression-and-scaling.md)).
 6. **Starting Party:** Character creation chooses the party leader's name and class, then automatically fills the rest of the starter party with the remaining two classes so every run begins with a balanced trio.
 
