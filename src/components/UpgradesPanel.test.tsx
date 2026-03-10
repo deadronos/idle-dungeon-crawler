@@ -46,6 +46,21 @@ describe("UpgradesPanel", () => {
         expect(screen.getByRole("button", { name: /unlock slot \(60 gold\)/i })).toBeDisabled();
     });
 
+    it("enables fortification as soon as enough gold is available", () => {
+        render(
+            <GameProvider
+                initialState={{
+                    gold: new Decimal(35),
+                    party: createStarterParty("Ayla", "Warrior"),
+                }}
+            >
+                <UpgradesPanel />
+            </GameProvider>,
+        );
+
+        expect(screen.getByRole("button", { name: /upgrade \(35 gold\)/i })).toBeEnabled();
+    });
+
     it("unlocks a party slot and recruits a new adventurer as soon as floor 3 is cleared", async () => {
         const user = userEvent.setup();
 
@@ -72,5 +87,31 @@ describe("UpgradesPanel", () => {
         expect(screen.getByText(/open slots: 0/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /recruit warrior/i })).toBeDisabled();
         expect(screen.getByText(/current recruit cost: 90 gold/i)).toBeInTheDocument();
+    });
+
+    it("unlocks the third party slot after floor 10 has been cleared", async () => {
+        const user = userEvent.setup();
+
+        render(
+            <GameProvider
+                initialState={{
+                    gold: new Decimal(1000),
+                    party: createStarterParty("Ayla", "Warrior"),
+                    partyCapacity: 2,
+                    highestFloorCleared: 11,
+                }}
+            >
+                <UpgradesPanel />
+            </GameProvider>,
+        );
+
+        const unlockButton = screen.getByRole("button", { name: /unlock slot \(180 gold\)/i });
+
+        expect(unlockButton).toBeEnabled();
+
+        await user.click(unlockButton);
+
+        expect(screen.getByText("3/5")).toBeInTheDocument();
+        expect(screen.getByText(/next capacity: 4/i)).toBeInTheDocument();
     });
 });
