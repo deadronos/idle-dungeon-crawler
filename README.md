@@ -54,3 +54,7 @@ git push origin v1.0.0
 ## License
 
 This repository is licensed under the MIT license. See [LICENSE.md](LICENSE.md) for details.
+
+## Disclosure
+
+Art generated mostly using Gemini.
