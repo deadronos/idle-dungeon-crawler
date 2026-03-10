@@ -1,35 +1,36 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Shield, Swords } from 'lucide-react';
-import { GameProvider, useGame } from './game/gameState';
+import { GameProvider } from './game/gameState';
+import { useGameStore } from './game/store/gameStore';
 import { MainGameView } from './components/MainGameView';
 import { CharacterCreation } from './components/CharacterCreation';
 import { ShopView } from './components/ShopView';
 import { Button } from './components/ui/button';
 import { formatNumber } from './utils/format';
 
-type AppSection = 'dungeon' | 'shop';
-
 const AppHeader: React.FC = () => {
-  const { state } = useGame();
+  const gold = useGameStore((state) => state.gold);
+  const floor = useGameStore((state) => state.floor);
 
   return (
     <header className="h-auto min-h-[90px] flex items-center justify-between px-6 lg:px-12 py-4 bg-gradient-to-br from-slate-900 to-slate-800 border-b border-slate-700/50 shadow-lg z-10 backdrop-blur-md flex-wrap gap-4">
       <div className="flex items-center gap-3 text-2xl lg:text-3xl font-extrabold text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">
-        {formatNumber(state.gold)} Gold
+        {formatNumber(gold)} Gold
       </div>
       <div className="flex flex-col items-end">
         <span className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Floor</span>
-        <span className="text-xl font-bold text-slate-50">{state.floor}</span>
+        <span className="text-xl font-bold text-slate-50">{floor}</span>
       </div>
     </header>
   );
 };
 
 const AppContent: React.FC = () => {
-  const { state } = useGame();
-  const [activeSection, setActiveSection] = useState<AppSection>('dungeon');
+  const hasParty = useGameStore((state) => state.party.length > 0);
+  const activeSection = useGameStore((state) => state.activeSection);
+  const setActiveSection = useGameStore((state) => state.setActiveSection);
 
-  if (state.party.length === 0) {
+  if (!hasParty) {
     return <CharacterCreation />;
   }
 

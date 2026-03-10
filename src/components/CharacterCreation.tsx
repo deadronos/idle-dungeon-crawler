@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { useGame } from '../game/gameState';
 import type { EntityClass } from '../game/entity';
 import { createStarterParty } from '../game/entity';
+import { useGameStore } from '../game/store/gameStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 
 export const CharacterCreation: React.FC = () => {
-    const { actions } = useGame();
+    const initializeParty = useGameStore((state) => state.initializeParty);
     const [name, setName] = useState("Hero");
     const [selectedClass, setSelectedClass] = useState<EntityClass>("Warrior");
 
     const handleCreate = () => {
         const party = createStarterParty(name.trim() || "Hero", selectedClass as Exclude<EntityClass, "Monster">);
-        actions.initializeParty(party);
+        initializeParty(party);
     };
 
     return (

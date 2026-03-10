@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>16/16</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>6/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>11/11</span>
             </div>
         
             
@@ -134,7 +134,13 @@
 <a name='L69'></a><a href='#L69'>69</a>
 <a name='L70'></a><a href='#L70'>70</a>
 <a name='L71'></a><a href='#L71'>71</a>
-<a name='L72'></a><a href='#L72'>72</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -142,7 +148,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">15x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
@@ -206,20 +216,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import React from "react";
-import { useGame } from "../game/gameState";
+import { useGameStore } from "../game/store/gameStore";
 import { formatNumber } from "../utils/format";
+import { getFortificationUpgradeCost, getTrainingUpgradeCost } from "../game/upgrades";
 import { Shield, Sword } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 &nbsp;
 export const UpgradesPanel: React.FC = () =&gt; {
-    const { state, actions } = useGame();
+    const gold = useGameStore((state) =&gt; state.gold);
+    const trainingLevel = useGameStore((state) =&gt; state.metaUpgrades.training);
+    const fortificationLevel = useGameStore((state) =&gt; state.metaUpgrades.fortification);
+    const buyTrainingUpgrade = useGameStore((state) =&gt; state.buyTrainingUpgrade);
+    const buyFortificationUpgrade = useGameStore((state) =&gt; state.buyFortificationUpgrade);
 &nbsp;
-    const trainingCost = actions.getTrainingUpgradeCost();
-    const fortificationCost = actions.getFortificationUpgradeCost();
+    const trainingCost = getTrainingUpgradeCost(trainingLevel);
+    const fortificationCost = getFortificationUpgradeCost(fortificationLevel);
 &nbsp;
-    const canBuyTraining = state.gold.gte(trainingCost);
-    const canBuyFortification = state.gold.gte(fortificationCost);
+    const canBuyTraining = gold.gte(trainingCost);
+    const canBuyFortification = gold.gte(fortificationCost);
 &nbsp;
     return (
         &lt;Card className="w-full max-w-[600px] bg-slate-900/80 backdrop-blur-md border-slate-700/50 shadow-xl mt-4 shrink-0"&gt;
@@ -241,11 +256,11 @@ export const UpgradesPanel: React.FC = () =&gt; {
                             &lt;/div&gt;
                             &lt;p className="text-xs text-slate-400 mt-1"&gt;Increase all hero damage by 10% per level.&lt;/p&gt;
                         &lt;/div&gt;
-                        &lt;span className="text-xs font-black uppercase tracking-wider text-amber-400"&gt;Lv {state.metaUpgrades.training}&lt;/span&gt;
+                        &lt;span className="text-xs font-black uppercase tracking-wider text-amber-400"&gt;Lv {trainingLevel}&lt;/span&gt;
                     &lt;/div&gt;
                     &lt;Button
                         disabled={!canBuyTraining}
-                        onClick={actions.buyTrainingUpgrade}
+                        onClick={buyTrainingUpgrade}
                         className="w-full font-bold uppercase tracking-wider"
                     &gt;
                         Upgrade ({formatNumber(trainingCost)} Gold)
@@ -261,11 +276,11 @@ export const UpgradesPanel: React.FC = () =&gt; {
                             &lt;/div&gt;
                             &lt;p className="text-xs text-slate-400 mt-1"&gt;Increase all hero armor by 10% per level.&lt;/p&gt;
                         &lt;/div&gt;
-                        &lt;span className="text-xs font-black uppercase tracking-wider text-sky-300"&gt;Lv {state.metaUpgrades.fortification}&lt;/span&gt;
+                        &lt;span className="text-xs font-black uppercase tracking-wider text-sky-300"&gt;Lv {fortificationLevel}&lt;/span&gt;
                     &lt;/div&gt;
                     &lt;Button
                         disabled={!canBuyFortification}
-                        onClick={actions.buyFortificationUpgrade}
+                        onClick={buyFortificationUpgrade}
                         variant="secondary"
                         className="w-full font-bold uppercase tracking-wider"
                     &gt;
@@ -283,7 +298,7 @@ export const UpgradesPanel: React.FC = () =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-10T16:49:09.861Z
+                at 2026-03-10T17:06:26.278Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
