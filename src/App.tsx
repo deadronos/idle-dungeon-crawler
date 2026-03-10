@@ -8,15 +8,15 @@ const AppHeader: React.FC = () => {
   const { state } = useGame();
 
   return (
-    <div className="header">
-      <div className="gold-display">
+    <header className="h-auto min-h-[90px] flex items-center justify-between px-6 lg:px-12 py-4 bg-gradient-to-br from-slate-900 to-slate-800 border-b border-slate-700/50 shadow-lg z-10 backdrop-blur-md flex-wrap gap-4">
+      <div className="flex items-center gap-3 text-2xl lg:text-3xl font-extrabold text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">
         {formatNumber(state.gold)} Gold
       </div>
-      <div className="dps-display">
-        <span className="dps-label">Floor</span>
-        <span className="dps-value">{state.floor}</span>
+      <div className="flex flex-col items-end">
+        <span className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Floor</span>
+        <span className="text-xl font-bold text-slate-50">{state.floor}</span>
       </div>
-    </div>
+    </header>
   );
 };
 
@@ -28,9 +28,9 @@ const AppContent: React.FC = () => {
   }
 
   return (
-    <div className="app-container">
+    <div className="flex flex-col h-screen w-screen bg-slate-950 font-sans text-slate-50 overflow-hidden">
       <AppHeader />
-      <div className="main-content">
+      <div className="flex flex-1 overflow-hidden">
         <MainGameView />
       </div>
     </div>

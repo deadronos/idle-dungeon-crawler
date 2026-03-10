@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { useGame } from '../game/gameState';
 import type { EntityClass } from '../game/entity';
 import { createHero } from '../game/entity';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 export const CharacterCreation: React.FC = () => {
     const { actions } = useGame();
@@ -14,51 +18,68 @@ export const CharacterCreation: React.FC = () => {
     };
 
     return (
-        <div className="character-creation-overlay">
-            <div className="creation-modal">
-                <h2>Create Your First Hero</h2>
+        <div className="flex items-center justify-center w-screen h-screen bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] px-4">
+            <Card className="w-full max-w-2xl bg-slate-900/90 backdrop-blur-xl border-slate-700 shadow-2xl">
+                <CardHeader className="text-center pb-2">
+                    <CardTitle className="text-3xl font-black tracking-tight text-white uppercase">Create Your First Hero</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-6 pt-4">
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="hero-name" className="uppercase font-bold text-slate-400 text-sm tracking-wider">Hero Name</Label>
+                        <Input
+                            id="hero-name"
+                            className="bg-slate-950/50 border-slate-700 text-white text-lg h-12"
+                            value={name}
+                            onChange={e => setName(e.target.value)}
+                            maxLength={16}
+                        />
+                    </div>
 
-                <div className="input-group">
-                    <label>Hero Name</label>
-                    <input
-                        type="text"
-                        value={name}
-                        onChange={e => setName(e.target.value)}
-                        maxLength={16}
-                    />
-                </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <Button
+                            variant="outline"
+                            className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Warrior' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
+                            onClick={() => setSelectedClass('Warrior')}
+                        >
+                            <img src="/assets/hero_warrior.png" alt="Warrior" className="w-20 h-20 object-contain drop-shadow-md" />
+                            <div className="text-center">
+                                <h3 className="font-bold text-slate-50 text-lg mb-1">Warrior</h3>
+                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High HP, uses Rage for big physical damage.</p>
+                            </div>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Cleric' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
+                            onClick={() => setSelectedClass('Cleric')}
+                        >
+                            <img src="/assets/hero_cleric.png" alt="Cleric" className="w-20 h-20 object-contain drop-shadow-md" />
+                            <div className="text-center">
+                                <h3 className="font-bold text-slate-50 text-lg mb-1">Cleric</h3>
+                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High Wisdom, heals the party with Mana.</p>
+                            </div>
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Archer' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
+                            onClick={() => setSelectedClass('Archer')}
+                        >
+                            <img src="/assets/hero_archer.png" alt="Archer" className="w-20 h-20 object-contain drop-shadow-md" />
+                            <div className="text-center">
+                                <h3 className="font-bold text-slate-50 text-lg mb-1">Archer</h3>
+                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High Dexterity, uses Cunning for massive crits.</p>
+                            </div>
+                        </Button>
+                    </div>
 
-                <div className="class-selection">
-                    <button
-                        className={`class-btn ${selectedClass === 'Warrior' ? 'active' : ''}`}
-                        onClick={() => setSelectedClass('Warrior')}
+                    <Button
+                        size="lg"
+                        onClick={handleCreate}
+                        className="w-full text-lg h-14 mt-4 font-bold tracking-widest uppercase bg-amber-500 hover:bg-amber-400 text-amber-950 shadow-[0_0_15px_rgba(245,158,11,0.5)]"
                     >
-                        <img src="/assets/hero_warrior.png" alt="Warrior" className="class-preview-img" />
-                        <h3>Warrior</h3>
-                        <p>High HP, uses Rage for big physical damage.</p>
-                    </button>
-                    <button
-                        className={`class-btn ${selectedClass === 'Cleric' ? 'active' : ''}`}
-                        onClick={() => setSelectedClass('Cleric')}
-                    >
-                        <img src="/assets/hero_cleric.png" alt="Cleric" className="class-preview-img" />
-                        <h3>Cleric</h3>
-                        <p>High Wisdom, heals the party with Mana.</p>
-                    </button>
-                    <button
-                        className={`class-btn ${selectedClass === 'Archer' ? 'active' : ''}`}
-                        onClick={() => setSelectedClass('Archer')}
-                    >
-                        <img src="/assets/hero_archer.png" alt="Archer" className="class-preview-img" />
-                        <h3>Archer</h3>
-                        <p>High Dexterity, uses Cunning for massive crits.</p>
-                    </button>
-                </div>
-
-                <button className="start-journey-btn buy-button" onClick={handleCreate}>
-                    Start Journey
-                </button>
-            </div>
+                        Start Journey
+                    </Button>
+                </CardContent>
+            </Card>
         </div>
     );
 };
