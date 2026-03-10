@@ -29,7 +29,24 @@ describe("UpgradesPanel", () => {
         expect(screen.getByRole("button", { name: /upgrade \(40 gold\)/i })).toBeInTheDocument();
     });
 
-    it("unlocks a party slot and recruits a new adventurer when requirements are met", async () => {
+    it("keeps the first party slot locked until floor 3 has been cleared", () => {
+        render(
+            <GameProvider
+                initialState={{
+                    gold: new Decimal(100),
+                    party: createStarterParty("Ayla", "Warrior"),
+                    highestFloorCleared: 2,
+                }}
+            >
+                <UpgradesPanel />
+            </GameProvider>,
+        );
+
+        expect(screen.getByText(/requires floor 3 cleared/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /unlock slot \(60 gold\)/i })).toBeDisabled();
+    });
+
+    it("unlocks a party slot and recruits a new adventurer as soon as floor 3 is cleared", async () => {
         const user = userEvent.setup();
 
         render(
@@ -37,7 +54,7 @@ describe("UpgradesPanel", () => {
                 initialState={{
                     gold: new Decimal(100),
                     party: createStarterParty("Ayla", "Warrior"),
-                    highestFloorCleared: 5,
+                    highestFloorCleared: 3,
                 }}
             >
                 <UpgradesPanel />
