@@ -68,18 +68,20 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight }) =
                             </div>
 
                             {/* Experience and Stats */}
-                            {!entity.isEnemy && (
-                                <div className="mt-3 pt-2 border-t border-slate-700/50">
+                            <div className="mt-3 pt-2 border-t border-slate-700/50">
+                                {!entity.isEnemy && (
                                     <div className="h-1 w-full bg-slate-900 rounded overflow-hidden mb-2">
                                         <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, entity.exp.dividedBy(entity.expToNext).times(100).toNumber())}%` }} />
                                     </div>
-                                    <div className={`flex justify-between text-[10px] text-slate-400 font-mono ${alignRight ? 'flex-row-reverse' : ''}`}>
-                                        <span>STR:{entity.attributes.str}</span>
-                                        <span>DEX:{entity.attributes.dex}</span>
-                                        <span>INT:{entity.attributes.int}</span>
-                                    </div>
+                                )}
+                                <div className="grid grid-cols-3 gap-x-2 gap-y-1 text-[10px] text-slate-400 font-mono text-center">
+                                    <span>VIT:{entity.attributes.vit}</span>
+                                    <span>STR:{entity.attributes.str}</span>
+                                    <span>DEX:{entity.attributes.dex}</span>
+                                    <span>INT:{entity.attributes.int}</span>
+                                    <span>WIS:{entity.attributes.wis}</span>
                                 </div>
-                            )}
+                            </div>
                         </div>
                     </Card>
                 ))}

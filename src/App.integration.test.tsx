@@ -20,5 +20,10 @@ describe("App integration", () => {
         expect(screen.getByText("Kestrel")).toBeInTheDocument();
         expect(screen.getByText(/sanctum upgrades/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /auto-progress: on/i })).toBeInTheDocument();
+        expect(screen.getAllByText(/VIT:/i)).toHaveLength(4);
+        expect(screen.getAllByText(/STR:/i)).toHaveLength(4);
+        expect(screen.getAllByText(/DEX:/i)).toHaveLength(4);
+        expect(screen.getAllByText(/INT:/i)).toHaveLength(4);
+        expect(screen.getAllByText(/WIS:/i)).toHaveLength(4);
     });
 });
