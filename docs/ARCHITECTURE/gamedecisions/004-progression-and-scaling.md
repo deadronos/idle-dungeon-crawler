@@ -16,7 +16,7 @@ We established formal scaling mechanisms for both the player party's growth and 
 When an enemy is defeated, Experience Points (EXP) and Gold are granted to all living party members. Dead party members receive zero.
 
 * **EXP Reward per enemy:** `(Floor * 10) + Enemy VIT`
-* **Gold Reward per enemy:** `Floor * 2`
+* **Gold Reward per enemy:** `(Floor * 2) + 5`
 
 **Level Requirement Formula:**
 The EXP required to reach the next level grows exponentially:
@@ -35,7 +35,7 @@ Gold can be invested into persistent party-wide upgrades before a wipe occurs. T
 * **Battle Drills:** Increases all hero damage by `10%` per level.
 * **Fortification:** Increases all hero armor by `10%` per level.
 * **Party Slot Expansion:** Active party capacity starts at `1` and can be permanently increased to `5` by clearing milestone floors and then purchasing the next slot in the shop.
-  * Capacity `2`: clear Floor `5`, then pay `60` Gold
+  * Capacity `2`: clear Floor `3`, then pay `60` Gold
   * Capacity `3`: clear Floor `10`, then pay `180` Gold
   * Capacity `4`: clear Floor `20`, then pay `500` Gold
   * Capacity `5`: clear Floor `35`, then pay `1200` Gold

@@ -45,7 +45,7 @@ Currently, action resolution uses a lightweight class-aware ruleset:
 
 > *Note:* elemental resistances are calculated and capped at 75% but are still not applied to basic attacks; this reminder persists for future enhancements.
 
-5. **Mitigation:** The final incoming damage is reduced by subtracting the target's `Armor` value (minimum 1 damage).
+5. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, damage is reduced by subtracting the target's `Armor` value. If the element is magical (e.g. `light`, `fire`), damage is reduced by a percentage equal to the target's corresponding elemental resistance (minimum 1 damage).
 6. **Resource Triggers:** If a Warrior gives or receives a hit, they generate Rage.
 
 ### Combat Readability

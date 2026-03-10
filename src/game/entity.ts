@@ -79,8 +79,8 @@ const HERO_NAME_POOLS: Record<HeroClass, string[]> = {
 // Global Stat Multipliers
 export const STAT_MULTS = {
     HP_PER_VIT: 10,
-    ARMOR_PER_STR: 2,
-    ARMOR_PER_VIT: 1,
+    ARMOR_PER_STR: 1,
+    ARMOR_PER_VIT: 0.5,
     PHYS_DMG_PER_STR: 1.5, // For melee
     RANGED_DMG_PER_DEX: 1.5, // For archers
     MAGIC_DMG_PER_INT: 2,

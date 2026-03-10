@@ -30,7 +30,7 @@ Monsters use a simple base of 5 in each attribute, which is then scaled by floor
 When a unit is created or levels up, their total attributes are summed and used to calculate derived stats:
 
 *   **Max Health (HP):** `50 + (VIT * 10)`
-*   **Armor (Physical Defense):** `(STR * 2) + (VIT * 1)`
+*   **Armor (Physical Defense):** `(STR * 1) + (VIT * 0.5)`
 *   **Physical Damage (Melee):** `10 + (STR * 1.5)`
 *   **Ranged Damage (Archers):** `10 + (DEX * 1.5)`
 *   **Magic Damage:** `5 + (INT * 2.0)`
