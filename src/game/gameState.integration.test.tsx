@@ -1,8 +1,10 @@
 import Decimal from "decimal.js";
+import React from "react";
 import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createEnemy, createRecruitHero, createStarterParty } from "./entity";
+import { GAME_STATE_STORAGE_KEY, deserializeGameState } from "./store/persistence";
 import { GameProvider, useGame } from "./gameState";
 
 const CombatProbe = () => {
@@ -22,15 +24,32 @@ const CombatProbe = () => {
     );
 };
 
+const AutoSaveProbe = () => {
+    const { state, actions } = useGame();
+
+    React.useEffect(() => {
+        if (state.party.length > 0) {
+            return;
+        }
+
+        actions.initializeParty(createStarterParty("Ayla", "Warrior"));
+        actions.toggleAutoFight();
+    }, [actions, state.party.length]);
+
+    return <div data-testid="autosave-party-size">{state.party.length}</div>;
+};
+
 describe("GameProvider integration", () => {
     beforeEach(() => {
         vi.useFakeTimers();
+        window.localStorage.clear();
     });
 
     afterEach(() => {
         cleanup();
         vi.useRealTimers();
         vi.restoreAllMocks();
+        window.localStorage.clear();
     });
 
     it("lets clerics heal injured allies during the ATB loop", () => {
@@ -121,5 +140,26 @@ describe("GameProvider integration", () => {
         expect(screen.getByTestId("floor").textContent).toBe("4");
         expect(screen.getByTestId("enemy-count").textContent).toBe("1");
         expect(screen.getByText(/repeating floor 4/i)).toBeInTheDocument();
+    });
+
+    it("autosaves the current run to local storage", () => {
+        render(
+            <GameProvider>
+                <AutoSaveProbe />
+            </GameProvider>,
+        );
+
+        act(() => {
+            vi.advanceTimersByTime(10_000);
+        });
+
+        const savedState = window.localStorage.getItem(GAME_STATE_STORAGE_KEY);
+
+        expect(screen.getByTestId("autosave-party-size").textContent).toBe("1");
+        expect(savedState).toBeTruthy();
+        expect(deserializeGameState(savedState ?? "")).toMatchObject({
+            autoFight: false,
+            floor: 1,
+        });
     });
 });

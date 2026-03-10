@@ -5,6 +5,7 @@ import { createStore } from "zustand/vanilla";
 
 import { GAME_TICK_MS, createInitialGameState } from "../engine/simulation";
 import { createHotSimulationSlice, selectHotSimulationState } from "./hotSimulationSlice";
+import { GAME_STATE_AUTOSAVE_MS, getGameStateSnapshot, loadGameStateFromStorage, saveGameStateToStorage } from "./persistence";
 import { createProgressionSlice, selectProgressionState } from "./progressionSlice";
 import type { GameActions, GameState, GameStore } from "./types";
 import { createUiSlice, selectUiState } from "./uiSlice";
@@ -25,7 +26,17 @@ export const createGameStore = (initialState?: Partial<GameState>) => {
 };
 
 export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partial<GameState> }> = ({ children, initialState }) => {
-    const [store] = useState(() => createGameStore(initialState));
+    const [store] = useState(() => {
+        if (initialState) {
+            return createGameStore(initialState);
+        }
+
+        if (typeof window === "undefined") {
+            return createGameStore();
+        }
+
+        return createGameStore(loadGameStateFromStorage(window.localStorage) ?? undefined);
+    });
     const previousInitialStateRef = useRef(initialState);
 
     useEffect(() => {
@@ -43,10 +54,22 @@ export const GameProvider: React.FC<{ children: ReactNode; initialState?: Partia
         return () => clearInterval(intervalId);
     }, [store]);
 
+    useEffect(() => {
+        if (initialState || typeof window === "undefined") {
+            return;
+        }
+
+        const intervalId = setInterval(() => {
+            saveGameStateToStorage(window.localStorage, getGameStateSnapshot(store.getState()));
+        }, GAME_STATE_AUTOSAVE_MS);
+
+        return () => clearInterval(intervalId);
+    }, [initialState, store]);
+
     return <GameStoreContext.Provider value={store}>{children}</GameStoreContext.Provider>;
 };
 
-const useGameStoreApi = () => {
+export const useGameStoreApi = () => {
     const store = useContext(GameStoreContext);
     if (!store) {
         throw new Error("useGame must be used within a GameProvider");

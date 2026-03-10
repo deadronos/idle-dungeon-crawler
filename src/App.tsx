@@ -4,6 +4,7 @@ import { GameProvider } from './game/gameState';
 import { useGameStore } from './game/store/gameStore';
 import { MainGameView } from './components/MainGameView';
 import { CharacterCreation } from './components/CharacterCreation';
+import { SaveControls } from './components/SaveControls';
 import { ShopView } from './components/ShopView';
 import { Button } from './components/ui/button';
 import { formatNumber } from './utils/format';
@@ -21,6 +22,7 @@ const AppHeader: React.FC = () => {
         <span className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Floor</span>
         <span className="text-xl font-bold text-slate-50">{floor}</span>
       </div>
+      <SaveControls />
     </header>
   );
 };
@@ -31,7 +33,14 @@ const AppContent: React.FC = () => {
   const setActiveSection = useGameStore((state) => state.setActiveSection);
 
   if (!hasParty) {
-    return <CharacterCreation />;
+    return (
+      <div className="relative">
+        <div className="absolute right-4 top-4 z-10">
+          <SaveControls />
+        </div>
+        <CharacterCreation />
+      </div>
+    );
   }
 
   return (
