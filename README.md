@@ -14,6 +14,7 @@ A browser-based incremental RPG where you manage a party of heroes fighting thro
 - Selector-based `zustand` game store with compatibility provider support
 - Separate toggles for Autofight and Autoadvance to enable strategic farming
 - Persistent gold-upgrades via an in-game shop
+- Local autosaves plus JSON export/import for sharing or backing up runs
 - Live combat log and per-unit skill banners
 - Tailwind CSS + shadcn/Base UI styling
 - Full testing suite with Vitest + Testing Library

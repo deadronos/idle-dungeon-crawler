@@ -1,10 +1,24 @@
+import Decimal from "decimal.js";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import App from "./App";
+import { createStarterParty, createEnemy } from "./game/entity";
+import { createInitialGameState } from "./game/engine/simulation";
+import { serializeGameState } from "./game/store/persistence";
 
 describe("App integration", () => {
+    beforeEach(() => {
+        window.localStorage.clear();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+        window.localStorage.clear();
+    });
+
     it("creates a solo starter party and exposes party expansion in the shop", async () => {
         const user = userEvent.setup();
 
@@ -42,5 +56,47 @@ describe("App integration", () => {
         expect(screen.getByRole("button", { name: /dungeon/i })).toBeInTheDocument();
 
         unmount();
+    });
+
+    it("imports a saved run before creating a new party", async () => {
+        const user = userEvent.setup();
+        const importedState = createInitialGameState({
+            party: createStarterParty("Selene", "Cleric"),
+            enemies: [createEnemy(4, "enemy_4")],
+            gold: new Decimal(77),
+            floor: 4,
+            activeSection: "shop",
+            combatLog: ["Imported save"],
+        });
+        const saveFile = new File([serializeGameState(importedState)], "save.json", { type: "application/json" });
+
+        render(<App />);
+
+        await user.upload(screen.getByLabelText(/import save file/i), saveFile);
+
+        expect(screen.getByText("77 Gold")).toBeInTheDocument();
+        expect(screen.getByText(/sanctum upgrades/i)).toBeInTheDocument();
+        expect(screen.getByText(/party expansion/i)).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /start journey/i })).not.toBeInTheDocument();
+    });
+
+    it("exports the current run from the save controls", async () => {
+        const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:save-file");
+        const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => undefined);
+        const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
+        const user = userEvent.setup();
+
+        render(<App />);
+
+        await user.clear(screen.getByLabelText(/hero name/i));
+        await user.type(screen.getByLabelText(/hero name/i), "Ayla");
+        await user.click(screen.getByRole("button", { name: /warrior/i }));
+        await user.click(screen.getByRole("button", { name: /start journey/i }));
+        await user.click(screen.getByRole("button", { name: /export save/i }));
+
+        expect(anchorClick).toHaveBeenCalled();
+        expect(createObjectURL).toHaveBeenCalledOnce();
+        expect(revokeObjectURL).toHaveBeenCalledOnce();
+        expect(screen.getByRole("status")).toHaveTextContent(/save exported/i);
     });
 });

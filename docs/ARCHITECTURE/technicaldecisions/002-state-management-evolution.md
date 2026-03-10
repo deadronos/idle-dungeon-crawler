@@ -97,8 +97,10 @@ The migration landed with a compatibility path:
 * `GameProvider` still exists so the app root and existing tests can mount an isolated game instance per render.
 * `useGame` is retained as a compatibility hook for legacy callers.
 * New and migrated UI components subscribe through `useGameStore(selector)` so unrelated panels do not rerender on every ATB tick.
+* Browser-only persistence now hangs off the provider lifecycle: when no explicit `initialState` is supplied, the provider restores the latest autosave from `localStorage` and writes a fresh JSON save every 10 seconds.
 
 The first concrete UI slice stores section navigation (`dungeon` vs `shop`) separately from combat state, which keeps presentational concerns out of the simulation loop.
+Save management stays outside the hot combat loop as well: export/import controls serialize the current playable `GameState` to a JSON file and feed imported saves back through `reset(...)`, so the store remains the single source of truth after deserialization.
 
 ## Consequences
 
