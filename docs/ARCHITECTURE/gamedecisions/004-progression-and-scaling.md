@@ -49,7 +49,7 @@ These upgrades persist through wipes, but unspent Gold is still lost on party de
 
 ### Enemy Scaling
 
-Dungeon generation spawns between `1` and the current active party size in enemies per floor, capped at `5` total enemies. The floor still acts as the pacing gate, with encounter size increasing gradually as floors rise.
+Dungeon generation scales enemy counts independently from player party size. On standard floors, encounters spawn `ceil(Floor / 5)` enemies, capped at `5` total enemies, so the dungeon still ramps upward in discrete bands as the player climbs. Unlocking or recruiting additional party members does not increase enemy count by itself.
 Instead of tracking separate enemy classes, standard monsters scale their internal attributes directly based on the floor number (represented as `level` internally during generation):
 
 * `VIT: 5 + (Level * 2)`
@@ -57,7 +57,7 @@ Instead of tracking separate enemy classes, standard monsters scale their intern
 * `INT & WIS: 2 + Level`
 
 **Boss Encounters:**
-Every 10th floor is flagged as a Boss floor. The generated enemy on this floor has their final calculated VIT multiplied by `3` and their STR multiplied by `2`, forming massive spikes in required damage and durability to overcome.
+Every 10th floor is flagged as a Boss floor. Boss floors spawn exactly **one** enemy regardless of player party size, and that generated boss has their final calculated VIT multiplied by `3` and their STR multiplied by `2`, forming a focused spike in required damage and durability to overcome.
 
 ### Party Wipe & Hard Reset
 
