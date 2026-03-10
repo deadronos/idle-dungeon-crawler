@@ -41,7 +41,7 @@ export const CharacterCreation: React.FC = () => {
                             className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Warrior' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
                             onClick={() => setSelectedClass('Warrior')}
                         >
-                            <img src="/assets/hero_warrior.png" alt="Warrior" className="w-20 h-20 object-contain drop-shadow-md" />
+                            <img src={`${import.meta.env.BASE_URL}assets/hero_warrior.png`} alt="Warrior" className="w-20 h-20 object-contain drop-shadow-md" />
                             <div className="text-center">
                                 <h3 className="font-bold text-slate-50 text-lg mb-1">Warrior</h3>
                                 <p className="text-slate-400 text-xs whitespace-normal lead-tight">High HP, builds Rage into crushing weapon skills.</p>
@@ -52,7 +52,7 @@ export const CharacterCreation: React.FC = () => {
                             className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Cleric' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
                             onClick={() => setSelectedClass('Cleric')}
                         >
-                            <img src="/assets/hero_cleric.png" alt="Cleric" className="w-20 h-20 object-contain drop-shadow-md" />
+                            <img src={`${import.meta.env.BASE_URL}assets/hero_cleric.png`} alt="Cleric" className="w-20 h-20 object-contain drop-shadow-md" />
                             <div className="text-center">
                                 <h3 className="font-bold text-slate-50 text-lg mb-1">Cleric</h3>
                                 <p className="text-slate-400 text-xs whitespace-normal lead-tight">Uses Mana to smite enemies and heal injured allies.</p>
@@ -63,7 +63,7 @@ export const CharacterCreation: React.FC = () => {
                             className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Archer' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
                             onClick={() => setSelectedClass('Archer')}
                         >
-                            <img src="/assets/hero_archer.png" alt="Archer" className="w-20 h-20 object-contain drop-shadow-md" />
+                            <img src={`${import.meta.env.BASE_URL}assets/hero_archer.png`} alt="Archer" className="w-20 h-20 object-contain drop-shadow-md" />
                             <div className="text-center">
                                 <h3 className="font-bold text-slate-50 text-lg mb-1">Archer</h3>
                                 <p className="text-slate-400 text-xs whitespace-normal lead-tight">Uses Cunning for precision shots and lethal crits.</p>

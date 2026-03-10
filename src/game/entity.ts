@@ -181,7 +181,7 @@ export const createHero = (
     let hero: Entity = {
         id, name, class: entityClass,
         isEnemy: false,
-        image: `/assets/hero_${entityClass.toLowerCase()}.png`, // placeholder
+        image: `${import.meta.env.BASE_URL}assets/hero_${entityClass.toLowerCase()}.png`, // placeholder
         level: 1,
         exp: new Decimal(0),
         expToNext: getExpRequirement(1),
@@ -230,7 +230,7 @@ export const createEnemy = (level: number, id: string): Entity => {
     let enemy: Entity = {
         id, name: `${names[idx]} Lv${level}`, class: "Monster",
         isEnemy: true,
-        image: images[idx],
+        image: `${import.meta.env.BASE_URL}${images[idx]}`,
         level,
         exp: new Decimal(0), expToNext: new Decimal(0), // Enemies don't level up
         attributes: {
