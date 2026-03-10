@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  base: '/idle-dungeon-crawler/', // required for GitHub Pages hosting under a project path
   plugins: [
     react(),
     tailwindcss(),

@@ -2,6 +2,19 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## GitHub Pages Deployment
+
+To deploy the built site under `https://deadronos.github.io/idle-dungeon-crawler/`, the `base` configuration in `vite.config.ts` is set to `/idle-dungeon-crawler/`. A GitHub Actions workflow in `.github/workflows/deploy.yml` will build and push the `dist` directory to the `gh-pages` branch whenever a tag matching `v*` is pushed.  
+
+Release by tagging a commit, for example:
+
+```sh
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+The action runs and the site is available shortly after.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
