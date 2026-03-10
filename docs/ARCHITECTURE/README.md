@@ -9,22 +9,16 @@ We use a format inspired by Architecture Decision Records (ADRs) to document sig
 - `/gamedecisions/` - Documents decisions related to gameplay, mechanics, balance, and game design.
 - `/technicaldecisions/` - Documents decisions related to the technology stack, architecture, patterns, and libraries used.
 
+## Current Records
+
+### Game Decisions
+- [001 - Player Classes and Party System](gamedecisions/001-player-classes.md)
+- [002 - Attributes and Derived Stats](gamedecisions/002-attributes-and-stats.md)
+- [003 - Combat Loop and ATB Mechanics](gamedecisions/003-combat-and-atb.md)
+- [004 - Progression, Leveling, and Scaling](gamedecisions/004-progression-and-scaling.md)
+
+### Technical Decisions
+- [001 - Web Stack](technicaldecisions/001-web-stack.md)
+
 ## Decision Record Format
-
-Each decision record should use the following Markdown template:
-
-```markdown
-# [Record Number] - [Title]
-
-**Date:** [YYYY-MM-DD]
-**Status:** [Proposed | Accepted | Deprecated | Superseded]
-
-## Context
-What is the problem or situation that requires a decision? What are the constraints and assumptions?
-
-## Decision
-What is the change that we are making?
-
-## Consequences
-What becomes easier or more difficult to do because of this change? What are the trade-offs?
-```
+... (rest of the template)
