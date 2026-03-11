@@ -97,6 +97,8 @@ export const useGame = () => {
         maxPartySize: useGameStore((store) => store.maxPartySize),
         highestFloorCleared: useGameStore((store) => store.highestFloorCleared),
         activeSection: useGameStore((store) => store.activeSection),
+        heroSouls: useGameStore((store) => store.heroSouls),
+        prestigeUpgrades: useGameStore((store) => store.prestigeUpgrades),
     };
 
     const actions: GameActions = {
@@ -118,6 +120,9 @@ export const useGame = () => {
         unlockPartySlot: useGameStore((store) => store.unlockPartySlot),
         getRecruitCost: useGameStore((store) => store.getRecruitCost),
         recruitHero: useGameStore((store) => store.recruitHero),
+        retireHero: useGameStore((store) => store.retireHero),
+        getPrestigeUpgradeCost: useGameStore((store) => store.getPrestigeUpgradeCost),
+        buyPrestigeUpgrade: useGameStore((store) => store.buyPrestigeUpgrade),
         reset: useGameStore((store) => store.reset),
     };
 

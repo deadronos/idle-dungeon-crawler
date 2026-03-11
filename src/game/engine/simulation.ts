@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 
 import { BASE_META_UPGRADES, createEnemy, getExpRequirement, recalculateEntity } from "../entity";
-import type { Entity, MetaUpgrades } from "../entity";
+import type { Entity, MetaUpgrades, PrestigeUpgrades } from "../entity";
 import { MAX_PARTY_SIZE } from "../partyProgression";
 import type { GameState } from "../store/types";
 
@@ -51,8 +51,8 @@ export const cloneEntity = (entity: Entity): Entity => ({
     activeSkillTicks: entity.activeSkillTicks,
 });
 
-export const recalculateParty = (party: Entity[], upgrades: MetaUpgrades): Entity[] => {
-    return party.map((hero) => recalculateEntity(cloneEntity(hero), upgrades));
+export const recalculateParty = (party: Entity[], upgrades: MetaUpgrades, prestigeUpgrades?: PrestigeUpgrades): Entity[] => {
+    return party.map((hero) => recalculateEntity(cloneEntity(hero), upgrades, prestigeUpgrades));
 };
 
 export const prependCombatMessages = (combatLog: string[], ...messages: string[]) => {
@@ -72,10 +72,16 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
     maxPartySize: overrides?.maxPartySize ?? MAX_PARTY_SIZE,
     highestFloorCleared: overrides?.highestFloorCleared ?? 0,
     activeSection: overrides?.activeSection ?? "dungeon",
+    heroSouls: new Decimal(overrides?.heroSouls ?? 0),
+    prestigeUpgrades: {
+        costReducer: overrides?.prestigeUpgrades?.costReducer ?? 0,
+        hpMultiplier: overrides?.prestigeUpgrades?.hpMultiplier ?? 0,
+        gameSpeed: overrides?.prestigeUpgrades?.gameSpeed ?? 0,
+    },
 });
 
 export const getInitializedPartyState = (state: GameState, party: Entity[]): Partial<GameState> => ({
-    party: recalculateParty(party, state.metaUpgrades),
+    party: recalculateParty(party, state.metaUpgrades, state.prestigeUpgrades),
     enemies: createEncounter(1),
     combatLog: [`${party[0]?.name ?? "The party"} leads the party into the dungeon...`],
     activeSection: "dungeon",
@@ -94,7 +100,7 @@ export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
 
 export const getPartyWipeState = (state: GameState): Partial<GameState> => {
     const healedParty = state.party.map((hero) => {
-        const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades);
+        const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades, state.prestigeUpgrades);
         refreshed.currentHp = refreshed.maxHp;
         refreshed.currentResource = hero.class === "Warrior" ? new Decimal(0) : refreshed.maxResource;
         return refreshed;
@@ -165,7 +171,8 @@ export const simulateTick = (state: GameState): SimulationResult => {
             return;
         }
 
-        entity.actionProgress += ATB_RATE + (entity.attributes.dex * 0.1);
+        const hasteBonus = draft.prestigeUpgrades.gameSpeed * 0.1; // +10% speed up per level
+        entity.actionProgress += (ATB_RATE + (entity.attributes.dex * 0.1)) * (1 + hasteBonus);
 
         if (entity.class === "Cleric" || entity.class === "Archer") {
             const regen = entity.class === "Cleric" ? entity.attributes.wis * 0.5 : 2;
@@ -303,7 +310,7 @@ export const simulateTick = (state: GameState): SimulationResult => {
                     nextHero.attributes.dex += Math.random() > 0.5 ? 1 : 0;
                 }
 
-                nextHero = recalculateEntity(nextHero, draft.metaUpgrades);
+                nextHero = recalculateEntity(nextHero, draft.metaUpgrades, draft.prestigeUpgrades);
                 logMessages.push(`${nextHero.name} reached level ${nextHero.level}!`);
             }
 

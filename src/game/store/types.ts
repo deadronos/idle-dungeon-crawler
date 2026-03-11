@@ -16,11 +16,19 @@ export interface HotSimulationSlice {
     combatLog: string[];
 }
 
+export interface PrestigeUpgrades {
+    costReducer: number;
+    hpMultiplier: number;
+    gameSpeed: number;
+}
+
 export interface ProgressionSlice {
     metaUpgrades: MetaUpgrades;
     partyCapacity: number;
     maxPartySize: number;
     highestFloorCleared: number;
+    heroSouls: Decimal;
+    prestigeUpgrades: PrestigeUpgrades;
 }
 
 export interface UiSlice {
@@ -50,6 +58,9 @@ export interface ProgressionActions {
     unlockPartySlot: () => void;
     getRecruitCost: () => Decimal;
     recruitHero: (heroClass: HeroClass) => void;
+    retireHero: (heroId: string) => void;
+    getPrestigeUpgradeCost: (upgradeId: keyof PrestigeUpgrades) => number;
+    buyPrestigeUpgrade: (upgradeId: keyof PrestigeUpgrades) => void;
 }
 
 export interface UiActions {
