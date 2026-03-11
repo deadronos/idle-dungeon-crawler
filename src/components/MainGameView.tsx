@@ -19,11 +19,11 @@ export const MainGameView: React.FC = () => {
     return (
         <div className="flex-2 flex flex-col items-center justify-center relative w-full h-full bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] overflow-hidden">
             <div className="flex w-full h-full p-4 lg:p-8 gap-4 lg:gap-8 justify-between items-stretch flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-y-hidden">
-                {/* Left Side: Party */}
-                <EntityRoster title="The Party" entities={party} />
+                {/* Left Side: Party - prioritized first on mobile */}
+                <EntityRoster title="The Party" entities={party} className="order-first lg:order-none" />
 
                 {/* Center: Action / Floor Info */}
-                <div className="flex-1 lg:flex-2 min-w-[300px] flex flex-col items-center relative order-first lg:order-none">
+                <div className="flex-1 lg:flex-2 min-w-[300px] flex flex-col items-center relative lg:order-none">
                     <div className="flex items-center gap-3 text-2xl lg:text-4xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] shadow-[0_0_20px_rgba(99,102,241,0.5)] bg-slate-900/60 py-2 px-4 lg:py-3 lg:px-6 rounded-2xl border border-white/10 my-4 lg:my-6">
                         <Button
                             variant="nav"
@@ -71,7 +71,7 @@ export const MainGameView: React.FC = () => {
 
                     {/* Show a representative enemy sprite */}
                     {enemies.length > 0 && enemies[0].currentHp.gt(0) && (
-                        <div className="flex justify-center items-center flex-1 w-full p-4 lg:p-8">
+                        <div className="flex justify-center items-center max-h-[180px] lg:flex-1 lg:max-h-none w-full p-4 lg:p-8">
                             <img
                                 src={enemies[0].image}
                                 alt="Enemy"

@@ -21,13 +21,14 @@ interface Props {
     title: string;
     entities: Entity[];
     alignRight?: boolean;
+    className?: string;
 }
 
-export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight }) => {
+export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, className }) => {
     const { actions } = useGame();
 
     return (
-        <Card className={`w-full lg:w-[350px] shrink-0 bg-slate-900/80 backdrop-blur-md border-slate-700/50 shadow-xl flex flex-col h-full overflow-hidden ${alignRight ? 'text-right' : 'text-left'}`}>
+        <Card className={`w-full lg:w-[350px] shrink-0 bg-slate-900/80 backdrop-blur-md border-slate-700/50 shadow-xl flex flex-col h-full overflow-hidden ${alignRight ? 'text-right' : 'text-left'} ${className ?? ''}`}>
             <CardHeader className="pb-3 border-b border-slate-800">
                 <CardTitle className="text-xl font-black uppercase tracking-widest text-slate-200">
                     {title}
