@@ -43,7 +43,7 @@ export const UpgradesPanel: React.FC = () => {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div className="rounded-xl border border-slate-700/60 bg-slate-800/70 p-4 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-slate-100 font-bold">
                                 <Sword size={16} className="text-amber-400" />
@@ -64,7 +64,7 @@ export const UpgradesPanel: React.FC = () => {
                 </div>
 
                 <div className="rounded-xl border border-slate-700/60 bg-slate-800/70 p-4 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-slate-100 font-bold">
                                 <Shield size={16} className="text-sky-400" />
@@ -85,7 +85,7 @@ export const UpgradesPanel: React.FC = () => {
                 </div>
 
                 <div className="rounded-xl border border-slate-700/60 bg-slate-800/70 p-4 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-slate-100 font-bold">
                                 <Users size={16} className="text-emerald-400" />

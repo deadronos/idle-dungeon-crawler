@@ -37,7 +37,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
                 <div className="rounded-xl border border-fuchsia-700/30 bg-slate-900/70 p-4 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-fuchsia-200 font-bold">
                                 <CircleDollarSign size={16} className="text-fuchsia-400" />
@@ -58,7 +58,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                 </div>
 
                 <div className="rounded-xl border border-fuchsia-700/30 bg-slate-900/70 p-4 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-fuchsia-200 font-bold">
                                 <HeartPulse size={16} className="text-red-400" />
@@ -79,7 +79,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                 </div>
 
                 <div className="rounded-xl border border-fuchsia-700/30 bg-slate-900/70 p-4 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-fuchsia-200 font-bold">
                                 <FastForward size={16} className="text-yellow-400" />
@@ -100,7 +100,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                 </div>
 
                 <div className="rounded-xl border border-fuchsia-700/30 bg-slate-900/70 p-4 flex flex-col gap-3">
-                    <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-fuchsia-200 font-bold">
                                 <Brain size={16} className="text-blue-400" />
