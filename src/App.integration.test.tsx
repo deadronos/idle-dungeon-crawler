@@ -19,7 +19,7 @@ describe("App integration", () => {
         window.localStorage.clear();
     });
 
-    it("creates a solo starter party and exposes party expansion in the shop", async () => {
+    it("creates a solo starter party and navigates to the upgrade shop", async () => {
         const user = userEvent.setup();
 
         const { unmount } = render(<App />);
@@ -49,7 +49,7 @@ describe("App integration", () => {
         await user.click(screen.getByRole("button", { name: /upgrade shop/i }));
 
         expect(screen.getByRole("tab", { name: /sanctum upgrades/i })).toBeInTheDocument();
-        expect(screen.getByText(/party expansion/i)).toBeInTheDocument();
+        expect(screen.getByText(/adventure stats/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /unlock slot \(60 gold\)/i })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /recruit warrior/i })).toBeDisabled();
         expect(screen.queryByRole("button", { name: /previous floor/i })).not.toBeInTheDocument();
@@ -76,7 +76,7 @@ describe("App integration", () => {
 
         expect(screen.getByText("77 Gold")).toBeInTheDocument();
         expect(screen.getByRole("tab", { name: /sanctum upgrades/i })).toBeInTheDocument();
-        expect(screen.getByText(/party expansion/i)).toBeInTheDocument();
+        expect(screen.getByText(/adventure stats/i)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /start journey/i })).not.toBeInTheDocument();
     });
 

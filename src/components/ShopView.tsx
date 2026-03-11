@@ -1,18 +1,18 @@
 import React from "react";
-import { Shield, Sword } from "lucide-react";
+import { Coins, Sparkles, TrendingUp, Users } from "lucide-react";
 
 import { useGameStore } from "../game/store/gameStore";
+import { formatNumber } from "../utils/format";
 import { UpgradesPanel } from "./UpgradesPanel";
 import { PrestigeUpgradesPanel } from "./PrestigeUpgradesPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const ShopView: React.FC = () => {
-    const trainingLevel = useGameStore((state) => state.metaUpgrades.training);
-    const fortificationLevel = useGameStore((state) => state.metaUpgrades.fortification);
+    const gold = useGameStore((state) => state.gold);
+    const heroSouls = useGameStore((state) => state.heroSouls);
     const partySize = useGameStore((state) => state.party.length);
     const partyCapacity = useGameStore((state) => state.partyCapacity);
-    const maxPartySize = useGameStore((state) => state.maxPartySize);
     const highestFloorCleared = useGameStore((state) => state.highestFloorCleared);
 
     return (
@@ -21,37 +21,40 @@ export const ShopView: React.FC = () => {
                 <Card className="bg-slate-900/85 backdrop-blur-md border-slate-700/50 shadow-xl">
                     <CardHeader>
                         <CardTitle className="text-slate-100 text-2xl font-black uppercase tracking-[0.2em]">
-                            Upgrade Shop
+                            Adventure Stats
                         </CardTitle>
                         <p className="text-sm text-slate-400">
-                            Spend hard-earned gold on permanent improvements and party growth before your next wipe.
+                            A snapshot of your current run and lifetime progress.
                         </p>
                     </CardHeader>
-                    <CardContent className="space-y-4 text-sm text-slate-300">
-                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/70 p-4">
-                            <div className="flex items-center gap-2 font-bold text-amber-300 mb-2">
-                                <Sword className="size-4" />
-                                Battle Drills
+                    <CardContent className="space-y-3 text-sm text-slate-300">
+                        <div className="rounded-xl border border-fuchsia-700/40 bg-fuchsia-950/30 p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2 font-bold text-fuchsia-300">
+                                <Sparkles className="size-4" />
+                                Hero Souls
                             </div>
-                            <p>Increase all hero damage by 10% per level.</p>
-                            <p className="mt-2 text-xs uppercase tracking-wider text-slate-400">Current Level: {trainingLevel}</p>
+                            <span className="text-lg font-black text-fuchsia-200">{formatNumber(heroSouls)}</span>
                         </div>
-                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/70 p-4">
-                            <div className="flex items-center gap-2 font-bold text-sky-300 mb-2">
-                                <Shield className="size-4" />
-                                Fortification
+                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/70 p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2 font-bold text-amber-300">
+                                <Coins className="size-4" />
+                                Gold
                             </div>
-                            <p>Increase all hero armor by 10% per level.</p>
-                            <p className="mt-2 text-xs uppercase tracking-wider text-slate-400">Current Level: {fortificationLevel}</p>
+                            <span className="text-lg font-black text-amber-200">{formatNumber(gold)}</span>
                         </div>
-                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/70 p-4">
-                            <div className="flex items-center justify-between gap-2 font-bold text-emerald-300 mb-2">
-                                <span>Party Expansion</span>
-                                <span className="text-xs uppercase tracking-wider text-slate-400">{partySize}/{partyCapacity} Active</span>
+                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/70 p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2 font-bold text-emerald-300">
+                                <TrendingUp className="size-4" />
+                                Highest Floor
                             </div>
-                            <p>Start with a lone hero and grow the roster over time through slot unlocks and recruitment.</p>
-                            <p className="mt-2 text-xs uppercase tracking-wider text-slate-400">Highest Floor Cleared: {highestFloorCleared}</p>
-                            <p className="mt-1 text-xs uppercase tracking-wider text-slate-400">Current Capacity: {partyCapacity} / {maxPartySize}</p>
+                            <span className="text-lg font-black text-emerald-200">{highestFloorCleared}</span>
+                        </div>
+                        <div className="rounded-xl border border-slate-700/50 bg-slate-800/70 p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-2 font-bold text-sky-300">
+                                <Users className="size-4" />
+                                Party
+                            </div>
+                            <span className="text-lg font-black text-sky-200">{partySize} / {partyCapacity}</span>
                         </div>
                     </CardContent>
                 </Card>
