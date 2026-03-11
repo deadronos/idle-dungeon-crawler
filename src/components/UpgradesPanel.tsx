@@ -56,7 +56,8 @@ export const UpgradesPanel: React.FC = () => {
                     <Button
                         disabled={!canBuyTraining}
                         onClick={buyTrainingUpgrade}
-                        className="w-full font-bold uppercase tracking-wider"
+                        variant="upgrade"
+                        className="w-full"
                     >
                         Upgrade ({formatNumber(trainingCost)} Gold)
                     </Button>
@@ -76,8 +77,8 @@ export const UpgradesPanel: React.FC = () => {
                     <Button
                         disabled={!canBuyFortification}
                         onClick={buyFortificationUpgrade}
-                        variant="secondary"
-                        className="w-full font-bold uppercase tracking-wider"
+                        variant="upgrade-secondary"
+                        className="w-full"
                     >
                         Upgrade ({formatNumber(fortificationCost)} Gold)
                     </Button>
@@ -104,8 +105,8 @@ export const UpgradesPanel: React.FC = () => {
                             <Button
                                 disabled={!canBuySlot}
                                 onClick={unlockPartySlot}
-                                variant="secondary"
-                                className="w-full font-bold uppercase tracking-wider"
+                                variant="upgrade-secondary"
+                                className="w-full"
                             >
                                 Unlock Slot ({formatNumber(nextSlotUnlock.cost)} Gold)
                             </Button>
@@ -136,7 +137,8 @@ export const UpgradesPanel: React.FC = () => {
                                 key={heroClass}
                                 disabled={!canRecruit}
                                 onClick={() => recruitHero(heroClass)}
-                                className="w-full font-bold uppercase tracking-wider"
+                                variant="upgrade"
+                                className="w-full"
                             >
                                 Recruit {heroClass}
                             </Button>

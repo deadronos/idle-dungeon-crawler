@@ -66,12 +66,11 @@ const AppHeader: React.FC = () => {
           <div className="relative" ref={menuRef}>
             <Button
               type="button"
-              variant="outline"
+              variant="nav"
               size="icon"
               aria-label={menuOpen ? 'Close save menu' : 'Open save menu'}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((prev) => !prev)}
-              className="rounded-full border-slate-600 bg-slate-900/70 text-slate-100 hover:bg-slate-800"
             >
               {menuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
             </Button>
@@ -110,18 +109,16 @@ const AppContent: React.FC = () => {
       <AppHeader />
       <div className="flex items-center gap-2 px-4 lg:px-8 py-3 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
         <Button
-          variant={activeSection === 'dungeon' ? 'default' : 'outline'}
+          variant="nav"
           onClick={() => setActiveSection('dungeon')}
-          className="rounded-full font-bold uppercase tracking-[0.2em]"
           aria-pressed={activeSection === 'dungeon'}
         >
           <Swords className="size-4" />
           Dungeon
         </Button>
         <Button
-          variant={activeSection === 'shop' ? 'default' : 'outline'}
+          variant="nav"
           onClick={() => setActiveSection('shop')}
-          className="rounded-full font-bold uppercase tracking-[0.2em]"
           aria-pressed={activeSection === 'shop'}
         >
           <Shield className="size-4" />

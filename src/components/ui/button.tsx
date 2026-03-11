@@ -18,6 +18,30 @@ const buttonVariants = cva(
         destructive:
           "bg-destructive/10 text-destructive hover:bg-destructive/20 focus-visible:border-destructive/40 focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:hover:bg-destructive/30 dark:focus-visible:ring-destructive/40",
         link: "text-primary underline-offset-4 hover:underline",
+        // --- Game UI variants ---
+        // Pill-shaped button used for navigation tabs and save/export actions.
+        // Active/selected state is driven by aria-pressed.
+        nav:
+          "rounded-full border-slate-600 bg-slate-900/70 text-slate-100 font-bold uppercase tracking-[0.2em] " +
+          "hover:bg-slate-800 hover:text-slate-50 " +
+          "aria-pressed:bg-indigo-600 aria-pressed:border-indigo-500 aria-pressed:text-white aria-pressed:hover:bg-indigo-500",
+        // Amber primary call-to-action (e.g. "Start Journey").
+        cta:
+          "bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold tracking-widest uppercase " +
+          "shadow-[0_0_15px_rgba(245,158,11,0.5)] hover:shadow-[0_0_20px_rgba(245,158,11,0.6)]",
+        // Thick-bordered vertical card for hero class selection.
+        // Selected state is driven by aria-pressed.
+        "hero-card":
+          "border-2 border-slate-700 bg-slate-800/50 hover:bg-slate-800 aria-pressed:border-amber-400 aria-pressed:bg-amber-400/10",
+        // Fuchsia-themed button for soul/prestige upgrade actions.
+        prestige:
+          "border-fuchsia-800 bg-transparent text-fuchsia-300 hover:bg-fuchsia-950 hover:border-fuchsia-700 uppercase font-black tracking-wider text-xs",
+        // Primary upgrade action button (gold-spending, e.g. Battle Drills, Recruit).
+        upgrade:
+          "bg-slate-700 text-slate-50 border-slate-600 hover:bg-slate-600 hover:text-white font-bold uppercase tracking-wider",
+        // Secondary upgrade action button (e.g. Fortification, Party Slots).
+        "upgrade-secondary":
+          "bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700 hover:text-slate-50 font-bold uppercase tracking-wider",
       },
       size: {
         default:

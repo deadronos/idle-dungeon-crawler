@@ -50,8 +50,8 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     <Button 
                         disabled={heroSouls.lt(costReducerCost)}
                         onClick={() => actions.buyPrestigeUpgrade("costReducer")}
-                        variant="outline" 
-                        className="w-full border-fuchsia-800 text-fuchsia-300 hover:bg-fuchsia-950 uppercase font-black tracking-wider text-xs"
+                        variant="prestige" 
+                        className="w-full"
                     >
                         Imbue ({formatNumber(costReducerCost)} Souls)
                     </Button>
@@ -71,8 +71,8 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     <Button 
                         disabled={heroSouls.lt(hpMultiplierCost)}
                         onClick={() => actions.buyPrestigeUpgrade("hpMultiplier")}
-                        variant="outline" 
-                        className="w-full border-fuchsia-800 text-fuchsia-300 hover:bg-fuchsia-950 uppercase font-black tracking-wider text-xs"
+                        variant="prestige" 
+                        className="w-full"
                     >
                         Imbue ({formatNumber(hpMultiplierCost)} Souls)
                     </Button>
@@ -92,8 +92,8 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     <Button 
                         disabled={heroSouls.lt(gameSpeedCost)}
                         onClick={() => actions.buyPrestigeUpgrade("gameSpeed")}
-                        variant="outline" 
-                        className="w-full border-fuchsia-800 text-fuchsia-300 hover:bg-fuchsia-950 uppercase font-black tracking-wider text-xs"
+                        variant="prestige" 
+                        className="w-full"
                     >
                         Imbue ({formatNumber(gameSpeedCost)} Souls)
                     </Button>
@@ -113,8 +113,8 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     <Button 
                         disabled={heroSouls.lt(xpMultiplierCost)}
                         onClick={() => actions.buyPrestigeUpgrade("xpMultiplier")}
-                        variant="outline" 
-                        className="w-full border-fuchsia-800 text-fuchsia-300 hover:bg-fuchsia-950 uppercase font-black tracking-wider text-xs"
+                        variant="prestige" 
+                        className="w-full"
                     >
                         Imbue ({formatNumber(xpMultiplierCost)} Souls)
                     </Button>
