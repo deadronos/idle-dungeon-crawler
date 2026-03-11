@@ -1,11 +1,12 @@
 import Decimal from "decimal.js";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { createStarterParty } from "@/game/entity";
 import { GameProvider } from "@/game/gameState";
 
+import { PrestigeUpgradesPanel } from "./PrestigeUpgradesPanel";
 import { UpgradesPanel } from "./UpgradesPanel";
 
 describe("UpgradesPanel", () => {
@@ -113,5 +114,44 @@ describe("UpgradesPanel", () => {
 
         expect(screen.getByText("3/5")).toBeInTheDocument();
         expect(screen.getByText(/next capacity: 4/i)).toBeInTheDocument();
+    });
+
+    it("updates displayed upgrade costs after buying the gold cost reducer prestige upgrade", async () => {
+        const user = userEvent.setup();
+
+        render(
+            <GameProvider
+                initialState={{
+                    gold: new Decimal(100000),
+                    heroSouls: new Decimal(10),
+                    metaUpgrades: {
+                        training: 17,
+                        fortification: 0,
+                    },
+                    party: createStarterParty("Ayla", "Warrior"),
+                }}
+            >
+                <UpgradesPanel />
+                <PrestigeUpgradesPanel />
+            </GameProvider>,
+        );
+
+        const battleDrillsCard = screen.getByText("Battle Drills").closest("div.rounded-xl");
+
+        if (!battleDrillsCard) {
+            throw new Error("Expected Battle Drills upgrade card to be rendered.");
+        }
+
+        expect(within(battleDrillsCard).getByRole("button", { name: /upgrade/i })).toHaveTextContent("73.79k");
+
+        const greedCard = screen.getByText("Greed").closest("div.rounded-xl");
+
+        if (!greedCard) {
+            throw new Error("Expected Greed prestige card to be rendered.");
+        }
+
+        await user.click(within(greedCard).getByRole("button", { name: /imbue \(10 souls\)/i }));
+
+        expect(within(battleDrillsCard).getByRole("button", { name: /upgrade/i })).toHaveTextContent("66.33k");
     });
 });
