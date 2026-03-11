@@ -5,7 +5,10 @@ import { describe, expect, it } from "vitest";
 
 import { createStarterParty } from "@/game/entity";
 import { GameProvider } from "@/game/gameState";
+import { getTrainingUpgradeCost } from "@/game/upgrades";
+import { formatNumber } from "@/utils/format";
 
+import { PrestigeUpgradesPanel } from "./PrestigeUpgradesPanel";
 import { UpgradesPanel } from "./UpgradesPanel";
 
 describe("UpgradesPanel", () => {
@@ -113,5 +116,34 @@ describe("UpgradesPanel", () => {
 
         expect(screen.getByText("3/5")).toBeInTheDocument();
         expect(screen.getByText(/next capacity: 4/i)).toBeInTheDocument();
+    });
+
+    it("updates displayed upgrade costs after buying the gold cost reducer prestige upgrade", async () => {
+        const user = userEvent.setup();
+        const initialCost = formatNumber(getTrainingUpgradeCost(17));
+        const reducedCost = formatNumber(getTrainingUpgradeCost(17, 1));
+
+        render(
+            <GameProvider
+                initialState={{
+                    gold: new Decimal(100000),
+                    heroSouls: new Decimal(10),
+                    metaUpgrades: {
+                        training: 17,
+                        fortification: 0,
+                    },
+                    party: createStarterParty("Ayla", "Warrior"),
+                }}
+            >
+                <UpgradesPanel />
+                <PrestigeUpgradesPanel />
+            </GameProvider>,
+        );
+
+        expect(screen.getByRole("button", { name: new RegExp(`upgrade \\(${initialCost} gold\\)`, "i") })).toBeInTheDocument();
+
+        await user.click(screen.getAllByRole("button", { name: /imbue \(10 souls\)/i })[0]);
+
+        expect(screen.getByRole("button", { name: new RegExp(`upgrade \\(${reducedCost} gold\\)`, "i") })).toBeInTheDocument();
     });
 });

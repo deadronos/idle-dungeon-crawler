@@ -15,13 +15,13 @@ export const UpgradesPanel: React.FC = () => {
     const highestFloorCleared = useGameStore((state) => state.highestFloorCleared);
     const trainingLevel = useGameStore((state) => state.metaUpgrades.training);
     const fortificationLevel = useGameStore((state) => state.metaUpgrades.fortification);
+    const costReducerLevel = useGameStore((state) => state.prestigeUpgrades.costReducer);
     const buyTrainingUpgrade = useGameStore((state) => state.buyTrainingUpgrade);
     const buyFortificationUpgrade = useGameStore((state) => state.buyFortificationUpgrade);
     const unlockPartySlot = useGameStore((state) => state.unlockPartySlot);
     const recruitHero = useGameStore((state) => state.recruitHero);
-
-    const trainingCost = getTrainingUpgradeCost(trainingLevel);
-    const fortificationCost = getFortificationUpgradeCost(fortificationLevel);
+    const trainingCost = getTrainingUpgradeCost(trainingLevel, costReducerLevel);
+    const fortificationCost = getFortificationUpgradeCost(fortificationLevel, costReducerLevel);
     const nextSlotUnlock = getNextPartySlotUnlock(partyCapacity);
     const recruitCost = getRecruitCost(party.length);
 
