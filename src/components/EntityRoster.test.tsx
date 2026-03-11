@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import type { Entity } from "@/game/entity";
+import { GameProvider } from "@/game/gameState";
 
 import { EntityRoster } from "./EntityRoster";
 
@@ -33,7 +34,11 @@ const heroEntity: Entity = {
 
 describe("EntityRoster", () => {
     it("shows a current cast banner near the entity portrait", () => {
-        render(<EntityRoster title="Party" entities={[heroEntity]} />);
+        render(
+            <GameProvider initialState={{ party: [heroEntity] }}>
+                <EntityRoster title="Party" entities={[heroEntity]} />
+            </GameProvider>,
+        );
 
         expect(screen.getByText(/casting mend/i)).toBeInTheDocument();
     });

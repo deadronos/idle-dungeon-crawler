@@ -48,7 +48,7 @@ describe("App integration", () => {
 
         await user.click(screen.getByRole("button", { name: /upgrade shop/i }));
 
-        expect(screen.getByText(/sanctum upgrades/i)).toBeInTheDocument();
+        expect(screen.getByRole("tab", { name: /sanctum upgrades/i })).toBeInTheDocument();
         expect(screen.getByText(/party expansion/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /unlock slot \(60 gold\)/i })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /recruit warrior/i })).toBeDisabled();
@@ -75,7 +75,7 @@ describe("App integration", () => {
         await user.upload(screen.getByLabelText(/import save file/i), saveFile);
 
         expect(screen.getByText("77 Gold")).toBeInTheDocument();
-        expect(screen.getByText(/sanctum upgrades/i)).toBeInTheDocument();
+        expect(screen.getByRole("tab", { name: /sanctum upgrades/i })).toBeInTheDocument();
         expect(screen.getByText(/party expansion/i)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /start journey/i })).not.toBeInTheDocument();
     });
