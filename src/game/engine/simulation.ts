@@ -77,6 +77,7 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
         costReducer: overrides?.prestigeUpgrades?.costReducer ?? 0,
         hpMultiplier: overrides?.prestigeUpgrades?.hpMultiplier ?? 0,
         gameSpeed: overrides?.prestigeUpgrades?.gameSpeed ?? 0,
+        xpMultiplier: overrides?.prestigeUpgrades?.xpMultiplier ?? 0,
     },
 });
 
@@ -272,7 +273,9 @@ export const simulateTick = (state: GameState): SimulationResult => {
 
         logMessages.push(`${target.name} was defeated!`);
 
-        const experienceReward = new Decimal(draft.floor).times(10).plus(target.attributes.vit);
+        const baseExp = new Decimal(draft.floor).times(10).plus(target.attributes.vit);
+        const xpBonus = 1 + (draft.prestigeUpgrades.xpMultiplier * 0.2); // +20% base EXP per level
+        const experienceReward = baseExp.times(xpBonus).floor();
         const goldReward = new Decimal(draft.floor).times(2).plus(5);
         draft.gold = draft.gold.plus(goldReward);
 

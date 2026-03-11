@@ -1,5 +1,5 @@
 import React from "react";
-import { CircleDollarSign, FastForward, HeartPulse } from "lucide-react";
+import { CircleDollarSign, FastForward, HeartPulse, Brain } from "lucide-react";
 
 import { useGame } from "../game/store/gameStore";
 import { formatNumber } from "../utils/format";
@@ -14,10 +14,12 @@ export const PrestigeUpgradesPanel: React.FC = () => {
     const currentCostReducerLevel = prestigeUpgrades.costReducer;
     const currentHpLevel = prestigeUpgrades.hpMultiplier;
     const currentGameSpeedLevel = prestigeUpgrades.gameSpeed;
+    const currentXpLevel = prestigeUpgrades.xpMultiplier;
 
     const costReducerCost = actions.getPrestigeUpgradeCost("costReducer");
     const hpMultiplierCost = actions.getPrestigeUpgradeCost("hpMultiplier");
     const gameSpeedCost = actions.getPrestigeUpgradeCost("gameSpeed");
+    const xpMultiplierCost = actions.getPrestigeUpgradeCost("xpMultiplier");
 
     return (
         <Card className="w-full max-w-150 bg-slate-900/80 backdrop-blur-md border-fuchsia-700/50 shadow-xl mt-4 shrink-0 [box-shadow:0_0_15px_rgba(192,38,211,0.1)]">
@@ -76,7 +78,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     </Button>
                 </div>
 
-                <div className="rounded-xl border border-fuchsia-700/30 bg-slate-900/70 p-4 flex flex-col gap-3 md:col-span-2">
+                <div className="rounded-xl border border-fuchsia-700/30 bg-slate-900/70 p-4 flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2 text-fuchsia-200 font-bold">
@@ -94,6 +96,27 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                         className="w-full border-fuchsia-800 text-fuchsia-300 hover:bg-fuchsia-950 uppercase font-black tracking-wider text-xs"
                     >
                         Imbue ({formatNumber(gameSpeedCost)} Souls)
+                    </Button>
+                </div>
+
+                <div className="rounded-xl border border-fuchsia-700/30 bg-slate-900/70 p-4 flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 text-fuchsia-200 font-bold">
+                                <Brain size={16} className="text-blue-400" />
+                                Insight
+                            </div>
+                            <p className="text-xs text-slate-400 mt-1">Increases experience gained from enemies by 20% per level.</p>
+                        </div>
+                        <span className="text-xs font-black uppercase tracking-wider text-blue-400">Lv {currentXpLevel}</span>
+                    </div>
+                    <Button 
+                        disabled={heroSouls.lt(xpMultiplierCost)}
+                        onClick={() => actions.buyPrestigeUpgrade("xpMultiplier")}
+                        variant="outline" 
+                        className="w-full border-fuchsia-800 text-fuchsia-300 hover:bg-fuchsia-950 uppercase font-black tracking-wider text-xs"
+                    >
+                        Imbue ({formatNumber(xpMultiplierCost)} Souls)
                     </Button>
                 </div>
             </CardContent>

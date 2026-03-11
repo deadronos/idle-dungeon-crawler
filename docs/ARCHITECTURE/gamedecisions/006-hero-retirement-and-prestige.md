@@ -27,6 +27,10 @@ The Altar provides upgrades that alter fundamental game mechanics, not just flat
    - *Effect:* Increases the global game tick speed multiplier.
    - *Mechanic:* Every level provides a +10% `hasteBonus` to the overall `actionProgress` accumulation rate, making heroes attack and cast spells faster across the board.
 
+4. **Insight (XP Multiplier)**
+   - *Effect:* Increases experience gained from all defeated enemies.
+   - *Mechanic:* Each level grants a flat +20% multiplier to the base experience calculation (`baseExp * (1 + level * 0.2)`). This acts as a catch-up mechanic so players can level recruited replacements faster after a retirement.
+
 ## Consequences
 - **Positive:** Introduces a compelling choice (sacrificing a high-level hero) for long-term power. It provides a prestige system without the friction of a total progress wipe.
 - **Negative:** The player must re-grind a new hero from Level 1 after a retirement, requiring careful UI communication (via a confirmation dialog) so players don't accidentally ruin their active party composition.
