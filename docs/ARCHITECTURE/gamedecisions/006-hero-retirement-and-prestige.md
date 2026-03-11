@@ -7,7 +7,7 @@ As the player progresses deeper into the dungeon and recruits more heroes, the p
 Players can now permanently retire recruited heroes in exchange for a premium currency: **Hero Souls**. These souls are spent at the **Altar of Souls** (the prestige shop) for account-wide, permanent meta-upgrades that persist forever and modify the core mathematical scaling of the game.
 
 ### Retirement Rules
-1. **Minimum Level constraint:** A hero must be at least Level 5 to be retired.
+1. **Minimum Level to earn Souls:** While any non-starter hero can be dismissed, they must be at least Level 5 to yield any Hero Souls upon retirement.
 2. **Anchor Protection:** The starter hero (`hero_1`) cannot be retired under any circumstance. The player must always have at least one character to continue progressing or farming gold.
 3. **Reward Formula:** Souls reward scales with the level of the retired hero: `floor(Hero Level / 5) * 10`. 
    - *Example:* Level 5 grants 10 souls; Level 10 grants 20 souls.
@@ -17,11 +17,11 @@ The Altar provides upgrades that alter fundamental game mechanics, not just flat
 
 1. **Greed (Gold Cost Reducer)**
    - *Effect:* Reduces the exponential growth rate of all Gold-based upgrades (`Battle Drills`, `Fortification`).
-   - *Mechanic:* The cost formula uses `exponent = 1.15 - (level * 0.01)`. Each level of Greed makes future gold upgrades significantly cheaper.
+   - *Mechanic:* The cost formula dynamically subtracts `(level * 0.01)` from each upgrade's distinct base growth rate, down to a minimum rate of `1.05`. Each level of Greed makes exponential upgrades significantly cheaper over time.
 
 2. **Vitality (HP Multiplier)**
    - *Effect:* Increases the base HP scaling per point of VIT.
-   - *Mechanic:* Base HP calculation changes from `10 + (vit * 5)` to `10 + (vit * (5 + level))`. This provides massive late-game survivability.
+   - *Mechanic:* Base HP calculation changes from `50 + (vit * 10)` to `50 + (vit * (10 + level))`. This provides massive late-game survivability.
 
 3. **Haste (Game Speed Booster)**
    - *Effect:* Increases the global game tick speed multiplier.
