@@ -66,6 +66,19 @@ const toPartialGameState = (value: unknown): Partial<GameState> => {
         candidate.activeSection = value.activeSection;
     }
 
+    if (typeof value.heroSouls === "string" || typeof value.heroSouls === "number") {
+        candidate.heroSouls = value.heroSouls as unknown as GameState["heroSouls"];
+    }
+
+    if (isRecord(value.prestigeUpgrades)) {
+        const prestigeUpgrades: GameState["prestigeUpgrades"] = {
+            costReducer: typeof value.prestigeUpgrades.costReducer === "number" ? value.prestigeUpgrades.costReducer : 0,
+            hpMultiplier: typeof value.prestigeUpgrades.hpMultiplier === "number" ? value.prestigeUpgrades.hpMultiplier : 0,
+            gameSpeed: typeof value.prestigeUpgrades.gameSpeed === "number" ? value.prestigeUpgrades.gameSpeed : 0,
+        };
+        candidate.prestigeUpgrades = prestigeUpgrades;
+    }
+
     return candidate;
 };
 

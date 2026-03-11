@@ -2,13 +2,21 @@ import { getFortificationUpgradeCost as calculateFortificationUpgradeCost, getTr
 import { createRecruitHero } from "../entity";
 import { prependCombatMessages, recalculateParty } from "../engine/simulation";
 import { getNextPartySlotUnlock as getNextSlotUnlock, getRecruitCost as calculateRecruitCost } from "../partyProgression";
-import type { GameState, GameStateCreator, ProgressionActions, ProgressionSlice } from "./types";
+import type { GameState, GameStateCreator, PrestigeUpgrades, ProgressionActions, ProgressionSlice } from "./types";
+
+export const PRESTIGE_BASE_COSTS: Record<keyof PrestigeUpgrades, number> = {
+    costReducer: 10,
+    hpMultiplier: 15,
+    gameSpeed: 25,
+};
 
 export const selectProgressionState = (state: GameState): ProgressionSlice => ({
     metaUpgrades: state.metaUpgrades,
     partyCapacity: state.partyCapacity,
     maxPartySize: state.maxPartySize,
     highestFloorCleared: state.highestFloorCleared,
+    heroSouls: state.heroSouls,
+    prestigeUpgrades: state.prestigeUpgrades,
 });
 
 export const createProgressionSlice = (
@@ -17,31 +25,35 @@ export const createProgressionSlice = (
     return (set, get) => ({
         ...initialState,
         getTrainingUpgradeCost: () => {
-            return calculateTrainingUpgradeCost(get().metaUpgrades.training);
+            const state = get();
+            return calculateTrainingUpgradeCost(state.metaUpgrades.training, state.prestigeUpgrades.costReducer);
         },
         buyTrainingUpgrade: () => {
             set((state) => {
-                const cost = calculateTrainingUpgradeCost(state.metaUpgrades.training);
+                const cost = calculateTrainingUpgradeCost(state.metaUpgrades.training, state.prestigeUpgrades.costReducer);
                 if (state.gold.lt(cost)) {
                     return {};
                 }
 
-                const nextUpgrades = { ...state.metaUpgrades, training: state.metaUpgrades.training + 1 };
+                const newUpgrades = {
+                    ...state.metaUpgrades,
+                    training: state.metaUpgrades.training + 1,
+                };
 
                 return {
                     gold: state.gold.minus(cost),
-                    metaUpgrades: nextUpgrades,
-                    party: recalculateParty(state.party, nextUpgrades),
-                    combatLog: prependCombatMessages(state.combatLog, `Battle Drills improved to Lv ${nextUpgrades.training}.`),
+                    metaUpgrades: newUpgrades,
+                    party: recalculateParty(state.party, newUpgrades, state.prestigeUpgrades),
                 };
             });
         },
         getFortificationUpgradeCost: () => {
-            return calculateFortificationUpgradeCost(get().metaUpgrades.fortification);
+            const state = get();
+            return calculateFortificationUpgradeCost(state.metaUpgrades.fortification, state.prestigeUpgrades.costReducer);
         },
         buyFortificationUpgrade: () => {
             set((state) => {
-                const cost = calculateFortificationUpgradeCost(state.metaUpgrades.fortification);
+                const cost = calculateFortificationUpgradeCost(state.metaUpgrades.fortification, state.prestigeUpgrades.costReducer);
                 if (state.gold.lt(cost)) {
                     return {};
                 }
@@ -51,8 +63,7 @@ export const createProgressionSlice = (
                 return {
                     gold: state.gold.minus(cost),
                     metaUpgrades: nextUpgrades,
-                    party: recalculateParty(state.party, nextUpgrades),
-                    combatLog: prependCombatMessages(state.combatLog, `Fortification improved to Lv ${nextUpgrades.fortification}.`),
+                    party: recalculateParty(state.party, nextUpgrades, state.prestigeUpgrades),
                 };
             });
         },
@@ -86,21 +97,75 @@ export const createProgressionSlice = (
         },
         recruitHero: (heroClass) => {
             set((state) => {
-                if (state.party.length >= state.partyCapacity) {
-                    return {};
-                }
-
                 const cost = calculateRecruitCost(state.party.length);
-                if (state.gold.lt(cost)) {
+                if (state.gold.lt(cost) || state.party.length >= state.partyCapacity) {
                     return {};
                 }
 
-                const recruit = createRecruitHero(heroClass, state.party, state.metaUpgrades);
-
+                const newHero = createRecruitHero(heroClass, state.party, state.metaUpgrades, state.prestigeUpgrades);
                 return {
                     gold: state.gold.minus(cost),
-                    party: [...state.party, recruit],
-                    combatLog: prependCombatMessages(state.combatLog, `${recruit.name} the ${heroClass} joined the party.`),
+                    party: [...state.party, newHero],
+                    combatLog: prependCombatMessages(state.combatLog, `${newHero.name} the ${heroClass} joined the party!`),
+                };
+            });
+        },
+        retireHero: (heroId: string) => {
+            set((state) => {
+                const heroIndex = state.party.findIndex((h) => h.id === heroId);
+                if (heroIndex === -1 || heroId === "hero_1") {
+                    return {}; // Cannot retire starter hero or hero not found
+                }
+
+                const hero = state.party[heroIndex];
+                
+                // floor(Level / 5) * 10 Souls
+                const soulsAwarded = Math.floor(hero.level / 5) * 10;
+                
+                const newParty = [...state.party];
+                newParty.splice(heroIndex, 1);
+
+                return {
+                    party: newParty,
+                    heroSouls: state.heroSouls.plus(soulsAwarded),
+                    combatLog: prependCombatMessages(
+                        state.combatLog,
+                        soulsAwarded > 0
+                            ? `${hero.name} was retired in exchange for ${soulsAwarded} Hero Souls.`
+                            : `${hero.name} was dismissed.`
+                    ),
+                };
+            });
+        },
+        getPrestigeUpgradeCost: (upgradeId: keyof PrestigeUpgrades) => {
+            const currentLevel = get().prestigeUpgrades[upgradeId];
+            return Math.floor(PRESTIGE_BASE_COSTS[upgradeId] * Math.pow(1.5, currentLevel));
+        },
+        buyPrestigeUpgrade: (upgradeId: keyof PrestigeUpgrades) => {
+            set((state) => {
+                const currentLevel = state.prestigeUpgrades[upgradeId];
+                const cost = Math.floor(PRESTIGE_BASE_COSTS[upgradeId] * Math.pow(1.5, currentLevel));
+                
+                if (state.heroSouls.lt(cost)) {
+                    return {};
+                }
+
+                const names: Record<keyof PrestigeUpgrades, string> = {
+                    costReducer: "Greed (Gold Cost Reducer)",
+                    hpMultiplier: "Vitality (HP Multiplier)",
+                    gameSpeed: "Haste (Game Speed Booster)",
+                };
+
+                const newPrestigeUpgrades = {
+                    ...state.prestigeUpgrades,
+                    [upgradeId]: currentLevel + 1,
+                };
+
+                return {
+                    heroSouls: state.heroSouls.minus(cost),
+                    prestigeUpgrades: newPrestigeUpgrades,
+                    party: recalculateParty(state.party, state.metaUpgrades, newPrestigeUpgrades),
+                    combatLog: prependCombatMessages(state.combatLog, `Altar of Souls: Purchased ${names[upgradeId]} Lv ${currentLevel + 1}.`),
                 };
             });
         },

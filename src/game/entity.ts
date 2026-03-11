@@ -9,6 +9,12 @@ export interface MetaUpgrades {
     fortification: number;
 }
 
+export interface PrestigeUpgrades {
+    costReducer: number;
+    hpMultiplier: number;
+    gameSpeed: number;
+}
+
 export interface Attributes {
     vit: number; // Constitution/Vitality
     str: number; // Strength
@@ -105,11 +111,13 @@ export const getExpRequirement = (level: number): Decimal => {
     return new Decimal(100).times(Decimal.pow(1.5, level - 1)).floor();
 };
 
-export const calculateDerivedStats = (entity: Entity): Entity => {
+export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: PrestigeUpgrades): Entity => {
     const attrs = entity.attributes;
 
     // Base logic for HP
-    entity.maxHp = new Decimal(50).plus(attrs.vit * STAT_MULTS.HP_PER_VIT);
+    // Vitality Prestige adds +1 HP per VIT point per level
+    const hpPerVit = STAT_MULTS.HP_PER_VIT + (prestigeUpgrades?.hpMultiplier ?? 0);
+    entity.maxHp = new Decimal(50).plus(attrs.vit * hpPerVit);
     if (entity.currentHp.gt(entity.maxHp)) entity.currentHp = entity.maxHp;
 
     // Armor
@@ -158,8 +166,8 @@ export const applyMetaUpgrades = (entity: Entity, upgrades: MetaUpgrades = BASE_
     return entity;
 };
 
-export const recalculateEntity = (entity: Entity, upgrades: MetaUpgrades = BASE_META_UPGRADES): Entity => {
-    calculateDerivedStats(entity);
+export const recalculateEntity = (entity: Entity, upgrades: MetaUpgrades = BASE_META_UPGRADES, prestigeUpgrades?: PrestigeUpgrades): Entity => {
+    calculateDerivedStats(entity, prestigeUpgrades);
     applyMetaUpgrades(entity, upgrades);
 
     if (entity.currentHp.gt(entity.maxHp)) {
@@ -178,6 +186,7 @@ export const createHero = (
     name: string,
     entityClass: HeroClass,
     upgrades: MetaUpgrades = BASE_META_UPGRADES,
+    prestigeUpgrades?: PrestigeUpgrades,
 ): Entity => {
     let hero: Entity = {
         id, name, class: entityClass,
@@ -197,7 +206,7 @@ export const createHero = (
         activeSkillTicks: 0,
     };
 
-    hero = recalculateEntity(hero, upgrades);
+    hero = recalculateEntity(hero, upgrades, prestigeUpgrades);
     // Fill resources (except warrior rage)
     if (entityClass === "Cleric" || entityClass === "Archer") {
         hero.currentResource = hero.maxResource;
@@ -211,8 +220,9 @@ export const createStarterParty = (
     leaderName: string,
     leaderClass: HeroClass,
     upgrades: MetaUpgrades = BASE_META_UPGRADES,
+    prestigeUpgrades?: PrestigeUpgrades,
 ): Entity[] => {
-    return [createHero("hero_1", leaderName, leaderClass, upgrades)];
+    return [createHero("hero_1", leaderName, leaderClass, upgrades, prestigeUpgrades)];
 };
 
 const getNextHeroId = (heroes: Entity[]): string => {
@@ -254,12 +264,14 @@ export const createRecruitHero = (
     entityClass: HeroClass,
     heroes: Entity[],
     upgrades: MetaUpgrades = BASE_META_UPGRADES,
+    prestigeUpgrades?: PrestigeUpgrades,
 ): Entity => {
     return createHero(
         getNextHeroId(heroes),
         getGeneratedHeroName(entityClass, heroes),
         entityClass,
         upgrades,
+        prestigeUpgrades,
     );
 };
 

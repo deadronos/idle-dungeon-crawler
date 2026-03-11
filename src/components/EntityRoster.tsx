@@ -1,7 +1,21 @@
 import React from 'react';
+import { Skull } from 'lucide-react';
+
 import type { Entity } from '../game/entity';
+import { useGame } from '../game/store/gameStore';
 import { formatNumber } from '../utils/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Props {
     title: string;
@@ -10,6 +24,8 @@ interface Props {
 }
 
 export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight }) => {
+    const { actions } = useGame();
+
     return (
         <Card className={`w-full lg:w-[350px] shrink-0 bg-slate-900/80 backdrop-blur-md border-slate-700/50 shadow-xl flex flex-col h-full overflow-hidden ${alignRight ? 'text-right' : 'text-left'}`}>
             <CardHeader className="pb-3 border-b border-slate-800">
@@ -23,7 +39,39 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight }) =
                         <div className="p-3">
                             <div className={`flex justify-between items-center mb-1 ${alignRight ? 'flex-row-reverse' : ''}`}>
                                 <h3 className="font-bold text-slate-100 text-base sm:text-lg">{entity.name}</h3>
-                                <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>
+                                    {!entity.isEnemy && entity.id !== "hero_1" && entity.level >= 5 && (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger
+                                                className="text-slate-500 hover:text-red-400 transition-colors bg-slate-800/50 hover:bg-slate-800 p-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 focus:ring-offset-slate-900"
+                                                title={`Retire Hero for ${Math.floor(entity.level / 5) * 10} Souls`}
+                                            >
+                                                <Skull size={14} />
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent className="bg-slate-900 border-slate-700 text-slate-200 shadow-2xl shadow-black/50 sm:max-w-[425px]">
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle className="text-xl font-bold flex items-center gap-2">
+                                                        <Skull className="text-red-400" size={20} />
+                                                        Retire {entity.name}?
+                                                    </AlertDialogTitle>
+                                                    <AlertDialogDescription className="text-slate-400 mt-2">
+                                                        Are you sure you want to retire this hero? They will leave the party <strong className="text-slate-200">permanently</strong> in exchange for <strong className="text-fuchsia-400 font-bold">{Math.floor(entity.level / 5) * 10} Hero Souls</strong>.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter className="mt-4 gap-2 sm:gap-0">
+                                                    <AlertDialogCancel className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-slate-100">Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction 
+                                                        onClick={() => actions.retireHero(entity.id)}
+                                                        className="bg-red-600 hover:bg-red-700 text-white font-bold tracking-wider"
+                                                    >
+                                                        Retire Hero
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="relative w-full h-16 sm:h-20 flex justify-center items-center my-2">
