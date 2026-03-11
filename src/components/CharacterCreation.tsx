@@ -37,8 +37,9 @@ export const CharacterCreation: React.FC = () => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <Button
-                            variant="outline"
-                            className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Warrior' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
+                            variant="hero-card"
+                            className="h-auto flex-col items-center gap-3 p-4"
+                            aria-pressed={selectedClass === 'Warrior'}
                             onClick={() => setSelectedClass('Warrior')}
                         >
                             <img src={`${import.meta.env.BASE_URL}assets/hero_warrior.png`} alt="Warrior" className="w-20 h-20 object-contain drop-shadow-md" />
@@ -48,8 +49,9 @@ export const CharacterCreation: React.FC = () => {
                             </div>
                         </Button>
                         <Button
-                            variant="outline"
-                            className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Cleric' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
+                            variant="hero-card"
+                            className="h-auto flex-col items-center gap-3 p-4"
+                            aria-pressed={selectedClass === 'Cleric'}
                             onClick={() => setSelectedClass('Cleric')}
                         >
                             <img src={`${import.meta.env.BASE_URL}assets/hero_cleric.png`} alt="Cleric" className="w-20 h-20 object-contain drop-shadow-md" />
@@ -59,8 +61,9 @@ export const CharacterCreation: React.FC = () => {
                             </div>
                         </Button>
                         <Button
-                            variant="outline"
-                            className={`h-auto flex-col items-center gap-3 p-4 border-2 transition-all hover:bg-slate-800 ${selectedClass === 'Archer' ? 'border-amber-400 bg-amber-400/10' : 'border-slate-700 bg-slate-800/50'}`}
+                            variant="hero-card"
+                            className="h-auto flex-col items-center gap-3 p-4"
+                            aria-pressed={selectedClass === 'Archer'}
                             onClick={() => setSelectedClass('Archer')}
                         >
                             <img src={`${import.meta.env.BASE_URL}assets/hero_archer.png`} alt="Archer" className="w-20 h-20 object-contain drop-shadow-md" />
@@ -76,9 +79,10 @@ export const CharacterCreation: React.FC = () => {
                     </p>
 
                     <Button
+                        variant="cta"
                         size="lg"
                         onClick={handleCreate}
-                        className="w-full text-lg h-14 mt-4 font-bold tracking-widest uppercase bg-amber-500 hover:bg-amber-400 text-amber-950 shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+                        className="w-full text-lg h-14 mt-4"
                     >
                         Start Journey
                     </Button>

@@ -26,10 +26,9 @@ export const MainGameView: React.FC = () => {
                 <div className="flex-1 lg:flex-2 min-w-[300px] flex flex-col items-center relative order-first lg:order-none">
                     <div className="flex items-center gap-3 text-2xl lg:text-4xl font-black text-white tracking-widest uppercase drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] shadow-[0_0_20px_rgba(99,102,241,0.5)] bg-slate-900/60 py-2 px-4 lg:py-3 lg:px-6 rounded-2xl border border-white/10 my-4 lg:my-6">
                         <Button
-                            variant="outline"
+                            variant="nav"
                             size="icon"
                             aria-label="Previous floor"
-                            className="rounded-full border-white/15 bg-slate-900/70 text-white hover:bg-slate-800 disabled:opacity-40"
                             disabled={floor <= 1}
                             onClick={previousFloor}
                         >
@@ -37,10 +36,9 @@ export const MainGameView: React.FC = () => {
                         </Button>
                         <span>Floor {floor}</span>
                         <Button
-                            variant="outline"
+                            variant="nav"
                             size="icon"
                             aria-label="Next floor"
-                            className="rounded-full border-white/15 bg-slate-900/70 text-white hover:bg-slate-800"
                             onClick={nextFloor}
                         >
                             <ChevronRight className="size-5" />

@@ -86,9 +86,8 @@ export const SaveControls: React.FC = () => {
             <div className="flex flex-wrap items-center justify-end gap-2">
                 <Button
                     type="button"
-                    variant="outline"
+                    variant="nav"
                     onClick={handleExport}
-                    className="rounded-full border-slate-600 bg-slate-900/70 font-bold uppercase tracking-[0.2em] text-slate-100 hover:bg-slate-800"
                 >
                     <Download className="size-4" />
                     Export Save
@@ -106,9 +105,8 @@ export const SaveControls: React.FC = () => {
                 </label>
                 <Button
                     type="button"
-                    variant="outline"
+                    variant="nav"
                     onClick={() => fileInputRef.current?.click()}
-                    className="rounded-full border-slate-600 bg-slate-900/70 font-bold uppercase tracking-[0.2em] text-slate-100 hover:bg-slate-800"
                 >
                     <Upload className="size-4" />
                     Import Save
