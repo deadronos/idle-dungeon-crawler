@@ -136,7 +136,7 @@ describe("UpgradesPanel", () => {
             </GameProvider>,
         );
 
-        const battleDrillsCard = screen.getByText("Battle Drills").closest("div.rounded-xl");
+        const battleDrillsCard = screen.getByText("Battle Drills").closest<HTMLElement>("div.rounded-xl");
 
         if (!battleDrillsCard) {
             throw new Error("Expected Battle Drills upgrade card to be rendered.");
@@ -144,7 +144,7 @@ describe("UpgradesPanel", () => {
 
         expect(within(battleDrillsCard).getByRole("button", { name: /upgrade/i })).toHaveTextContent("73.79k");
 
-        const greedCard = screen.getByText("Greed").closest("div.rounded-xl");
+        const greedCard = screen.getByText("Greed").closest<HTMLElement>("div.rounded-xl");
 
         if (!greedCard) {
             throw new Error("Expected Greed prestige card to be rendered.");
