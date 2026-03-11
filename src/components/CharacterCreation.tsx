@@ -18,7 +18,7 @@ export const CharacterCreation: React.FC = () => {
     };
 
     return (
-        <div className="flex items-center justify-center w-screen h-screen bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] px-4">
+        <div className="flex items-center justify-center min-h-screen bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] px-4 py-6">
             <Card className="w-full max-w-2xl bg-slate-900/90 backdrop-blur-xl border-slate-700 shadow-2xl">
                 <CardHeader className="text-center pb-2">
                     <CardTitle className="text-3xl font-black tracking-tight text-white uppercase">Create Your First Hero</CardTitle>
