@@ -20,6 +20,7 @@ export interface PrestigeUpgrades {
     costReducer: number;
     hpMultiplier: number;
     gameSpeed: number;
+    xpMultiplier: number;
 }
 
 export interface ProgressionSlice {

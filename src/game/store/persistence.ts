@@ -75,6 +75,7 @@ const toPartialGameState = (value: unknown): Partial<GameState> => {
             costReducer: typeof value.prestigeUpgrades.costReducer === "number" ? value.prestigeUpgrades.costReducer : 0,
             hpMultiplier: typeof value.prestigeUpgrades.hpMultiplier === "number" ? value.prestigeUpgrades.hpMultiplier : 0,
             gameSpeed: typeof value.prestigeUpgrades.gameSpeed === "number" ? value.prestigeUpgrades.gameSpeed : 0,
+            xpMultiplier: typeof value.prestigeUpgrades.xpMultiplier === "number" ? value.prestigeUpgrades.xpMultiplier : 0,
         };
         candidate.prestigeUpgrades = prestigeUpgrades;
     }

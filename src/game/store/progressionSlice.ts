@@ -8,6 +8,7 @@ export const PRESTIGE_BASE_COSTS: Record<keyof PrestigeUpgrades, number> = {
     costReducer: 10,
     hpMultiplier: 15,
     gameSpeed: 25,
+    xpMultiplier: 10,
 };
 
 export const selectProgressionState = (state: GameState): ProgressionSlice => ({
@@ -154,6 +155,7 @@ export const createProgressionSlice = (
                     costReducer: "Greed (Gold Cost Reducer)",
                     hpMultiplier: "Vitality (HP Multiplier)",
                     gameSpeed: "Haste (Game Speed Booster)",
+                    xpMultiplier: "Insight (XP Multiplier)",
                 };
 
                 const newPrestigeUpgrades = {
