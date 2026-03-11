@@ -12,14 +12,18 @@ import { formatNumber } from './utils/format';
 const AppHeader: React.FC = () => {
   const gold = useGameStore((state) => state.gold);
   const floor = useGameStore((state) => state.floor);
-  const [isNarrow, setIsNarrow] = useState(false);
+  const [isNarrow, setIsNarrow] = useState(() => {
+    if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
+      return window.matchMedia('(max-width: 1023px)').matches;
+    }
+    return false;
+  });
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return () => {};
     const mq = window.matchMedia('(max-width: 1023px)');
-    setIsNarrow(mq.matches);
     const handler = (e: MediaQueryListEvent) => {
       setIsNarrow(e.matches);
       if (!e.matches) setMenuOpen(false);
@@ -35,8 +39,17 @@ const AppHeader: React.FC = () => {
         setMenuOpen(false);
       }
     };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setMenuOpen(false);
+      }
+    };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [menuOpen]);
 
   return (
