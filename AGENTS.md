@@ -25,8 +25,9 @@ Use the screenshots in `docs/ARCHITECTURE/conceptimages/` as the current canonic
 1. **Read the Docs:** Before proposing major structural or mechanical changes, review the relevant `00X-*.md` decision records in the `docs/ARCHITECTURE/` folder.
 2. **Align Implementation:** Keep the codebase and documentation in sync.
 3. **Proactive Updates:**
-   - If you modify how a core system works (e.g., combat calculations, new stats, UI layout paradigms), you *must* update the corresponding decision record.
-   - If you notice a misalignment between the current implementation and the documentation, surface this discrepancy to the user immediately or propose an update to rectify it.
+   - If you modify how a core system works (e.g., combat calculations, new stats, UI layout paradigms), you *must* update the corresponding decision record. 
+   This could also entail capturing new screenshots for the docs/ARCHITECTURE/conceptimages/ folder if the change affects the visual design. Prefer overwriting existing screenshots, history is captured in commits. Add new screenshots if we introduce new sections or elements for example.
+   - If you notice a misalignment between the current implementation and the documentation: surface this discrepancy to the user immediately or propose an update to rectify it. If running noninteractively, go ahead and update the documentation to reflect the current state of the codebase. Or continue updating the codebase to match the documentation, if our changes did not achieve the goal set out.
    - Consider updating documentation alongside every major feature commit.
 
 By adhering to these rules, we ensure the project remains maintainable and understandable as it scales.
