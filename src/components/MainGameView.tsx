@@ -16,6 +16,7 @@ export const MainGameView: React.FC = () => {
     const toggleAutoFight = useGameStore((state) => state.toggleAutoFight);
     const toggleAutoAdvance = useGameStore((state) => state.toggleAutoAdvance);
 
+    const hasLivingEnemy = enemies.some((enemy) => enemy.currentHp.gt(0));
     const primaryEnemy = enemies.find((enemy) => enemy.currentHp.gt(0)) ?? enemies[0];
 
     const runStateLabel = autoAdvance
@@ -106,18 +107,29 @@ export const MainGameView: React.FC = () => {
                         </p>
                     </div>
 
-                    {primaryEnemy && primaryEnemy.currentHp.gt(0) && (
-                        <div className="flex justify-center items-center max-h-[180px] lg:flex-1 lg:max-h-none w-full p-4 lg:p-8 rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-sm">
-                            <img
-                                src={primaryEnemy.image}
-                                alt="Enemy"
-                                className="w-full max-w-[280px] h-auto object-contain drop-shadow-[0_0_25px_rgba(0,0,0,0.8)] animate-[idle-float_3s_ease-in-out_infinite]"
-                                draggable={false}
-                            />
+                    <div className="flex min-h-0 w-full flex-1 flex-col justify-end gap-4 lg:gap-6">
+                        <div
+                            data-testid="encounter-stage"
+                            className="pointer-events-none flex min-h-[180px] lg:min-h-[260px] lg:flex-1 w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-sm lg:p-8"
+                        >
+                            {primaryEnemy && hasLivingEnemy ? (
+                                <img
+                                    src={primaryEnemy.image}
+                                    alt="Enemy"
+                                    className="pointer-events-none h-auto w-full max-w-[280px] animate-[idle-float_3s_ease-in-out_infinite] object-contain drop-shadow-[0_0_25px_rgba(0,0,0,0.8)]"
+                                    draggable={false}
+                                />
+                            ) : (
+                                <div className="flex max-w-sm flex-col items-center gap-2 text-center text-slate-200">
+                                    <Swords className="size-8 text-amber-300/80" aria-hidden="true" />
+                                    <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-slate-400">Encounter cleared</p>
+                                    <p className="text-sm text-slate-300">The next foe is already lurking nearby, so the log stays pinned in place.</p>
+                                </div>
+                            )}
                         </div>
-                    )}
 
-                    <CombatLog />
+                        <CombatLog className="mt-auto" />
+                    </div>
                 </div>
 
                 <EntityRoster title="Enemies" entities={enemies} alignRight={true} />
