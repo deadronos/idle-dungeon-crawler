@@ -56,10 +56,12 @@ Whenever an entity resolves an action, the UI displays a short-lived skill banne
 
 To support higher-entity encounters (up to five party members and five enemies), the roster presentation follows a few conventions:
 
-- **Living-first ordering:** living entities are listed before defeated ones so the actionable combat state is always near the top of each roster.
-- **Compact bars with preserved scanability:** HP, resource, and action-readiness bars remain visible at reduced card density to avoid panel collapse at larger party sizes.
-- **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
-- **Scrollable roster columns:** party and enemy panels remain independently scrollable when total unit count exceeds available viewport height.
+* **Living-first ordering:** living entities are listed before defeated ones so the actionable combat state is always near the top of each roster.
+* **Compact bars with preserved scanability:** HP, resource, and action-readiness bars remain visible at reduced card density to avoid panel collapse at larger party sizes.
+* **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
+* **Scrollable roster columns:** party and enemy panels remain independently scrollable when total unit count exceeds available viewport height.
+* **Anchored combat log:** the middle-column log remains pinned to the bottom of the dungeon view while the encounter showcase keeps a stable footprint, so rapid kills or floor transitions do not cause the log panel to jump upward.
+* **Adjustable log depth:** players can still choose how much recent combat history to expose by expanding the log or dragging its resize handle upward for more visible entries.
 
 ### State Updates
 
