@@ -52,6 +52,15 @@ Cleric `Smite` is the first shipped non-physical attack in this system and is ta
 
 Whenever an entity resolves an action, the UI displays a short-lived skill banner near that unit's portrait (for example, `Casting Mend` or `Casting Rage Strike`) so the player can read combat intent at a glance without relying only on the combat log.
 
+### UI Readability Conventions
+
+To support higher-entity encounters (up to five party members and five enemies), the roster presentation follows a few conventions:
+
+- **Living-first ordering:** living entities are listed before defeated ones so the actionable combat state is always near the top of each roster.
+- **Compact bars with preserved scanability:** HP, resource, and action-readiness bars remain visible at reduced card density to avoid panel collapse at larger party sizes.
+- **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
+- **Scrollable roster columns:** party and enemy panels remain independently scrollable when total unit count exceeds available viewport height.
+
 ### State Updates
 
 The combat loop now advances through a provider-backed `zustand` store action (`stepSimulation`) while the combat math itself lives in pure engine helpers under `src/game/engine/`. This keeps ATB bars and regenerating resources visually in sync without forcing unrelated UI panels to subscribe to every tick. For the architectural rationale behind the migration, see [002 - State Management Evolution](../technicaldecisions/002-state-management-evolution.md).
