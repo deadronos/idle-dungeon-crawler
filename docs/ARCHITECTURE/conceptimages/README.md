@@ -15,9 +15,10 @@ Use these screenshots as the canonical reference when reviewing future changes t
 These images were captured from the running app at a desktop viewport of `1600×1200`.
 
 - `001-character-creation.png` — initial hero creation screen
-- `002-dungeon-view.png` — main dungeon gameplay view
+- `002-dungeon-view.png` — main dungeon gameplay view with the `Log` panel visible
 - `003-shop-sanctum-upgrades.png` — upgrade shop, `Sanctum Upgrades` tab
 - `004-shop-altar-of-souls.png` — upgrade shop, `Altar of Souls` tab
+- `005-dungeon-events-view.png` — main dungeon gameplay view with the `Events` panel visible
 
 ## Naming convention
 
@@ -41,9 +42,10 @@ When the intended UI changes materially:
 
 ## Scope
 
-The current set covers the distinct top-level screens and tabs presently available in the app:
+The current set covers the distinct top-level screens and tab states presently available in the app:
 
 - character creation
-- dungeon view
+- dungeon view with `Log`
+- dungeon view with `Events`
 - shop overview via `Sanctum Upgrades`
 - shop prestige view via `Altar of Souls`
