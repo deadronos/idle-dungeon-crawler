@@ -12,11 +12,7 @@ Use these screenshots as the canonical reference when reviewing future changes t
 
 ## Current baseline set
 
-> Note: Baseline screenshot PNG files are intentionally removed from this branch due Codex web-app binary file limitations. Re-generate and commit them locally (VS Code) using the same filenames listed below.
-
 These images were captured from the running app at a desktop viewport of `1600×1200`.
-
-Latest refresh: **March 2026 readability pass** (run behavior cards, compact scrollable rosters, living-first ordering, and portrait attribute tooltips in dungeon view).
 
 - `001-character-creation.png` — initial hero creation screen
 - `002-dungeon-view.png` — main dungeon gameplay view
