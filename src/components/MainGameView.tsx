@@ -16,6 +16,8 @@ export const MainGameView: React.FC = () => {
     const toggleAutoFight = useGameStore((state) => state.toggleAutoFight);
     const toggleAutoAdvance = useGameStore((state) => state.toggleAutoAdvance);
 
+    const primaryEnemy = enemies.find((enemy) => enemy.currentHp.gt(0)) ?? enemies[0];
+
     const runStateLabel = autoAdvance
         ? "Auto-advance enabled"
         : autoFight
@@ -24,10 +26,10 @@ export const MainGameView: React.FC = () => {
 
     return (
         <div className="flex-2 flex flex-col items-center justify-center relative w-full h-full bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.9)] overflow-hidden">
-            <div className="flex w-full h-full p-4 lg:p-8 gap-6 lg:gap-8 justify-between items-stretch flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-y-hidden">
+            <div className="flex w-full h-full min-h-0 p-4 lg:p-8 gap-6 lg:gap-8 justify-between items-stretch flex-wrap lg:flex-nowrap overflow-y-auto lg:overflow-y-hidden">
                 <EntityRoster title="The Party" entities={party} className="order-first lg:order-none" />
 
-                <div className="flex-1 lg:flex-2 min-w-[300px] flex flex-col items-center relative lg:order-none gap-4 lg:gap-6">
+                <div className="flex-1 lg:flex-2 min-w-[300px] min-h-0 flex flex-col items-center relative lg:order-none gap-4 lg:gap-6">
                     <div className="w-full rounded-2xl border border-white/10 bg-slate-950/70 backdrop-blur-md px-4 py-3 lg:px-6 lg:py-4 shadow-[0_0_30px_rgba(15,23,42,0.8)]">
                         <div className="flex items-center justify-between gap-3 text-white">
                             <Button
@@ -104,10 +106,10 @@ export const MainGameView: React.FC = () => {
                         </p>
                     </div>
 
-                    {enemies.length > 0 && enemies[0].currentHp.gt(0) && (
+                    {primaryEnemy && primaryEnemy.currentHp.gt(0) && (
                         <div className="flex justify-center items-center max-h-[180px] lg:flex-1 lg:max-h-none w-full p-4 lg:p-8 rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-sm">
                             <img
-                                src={enemies[0].image}
+                                src={primaryEnemy.image}
                                 alt="Enemy"
                                 className="w-full max-w-[280px] h-auto object-contain drop-shadow-[0_0_25px_rgba(0,0,0,0.8)] animate-[idle-float_3s_ease-in-out_infinite]"
                                 draggable={false}
