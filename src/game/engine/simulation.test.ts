@@ -6,7 +6,6 @@ import { createEnemy, createHero } from "../entity";
 import {
     applyElementalMitigation,
     applyPhysicalMitigation,
-    CLERIC_BLESS_COST,
     createEncounter,
     createInitialGameState,
     createSequenceRandomSource,

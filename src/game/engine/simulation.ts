@@ -375,6 +375,7 @@ const getAtbMultiplier = (entity: Entity) => {
     return Math.max(0.1, 1 - getStatusPotency(entity, "slow"));
 };
 
+/** Returns a multiplier (0–1) reducing incoming healing by the target's hex potency. */
 const getHealingMultiplier = (entity: Entity) => {
     return Math.max(0, 1 - getStatusPotency(entity, "hex"));
 };
@@ -804,7 +805,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             }
 
             if (statusEffect.key === "regen" && nextRemainingTicks % GAME_TICK_RATE === 0) {
-                const healAmount = Decimal.max(1, new Decimal(nextStatusEffect.potency)).floor();
+                const healAmount = Decimal.max(1, nextStatusEffect.potency).floor();
                 entity.currentHp = Decimal.min(entity.maxHp, entity.currentHp.plus(healAmount));
                 queueStatusEvent(entity, "regen", "tick", `${getStatusEffectName("regen")} +${healAmount.toString()}`, healAmount.toString());
                 logMessages.push(`${entity.name} regenerates ${healAmount.toString()} HP.`);
@@ -995,6 +996,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             }
 
             const blessCost = new Decimal(CLERIC_BLESS_COST);
+            // Bless targets other party members only; solo Clerics fall through to Smite
             const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((se) => se.key === "regen"));
             if (blessTarget && entity.currentResource.gte(blessCost)) {
                 const regenPotency = entity.magicDamage.times(REGEN_TICK_HEAL_MULTIPLIER).toNumber();
