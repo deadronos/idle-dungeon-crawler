@@ -8,8 +8,21 @@ import { deserializeGameState, serializeGameState } from "./persistence";
 
 describe("game-state persistence", () => {
     it("roundtrips the playable game state through JSON export and import", () => {
+        const party = createStarterParty("Selene", "Cleric");
+        party[0].statusEffects = [
+            {
+                key: "burn",
+                polarity: "debuff",
+                sourceId: "enemy_3",
+                remainingTicks: 60,
+                stacks: 2,
+                maxStacks: 2,
+                potency: 4.2,
+            },
+        ];
+
         const exportedState = createInitialGameState({
-            party: createStarterParty("Selene", "Cleric"),
+            party,
             enemies: [createEnemy(3, "enemy_3")],
             gold: new Decimal(345),
             floor: 3,
@@ -26,6 +39,14 @@ describe("game-state persistence", () => {
         expect(restoredState.gold.toString()).toBe("345");
         expect(restoredState.party[0]?.name).toBe("Selene");
         expect(restoredState.party[0]?.currentHp.eq(exportedState.party[0]?.currentHp ?? 0)).toBe(true);
+        expect(restoredState.party[0]?.statusEffects).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    key: "burn",
+                    stacks: 2,
+                }),
+            ]),
+        );
         expect(restoredState.enemies[0]?.name).toBe(exportedState.enemies[0]?.name);
         expect(restoredState.autoFight).toBe(false);
         expect(restoredState.activeSection).toBe("shop");
@@ -71,6 +92,7 @@ describe("game-state persistence", () => {
         delete payload.state.party[0]?.elementalPenetration;
         delete payload.state.party[0]?.tenacity;
         delete payload.state.party[0]?.guardStacks;
+        delete payload.state.party[0]?.statusEffects;
         delete payload.state.enemies[0]?.accuracyRating;
         delete payload.state.enemies[0]?.evasionRating;
         delete payload.state.enemies[0]?.parryRating;
@@ -80,6 +102,7 @@ describe("game-state persistence", () => {
         delete payload.state.enemies[0]?.enemyArchetype;
         delete payload.state.enemies[0]?.enemyElement;
         delete payload.state.enemies[0]?.guardStacks;
+        delete payload.state.enemies[0]?.statusEffects;
 
         const restoredState = deserializeGameState(JSON.stringify(payload));
 
@@ -90,6 +113,7 @@ describe("game-state persistence", () => {
         expect(restoredState.party[0]?.elementalPenetration).toBeGreaterThan(0);
         expect(restoredState.party[0]?.tenacity).toBeGreaterThan(0);
         expect(restoredState.party[0]?.guardStacks).toBe(0);
+        expect(restoredState.party[0]?.statusEffects).toEqual([]);
         expect(restoredState.enemies[0]?.accuracyRating).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.evasionRating).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.parryRating).toBeGreaterThan(0);
@@ -98,6 +122,7 @@ describe("game-state persistence", () => {
         expect(restoredState.enemies[0]?.tenacity).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.enemyArchetype).toBe("Bruiser");
         expect(restoredState.enemies[0]?.guardStacks).toBe(0);
+        expect(restoredState.enemies[0]?.statusEffects).toEqual([]);
     });
 
     it("rejects malformed save payloads", () => {

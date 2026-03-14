@@ -1,7 +1,7 @@
 import React from 'react';
 import { Skull } from 'lucide-react';
 
-import { getEnemyArchetypeLabel } from '../game/entity';
+import { getEnemyArchetypeLabel, getStatusEffectBadge, getStatusEffectName } from '../game/entity';
 import type { Entity } from '../game/entity';
 import type { CombatEvent } from '../game/store/types';
 import { useGame, useGameStore } from '../game/store/gameStore';
@@ -80,6 +80,12 @@ const resistanceStatsFor = (entity: Entity): TooltipStat[] => [
   { label: "Shadow", value: `${Math.round(entity.resistances.shadow * 100)}%` },
 ];
 
+const statusChipClassName = (entity: Entity) => {
+  return entity.isEnemy
+    ? 'border-red-400/30 bg-red-500/10 text-red-100'
+    : 'border-cyan-300/30 bg-cyan-500/10 text-cyan-100';
+};
+
 const combatEventClassName = (event: CombatEvent) => {
   switch (event.kind) {
     case 'damage':
@@ -96,6 +102,14 @@ const combatEventClassName = (event: CombatEvent) => {
       return 'border-slate-400/60 bg-slate-700/40 text-slate-100';
     case 'skill':
       return 'border-violet-300/50 bg-violet-500/15 text-violet-100';
+    case 'status':
+      if (event.statusPhase === 'tick') {
+        return 'border-orange-300/50 bg-orange-500/15 text-orange-100';
+      }
+      if (event.statusPhase === 'expire') {
+        return 'border-slate-300/40 bg-slate-500/15 text-slate-100';
+      }
+      return 'border-cyan-300/50 bg-cyan-500/15 text-cyan-100';
     default:
       return 'border-slate-300/30 bg-slate-900/70 text-slate-100';
   }
@@ -126,6 +140,18 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                       ? `${entity.class} • ${getEnemyArchetypeLabel(entity)}`
                       : entity.class}
                   </p>
+                  {entity.statusEffects.length > 0 && (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {entity.statusEffects.map((statusEffect) => (
+                        <span
+                          key={`${entity.id}-${statusEffect.key}`}
+                          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] ${statusChipClassName(entity)}`}
+                        >
+                          {getStatusEffectBadge(statusEffect)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>
@@ -213,6 +239,23 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                         ))}
                       </dl>
                     </div>
+                    {entity.statusEffects.length > 0 && (
+                      <div className="border-t border-slate-800/80 pt-2">
+                        <p className="text-[9px] font-black uppercase tracking-[0.28em] text-rose-200/80">Statuses</p>
+                        <dl className="mt-2 grid grid-cols-1 gap-y-1">
+                          {entity.statusEffects.map((statusEffect) => (
+                            <div key={`${entity.id}-${statusEffect.key}-tooltip`} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
+                              <dt className="text-slate-400">
+                                {getStatusEffectName(statusEffect.key)}
+                              </dt>
+                              <dd className="font-mono font-bold text-slate-50">
+                                {statusEffect.stacks > 1 ? `x${statusEffect.stacks}` : `${Math.ceil(statusEffect.remainingTicks / 20)}s`}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      </div>
+                    )}
                   </div>
                 </div>
                 {entity.activeSkill && (

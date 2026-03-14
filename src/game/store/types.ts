@@ -1,11 +1,12 @@
 import type Decimal from "decimal.js";
 import type { StateCreator } from "zustand";
 
-import type { Entity, HeroClass, MetaUpgrades } from "../entity";
+import type { Entity, HeroClass, MetaUpgrades, StatusEffectKey } from "../entity";
 import type { PartySlotUnlock } from "../partyProgression";
 
 export type AppSection = "dungeon" | "shop";
-export type CombatEventKind = "damage" | "heal" | "dodge" | "parry" | "crit" | "defeat" | "skill";
+export type CombatEventKind = "damage" | "heal" | "dodge" | "parry" | "crit" | "defeat" | "skill" | "status";
+export type CombatEventStatusPhase = "apply" | "tick" | "expire";
 
 export interface CombatEvent {
     id: string;
@@ -15,6 +16,8 @@ export interface CombatEvent {
     text: string;
     amount?: string;
     isCrit?: boolean;
+    statusKey?: StatusEffectKey;
+    statusPhase?: CombatEventStatusPhase;
     ttlTicks: number;
 }
 

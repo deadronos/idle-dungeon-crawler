@@ -37,6 +37,7 @@ const heroEntity: Entity = {
     activeSkill: "Casting Mend",
     activeSkillTicks: 10,
     guardStacks: 0,
+    statusEffects: [],
 };
 
 describe("EntityRoster", () => {
@@ -51,10 +52,25 @@ describe("EntityRoster", () => {
     });
 
     it("renders floating combat events and expanded derived stat details", () => {
+        const statusEntity = {
+            ...heroEntity,
+            statusEffects: [
+                {
+                    key: "burn" as const,
+                    polarity: "debuff" as const,
+                    sourceId: "enemy_1",
+                    remainingTicks: 80,
+                    stacks: 2,
+                    maxStacks: 2,
+                    potency: 3.15,
+                },
+            ],
+        };
+
         render(
             <GameProvider
                 initialState={{
-                    party: [heroEntity],
+                    party: [statusEntity],
                     combatEvents: [
                         {
                             id: "combat-event-1",
@@ -63,17 +79,29 @@ describe("EntityRoster", () => {
                             text: "+21",
                             ttlTicks: 10,
                         },
+                        {
+                            id: "combat-event-2",
+                            targetId: heroEntity.id,
+                            kind: "status",
+                            text: "Burn",
+                            statusKey: "burn",
+                            statusPhase: "apply",
+                            ttlTicks: 10,
+                        },
                     ],
                 }}
             >
-                <EntityRoster title="Party" entities={[heroEntity]} />
+                <EntityRoster title="Party" entities={[statusEntity]} />
             </GameProvider>,
         );
 
         expect(screen.getByText("+21")).toBeInTheDocument();
+        expect(screen.getAllByText(/burn/i).length).toBeGreaterThan(0);
+        expect(screen.getByText(/brn x2/i)).toBeInTheDocument();
         const tooltip = screen.getByRole("tooltip");
         expect(tooltip).toHaveTextContent(/attributes/i);
         expect(tooltip).toHaveTextContent(/resistances/i);
+        expect(tooltip).toHaveTextContent(/statuses/i);
         expect(tooltip).toHaveTextContent(/acc\s*66/i);
         expect(tooltip).toHaveTextContent(/eva\s*51/i);
         expect(tooltip).toHaveTextContent(/par\s*9/i);

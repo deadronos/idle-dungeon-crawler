@@ -150,6 +150,17 @@ describe("createGameStore", () => {
         party.push(createRecruitHero("Cleric", party));
         party.push(createRecruitHero("Archer", party));
         party.push(createRecruitHero("Warrior", party));
+        party[0].statusEffects = [
+            {
+                key: "slow",
+                polarity: "debuff",
+                sourceId: "enemy_water",
+                remainingTicks: 30,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.2,
+            },
+        ];
 
         const store = createGameStore({
             floor: 19,
@@ -164,6 +175,7 @@ describe("createGameStore", () => {
 
         expect(state.floor).toBe(20);
         expect(state.party).toHaveLength(4);
+        expect(state.party[0]?.statusEffects).toEqual([]);
         expect(state.enemies).toHaveLength(1);
         expect(state.enemies[0]?.name.startsWith("Boss:")).toBe(true);
     });

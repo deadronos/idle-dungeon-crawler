@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 type LogTab = 'log' | 'events';
 
-const notablePattern = /crit|critical|kill|slain|defeat|level|skill|boss|loot|drop|dodge|parry|resist/i;
+const notablePattern = /crit|critical|kill|slain|defeat|level|skill|boss|loot|drop|dodge|parry|resist|burn|slow|weaken|afflicted|fades/i;
 const BODY_HEIGHT_CLASSES = ['h-[86px]', 'h-[114px]', 'h-[142px]', 'h-[170px]', 'h-[198px]', 'h-[226px]', 'h-[254px]'] as const;
 const PREVIEW_COUNTS = [4, 4, 5, 6, 7, 8, 9] as const;
 const ENTRY_OPACITY_CLASSES = ['opacity-100', 'opacity-85', 'opacity-70', 'opacity-55', 'opacity-40', 'opacity-30'] as const;
