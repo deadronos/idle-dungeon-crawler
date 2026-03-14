@@ -15,10 +15,10 @@ Use these screenshots as the canonical reference when reviewing future changes t
 These images were captured from the running app at a desktop viewport of `1600×1200`.
 
 - `001-character-creation.png` — initial hero creation screen
-- `002-dungeon-view.png` — main dungeon gameplay view with the bottom-anchored, resizable `Log` panel visible and floating combat callouts active near unit portraits
+- `002-dungeon-view.png` — main dungeon gameplay view with the bottom-anchored, resizable `Log` panel visible, floating combat callouts active near unit portraits, and the encounter / roster archetype labels surfaced subtly in place
 - `003-shop-sanctum-upgrades.png` — upgrade shop, `Sanctum Upgrades` tab
 - `004-shop-altar-of-souls.png` — upgrade shop, `Altar of Souls` tab
-- `005-dungeon-events-view.png` — main dungeon gameplay view with the bottom-anchored `Events` panel visible and combat outcomes like `Dodge` surfaced inline
+- `005-dungeon-events-view.png` — main dungeon gameplay view with the bottom-anchored `Events` panel visible, combat outcomes like `Dodge` surfaced inline, and the enemy archetype label still readable in the stage view
 - `006-dungeon-hover-tooltip.png` — dungeon gameplay view with the entity hover tooltip expanded, showing grouped attributes and elemental resistances without truncation
 
 ## Naming convention

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Skull } from 'lucide-react';
 
+import { getEnemyArchetypeLabel } from '../game/entity';
 import type { Entity } from '../game/entity';
 import type { CombatEvent } from '../game/store/types';
 import { useGame, useGameStore } from '../game/store/gameStore';
@@ -113,7 +114,11 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
               <div className={`flex justify-between items-center ${alignRight ? 'flex-row-reverse' : ''}`}>
                 <div>
                   <h3 className="font-bold text-slate-100 text-sm sm:text-base leading-tight">{entity.name}</h3>
-                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-[0.2em]">{entity.class}</p>
+                  <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-[0.2em]">
+                    {entity.isEnemy && getEnemyArchetypeLabel(entity)
+                      ? `${entity.class} • ${getEnemyArchetypeLabel(entity)}`
+                      : entity.class}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>

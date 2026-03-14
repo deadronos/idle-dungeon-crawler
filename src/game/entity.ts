@@ -3,6 +3,9 @@ import Decimal from "decimal.js";
 // Basic Types
 export type EntityClass = "Warrior" | "Cleric" | "Archer" | "Monster";
 export type HeroClass = Exclude<EntityClass, "Monster">;
+export type DamageElement = "physical" | keyof Elements;
+export type EnemyElement = Exclude<DamageElement, "physical">;
+export type EnemyArchetype = "Bruiser" | "Skirmisher" | "Caster" | "Support" | "Boss";
 
 export interface MetaUpgrades {
     training: number;
@@ -39,6 +42,8 @@ export interface Entity {
     class: EntityClass;
     image: string; // Sprite path
     isEnemy: boolean;
+    enemyArchetype?: EnemyArchetype;
+    enemyElement?: EnemyElement | null;
 
     // Progression
     level: number;
@@ -72,6 +77,13 @@ export interface Entity {
     actionProgress: number; // 0 to 100
     activeSkill: string | null;
     activeSkillTicks: number;
+    guardStacks: number;
+}
+
+export interface CreateEnemyOptions {
+    archetype?: EnemyArchetype;
+    boss?: boolean;
+    element?: EnemyElement;
 }
 
 export const BASE_META_UPGRADES: MetaUpgrades = {
@@ -82,11 +94,130 @@ export const BASE_META_UPGRADES: MetaUpgrades = {
 export const HERO_CLASSES: HeroClass[] = ["Warrior", "Cleric", "Archer"];
 export const BOSS_VITALITY_MULTIPLIER = 2;
 export const BOSS_STRENGTH_MULTIPLIER = 1.3;
+export const ENEMY_ELEMENTS: EnemyElement[] = ["fire", "water", "earth", "air", "light", "shadow"];
 
 const HERO_NAME_POOLS: Record<HeroClass, string[]> = {
     Warrior: ["Brom", "Tarin", "Mira", "Hale", "Sable"],
     Cleric: ["Lyra", "Seren", "Ione", "Thess", "Aster"],
     Archer: ["Kestrel", "Nyx", "Corin", "Vera", "Pike"],
+};
+
+const OFFENSIVE_ENEMY_ARCHETYPES: Array<Exclude<EnemyArchetype, "Support" | "Boss">> = ["Bruiser", "Skirmisher", "Caster"];
+
+const capitalizeLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+const applyEnemyArchetypeBias = (attributes: Attributes, archetype: EnemyArchetype): Attributes => {
+    switch (archetype) {
+        case "Bruiser":
+            return {
+                vit: attributes.vit * 1.45,
+                str: attributes.str * 1.25,
+                dex: attributes.dex * 0.75,
+                int: attributes.int * 0.7,
+                wis: attributes.wis * 0.85,
+            };
+        case "Skirmisher":
+            return {
+                vit: attributes.vit * 0.85,
+                str: attributes.str * 0.9,
+                dex: attributes.dex * 1.45,
+                int: attributes.int * 0.8,
+                wis: attributes.wis * 1.05,
+            };
+        case "Caster":
+            return {
+                vit: attributes.vit * 0.9,
+                str: attributes.str * 0.65,
+                dex: attributes.dex * 0.95,
+                int: attributes.int * 1.45,
+                wis: attributes.wis * 1.25,
+            };
+        case "Support":
+            return {
+                vit: attributes.vit,
+                str: attributes.str * 0.65,
+                dex: attributes.dex * 0.95,
+                int: attributes.int * 1.25,
+                wis: attributes.wis * 1.45,
+            };
+        case "Boss":
+            return {
+                vit: attributes.vit * 1.25,
+                str: attributes.str * 1.15,
+                dex: attributes.dex * 1.2,
+                int: attributes.int * 1.2,
+                wis: attributes.wis * 1.2,
+            };
+        default:
+            return attributes;
+    }
+};
+
+export const isBossArchetype = (archetype?: EnemyArchetype | null) => archetype === "Boss";
+
+export const getEnemyArchetypePoolForFloor = (floor: number): EnemyArchetype[] => {
+    if (floor % 10 === 0) {
+        return ["Boss"];
+    }
+
+    if (floor >= 11) {
+        return ["Bruiser", "Skirmisher", "Caster", "Support"];
+    }
+
+    if (floor >= 5) {
+        return ["Bruiser", "Skirmisher", "Caster"];
+    }
+
+    return ["Bruiser", "Skirmisher"];
+};
+
+export const getEncounterArchetypes = (floor: number, encounterSize: number): EnemyArchetype[] => {
+    if (floor % 10 === 0) {
+        return ["Boss"];
+    }
+
+    const archetypes: EnemyArchetype[] = Array.from({ length: encounterSize }, (_, index) => {
+        const offensivePool = floor >= 5 ? OFFENSIVE_ENEMY_ARCHETYPES : OFFENSIVE_ENEMY_ARCHETYPES.slice(0, 2);
+        return offensivePool[(floor + index) % offensivePool.length];
+    });
+
+    if (floor >= 11 && encounterSize >= 2 && floor % 2 === 1) {
+        archetypes[encounterSize - 1] = "Support";
+    }
+
+    return archetypes;
+};
+
+export const getEnemyElementForEncounter = (floor: number, encounterIndex = 0): EnemyElement => {
+    return ENEMY_ELEMENTS[(floor + encounterIndex) % ENEMY_ELEMENTS.length];
+};
+
+export const getEnemyArchetypeLabel = (entity: Pick<Entity, "isEnemy" | "enemyArchetype" | "enemyElement">) => {
+    if (!entity.isEnemy || !entity.enemyArchetype) {
+        return null;
+    }
+
+    if ((entity.enemyArchetype === "Caster" || entity.enemyArchetype === "Boss") && entity.enemyElement) {
+        return `${capitalizeLabel(entity.enemyElement)} ${entity.enemyArchetype}`;
+    }
+
+    return entity.enemyArchetype;
+};
+
+export const inferEnemyArchetype = (entity: Pick<Entity, "isEnemy" | "enemyArchetype" | "name">): EnemyArchetype | undefined => {
+    if (!entity.isEnemy) {
+        return undefined;
+    }
+
+    if (entity.enemyArchetype) {
+        return entity.enemyArchetype;
+    }
+
+    if (entity.name.startsWith("Boss:")) {
+        return "Boss";
+    }
+
+    return "Bruiser";
 };
 
 // Global Stat Multipliers
@@ -223,6 +354,7 @@ export const createHero = (
         actionProgress: 0,
         activeSkill: null,
         activeSkillTicks: 0,
+        guardStacks: 0,
     };
 
     hero = recalculateEntity(hero, upgrades, prestigeUpgrades);
@@ -295,24 +427,33 @@ export const createRecruitHero = (
 };
 
 // Enemy generation (simple for now)
-export const createEnemy = (level: number, id: string): Entity => {
+export const createEnemy = (level: number, id: string, options: CreateEnemyOptions = {}): Entity => {
     const images = ["/assets/enemy_rat.png", "/assets/enemy_goblin.png", "/assets/enemy_skeleton.png"];
     const names = ["Sewer Rat", "Goblin Trainee", "Skeleton Guard"];
     const idx = (level - 1) % images.length;
+    const isBoss = options.boss ?? (level % 10 === 0);
+    const enemyArchetype = options.archetype ?? (isBoss ? "Boss" : "Bruiser");
+    const enemyElement = enemyArchetype === "Caster" || enemyArchetype === "Boss"
+        ? (options.element ?? getEnemyElementForEncounter(level))
+        : null;
+
+    const baseAttributes = {
+        vit: 5 + (level * 2),
+        str: 5 + (level * 1.5),
+        dex: 5 + (level * 1.5),
+        int: 2 + level,
+        wis: 2 + level,
+    };
 
     let enemy: Entity = {
         id, name: `${names[idx]} Lv${level}`, class: "Monster",
         isEnemy: true,
+        enemyArchetype,
+        enemyElement,
         image: `${import.meta.env.BASE_URL}${images[idx]}`,
         level,
         exp: new Decimal(0), expToNext: new Decimal(0), // Enemies don't level up
-        attributes: {
-            vit: 5 + (level * 2),
-            str: 5 + (level * 1.5),
-            dex: 5 + (level * 1.5),
-            int: 2 + level,
-            wis: 2 + level
-        },
+        attributes: applyEnemyArchetypeBias(baseAttributes, enemyArchetype),
         maxHp: new Decimal(1), currentHp: new Decimal(1),
         maxResource: new Decimal(100), currentResource: new Decimal(0),
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
@@ -322,12 +463,16 @@ export const createEnemy = (level: number, id: string): Entity => {
         actionProgress: 0,
         activeSkill: null,
         activeSkillTicks: 0,
+        guardStacks: 0,
     };
 
     // Boss floor
-    if (level % 10 === 0) {
+    if (isBoss) {
         enemy.attributes.vit *= BOSS_VITALITY_MULTIPLIER;
         enemy.attributes.str *= BOSS_STRENGTH_MULTIPLIER;
+        enemy.attributes.dex *= 1.1;
+        enemy.attributes.int *= 1.15;
+        enemy.attributes.wis *= 1.15;
         enemy.name = `Boss: ${enemy.name}`;
     }
 

@@ -67,18 +67,25 @@ describe("game-state persistence", () => {
         delete payload.state.party[0]?.accuracyRating;
         delete payload.state.party[0]?.evasionRating;
         delete payload.state.party[0]?.parryRating;
+        delete payload.state.party[0]?.guardStacks;
         delete payload.state.enemies[0]?.accuracyRating;
         delete payload.state.enemies[0]?.evasionRating;
         delete payload.state.enemies[0]?.parryRating;
+        delete payload.state.enemies[0]?.enemyArchetype;
+        delete payload.state.enemies[0]?.enemyElement;
+        delete payload.state.enemies[0]?.guardStacks;
 
         const restoredState = deserializeGameState(JSON.stringify(payload));
 
         expect(restoredState.party[0]?.accuracyRating).toBeGreaterThan(0);
         expect(restoredState.party[0]?.evasionRating).toBeGreaterThan(0);
         expect(restoredState.party[0]?.parryRating).toBeGreaterThan(0);
+        expect(restoredState.party[0]?.guardStacks).toBe(0);
         expect(restoredState.enemies[0]?.accuracyRating).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.evasionRating).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.parryRating).toBeGreaterThan(0);
+        expect(restoredState.enemies[0]?.enemyArchetype).toBe("Bruiser");
+        expect(restoredState.enemies[0]?.guardStacks).toBe(0);
     });
 
     it("rejects malformed save payloads", () => {

@@ -65,6 +65,16 @@ describe("simulation engine", () => {
         expect(encounter[0]?.name.startsWith("Boss:")).toBe(true);
     });
 
+    it("introduces deterministic archetype composition as floors deepen", () => {
+        const earlyEncounter = createEncounter(3);
+        const midEncounter = createEncounter(7);
+        const lateEncounter = createEncounter(11);
+
+        expect(earlyEncounter.map((enemy) => enemy.enemyArchetype)).toEqual(["Skirmisher"]);
+        expect(midEncounter.map((enemy) => enemy.enemyArchetype)).toEqual(["Skirmisher", "Caster"]);
+        expect(lateEncounter.map((enemy) => enemy.enemyArchetype)).toEqual(["Caster", "Bruiser", "Support"]);
+    });
+
     it("applies light resistance to cleric smite damage", () => {
         const cleric = createHero("hero_1", "Ayla", "Cleric");
         cleric.actionProgress = 99;
@@ -143,7 +153,7 @@ describe("simulation engine", () => {
         warrior.parryRating = 200;
         warrior.currentHp = warrior.maxHp;
 
-        const enemy = createEnemy(1, "enemy_1");
+        const enemy = createEnemy(1, "enemy_1", { archetype: "Bruiser" });
         enemy.actionProgress = 99;
         enemy.critChance = 0;
         const startingHp = warrior.currentHp;
@@ -158,7 +168,7 @@ describe("simulation engine", () => {
         );
 
         expect(result.state.party[0].currentHp.eq(startingHp)).toBe(true);
-        expect(result.state.combatLog[0]).toMatch(/Brom parries Sewer Rat Lv1's Attack!/);
+        expect(result.state.combatLog[0]).toMatch(/Brom parries Sewer Rat Lv1's Crushing Blow!/);
         expect(result.state.combatEvents.some((event) => event.kind === "parry" && event.targetId === warrior.id)).toBe(true);
     });
 
@@ -184,6 +194,180 @@ describe("simulation engine", () => {
         expect(result.state.enemies[0].currentHp.lt(startingHp)).toBe(true);
         expect(result.state.combatLog[0]).toMatch(/piercing shot/i);
         expect(result.state.combatLog[0]).not.toMatch(/parries/i);
+    });
+
+    it("has bruisers target the hero with the highest current HP", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        const cleric = createHero("hero_2", "Ayla", "Cleric");
+        warrior.currentHp = new Decimal(40);
+        cleric.currentHp = new Decimal(70);
+
+        const bruiser = createEnemy(6, "enemy_bruiser", { archetype: "Bruiser" });
+        bruiser.actionProgress = 99;
+        bruiser.critChance = 0;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [warrior, cleric],
+                enemies: [bruiser],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0.9),
+        );
+
+        expect(result.state.combatLog[0]).toMatch(/Crushing Blow on Ayla/i);
+    });
+
+    it("has skirmishers target low-HP heroes with ranged pressure that cannot be parried", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        const cleric = createHero("hero_2", "Ayla", "Cleric");
+        warrior.currentHp = new Decimal(25);
+        warrior.parryRating = 999;
+        cleric.currentHp = new Decimal(80);
+
+        const skirmisher = createEnemy(6, "enemy_skirmisher", { archetype: "Skirmisher" });
+        skirmisher.actionProgress = 99;
+        skirmisher.critChance = 0;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [warrior, cleric],
+                enemies: [skirmisher],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0.9),
+        );
+
+        expect(result.state.combatLog[0]).toMatch(/Harrying Shot on Brom/i);
+        expect(result.state.combatLog[0]).not.toMatch(/parries/i);
+    });
+
+    it("has casters target the hero with the weakest elemental resistance", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        const cleric = createHero("hero_2", "Ayla", "Cleric");
+        warrior.resistances.fire = 0.6;
+        cleric.resistances.fire = 0.05;
+
+        const caster = createEnemy(6, "enemy_caster", { archetype: "Caster", element: "fire" });
+        caster.actionProgress = 99;
+        caster.critChance = 0;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [warrior, cleric],
+                enemies: [caster],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0.9),
+        );
+
+        expect(result.state.combatLog[0]).toMatch(/Fire Bolt on Ayla/i);
+    });
+
+    it("lets support enemies heal injured allies before attacking", () => {
+        const support = createEnemy(11, "enemy_support", { archetype: "Support" });
+        support.actionProgress = 99;
+
+        const bruiser = createEnemy(11, "enemy_bruiser", { archetype: "Bruiser" });
+        bruiser.currentHp = bruiser.maxHp.div(2);
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [createHero("hero_1", "Brom", "Warrior")],
+                enemies: [support, bruiser],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        expect(result.state.enemies[1].currentHp.gt(bruiser.maxHp.div(2))).toBe(true);
+        expect(result.state.combatLog[0]).toMatch(/Mend Ally/i);
+    });
+
+    it("lets support enemies ward allies and consume the ward on the next hit", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.critChance = 0;
+
+        const support = createEnemy(11, "enemy_support", { archetype: "Support" });
+        support.actionProgress = 99;
+
+        const bruiser = createEnemy(11, "enemy_bruiser", { archetype: "Bruiser" });
+        bruiser.currentHp = bruiser.maxHp;
+        bruiser.actionProgress = -999;
+
+        const initialState = createInitialGameState({
+            party: [warrior],
+            enemies: [support, bruiser],
+            combatLog: [],
+        });
+
+        const wardResult = simulateTick(initialState, createSequenceRandomSource(0));
+
+        expect(wardResult.state.enemies[1].guardStacks).toBe(1);
+        expect(wardResult.state.combatLog[0]).toMatch(/Ward Ally/i);
+
+        const unguardedBruiser = createEnemy(11, "enemy_compare", { archetype: "Bruiser" });
+        unguardedBruiser.actionProgress = -999;
+        const unguardedResult = simulateTick(
+            createInitialGameState({
+                party: [{ ...warrior, actionProgress: 99 }],
+                enemies: [unguardedBruiser],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0.9),
+        );
+
+        const guardedBruiser = wardResult.state.enemies[1];
+        guardedBruiser.actionProgress = -999;
+        const guardedState = createInitialGameState({
+            party: [{ ...warrior, actionProgress: 99 }],
+            enemies: [guardedBruiser],
+            combatLog: [],
+        });
+
+        const guardedFollowUp = simulateTick(guardedState, createSequenceRandomSource(0, 0, 0.9));
+
+        const guardedDamage = guardedBruiser.currentHp.minus(guardedFollowUp.state.enemies[0].currentHp);
+        const unguardedDamage = unguardedBruiser.currentHp.minus(unguardedResult.state.enemies[0].currentHp);
+
+        expect(guardedDamage.lt(unguardedDamage)).toBe(true);
+        expect(guardedFollowUp.state.enemies[0].guardStacks).toBe(0);
+    });
+
+    it("has bosses switch from melee pressure to ruin bolt below the phase threshold", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        const cleric = createHero("hero_2", "Ayla", "Cleric");
+        cleric.resistances.air = 0;
+        warrior.resistances.air = 0.6;
+
+        const boss = createEnemy(20, "enemy_boss", { archetype: "Boss", boss: true, element: "air" });
+        boss.actionProgress = 99;
+        boss.critChance = 0;
+
+        const opening = simulateTick(
+            createInitialGameState({
+                floor: 20,
+                party: [warrior, cleric],
+                enemies: [boss],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0.9),
+        );
+
+        expect(opening.state.combatLog[0]).toMatch(/Overlord Strike on Brom/i);
+
+        boss.currentHp = boss.maxHp.times(0.5);
+        const phaseTwo = simulateTick(
+            createInitialGameState({
+                floor: 20,
+                party: [warrior, cleric],
+                enemies: [boss],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0.9),
+        );
+
+        expect(phaseTwo.state.combatLog[0]).toMatch(/Ruin Bolt on Ayla/i);
     });
 
     it("does not let Rage Strike be parried", () => {
@@ -231,6 +415,7 @@ describe("simulation engine", () => {
         const warrior = createHero("hero_1", "Brom", "Warrior");
         warrior.critChance = 0;
         warrior.parryRating = 0;
+        warrior.currentResource = new Decimal(32);
 
         const enemy = createEnemy(1, "enemy_1");
         enemy.actionProgress = 99;
@@ -301,8 +486,8 @@ describe("simulation engine", () => {
             createSequenceRandomSource(0, 0, 0.9),
         );
 
-        expect(result.state.party[0].level).toBe(2);
-        expect(result.state.party[0].attributes.dex).toBe(14);
+        expect(result.state.party[0].level).toBe(3);
+        expect(result.state.party[0].attributes.dex).toBe(16);
     });
 
     it("expires transient combat events as ticks advance", () => {

@@ -1,7 +1,15 @@
 import Decimal from "decimal.js";
 
-import { BASE_META_UPGRADES, createEnemy, getExpRequirement, recalculateEntity } from "../entity";
-import type { Entity, MetaUpgrades, PrestigeUpgrades } from "../entity";
+import {
+    BASE_META_UPGRADES,
+    createEnemy,
+    getEncounterArchetypes,
+    getEnemyElementForEncounter,
+    getExpRequirement,
+    inferEnemyArchetype,
+    recalculateEntity,
+} from "../entity";
+import type { DamageElement, EnemyArchetype, Entity, MetaUpgrades, PrestigeUpgrades } from "../entity";
 import { MAX_PARTY_SIZE } from "../partyProgression";
 import type { CombatEvent, GameState } from "../store/types";
 
@@ -25,9 +33,18 @@ const MAX_PHYSICAL_HIT_CHANCE = 0.97;
 const MIN_SPELL_HIT_CHANCE = 0.74;
 const MAX_SPELL_HIT_CHANCE = 0.96;
 const MAX_PARRY_CHANCE = 0.25;
+const BRUISER_DAMAGE_MULTIPLIER = 1.35;
+const SKIRMISHER_CRIT_BONUS = 0.1;
+const CASTER_DAMAGE_MULTIPLIER = 1.15;
+const SUPPORT_HEAL_THRESHOLD = 0.6;
+const SUPPORT_HEAL_MULTIPLIER = 1.5;
+const SUPPORT_GUARD_REDUCTION = 0.35;
+const SUPPORT_HEX_DAMAGE_MULTIPLIER = 0.8;
+const BOSS_PHASE_SWITCH_THRESHOLD = 0.6;
+const BOSS_MELEE_DAMAGE_MULTIPLIER = 1.4;
+const BOSS_SPELL_DAMAGE_MULTIPLIER = 1.25;
 let combatEventSequence = 0;
 
-type DamageElement = "physical" | keyof Entity["resistances"];
 type DeliveryType = "melee" | "ranged" | "spell";
 
 interface DamageAction {
@@ -38,6 +55,12 @@ interface DamageAction {
     critChance: number;
     canDodge: boolean;
     canParry: boolean;
+}
+
+interface SupportAction {
+    type: "heal" | "guard";
+    name: string;
+    target: Entity;
 }
 
 export type SimulationOutcome = "running" | "paused" | "victory" | "party-wipe";
@@ -83,11 +106,29 @@ export const getEncounterSize = (floor: number) => {
 };
 
 export const createEncounter = (floor: number) => {
-    return Array.from({ length: getEncounterSize(floor) }, (_, index) => createEnemy(floor, `enemy_${floor}_${index}`));
+    const encounterSize = getEncounterSize(floor);
+    const archetypes = getEncounterArchetypes(floor, encounterSize);
+
+    return archetypes.map((archetype, index) => createEnemy(floor, `enemy_${floor}_${index}`, {
+        archetype,
+        boss: archetype === "Boss",
+        element: archetype === "Caster" || archetype === "Boss"
+            ? getEnemyElementForEncounter(floor, index)
+            : undefined,
+    }));
 };
 
 export const cloneEntity = (entity: Entity): Entity => ({
     ...entity,
+    enemyArchetype: inferEnemyArchetype(entity),
+    enemyElement: (() => {
+        const archetype = inferEnemyArchetype(entity);
+        if (archetype === "Caster" || archetype === "Boss") {
+            return entity.enemyElement ?? getEnemyElementForEncounter(entity.level);
+        }
+
+        return null;
+    })(),
     exp: new Decimal(entity.exp),
     expToNext: new Decimal(entity.expToNext),
     attributes: { ...entity.attributes },
@@ -104,6 +145,7 @@ export const cloneEntity = (entity: Entity): Entity => ({
     resistances: { ...entity.resistances },
     activeSkill: entity.activeSkill,
     activeSkillTicks: entity.activeSkillTicks,
+    guardStacks: entity.guardStacks ?? 0,
 });
 
 export const recalculateParty = (party: Entity[], upgrades: MetaUpgrades, prestigeUpgrades?: PrestigeUpgrades): Entity[] => {
@@ -184,6 +226,7 @@ export const getPartyWipeState = (state: GameState): Partial<GameState> => {
         const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades, state.prestigeUpgrades);
         refreshed.currentHp = refreshed.maxHp;
         refreshed.currentResource = hero.class === "Warrior" ? new Decimal(0) : refreshed.maxResource;
+        refreshed.guardStacks = 0;
         return refreshed;
     });
 
@@ -242,7 +285,163 @@ const decrementCombatEvents = (events: CombatEvent[]) => {
         .filter((event) => event.ttlTicks > 0);
 };
 
+const getHpRatio = (entity: Entity) => entity.currentHp.div(entity.maxHp).toNumber();
+
+const getLowestHpRatioTarget = (entities: Entity[]) => {
+    return [...entities].sort((left, right) => getHpRatio(left) - getHpRatio(right))[0];
+};
+
+const getHighestCurrentHpTarget = (entities: Entity[]) => {
+    return [...entities].sort((left, right) => right.currentHp.minus(left.currentHp).toNumber())[0];
+};
+
+const getLowestCurrentHpTarget = (entities: Entity[]) => {
+    return [...entities].sort((left, right) => left.currentHp.minus(right.currentHp).toNumber())[0];
+};
+
+const getThreatRating = (entity: Entity) => entity.physicalDamage.plus(entity.magicDamage).toNumber();
+
+const getHighestThreatTarget = (entities: Entity[]) => {
+    return [...entities].sort((left, right) => getThreatRating(right) - getThreatRating(left))[0];
+};
+
+const getLowestResistanceTarget = (entities: Entity[], damageElement: DamageElement) => {
+    if (damageElement === "physical") {
+        return getLowestCurrentHpTarget(entities);
+    }
+
+    return [...entities].sort((left, right) => left.resistances[damageElement] - right.resistances[damageElement])[0];
+};
+
+const getEnemyDamageAction = (entity: Entity, archetype: EnemyArchetype): DamageAction => {
+    switch (archetype) {
+        case "Bruiser":
+            return {
+                name: "Crushing Blow",
+                damage: entity.physicalDamage.times(BRUISER_DAMAGE_MULTIPLIER),
+                damageElement: "physical",
+                deliveryType: "melee",
+                critChance: entity.critChance,
+                canDodge: true,
+                canParry: true,
+            };
+        case "Skirmisher":
+            return {
+                name: "Harrying Shot",
+                damage: entity.physicalDamage,
+                damageElement: "physical",
+                deliveryType: "ranged",
+                critChance: Math.min(1, entity.critChance + SKIRMISHER_CRIT_BONUS),
+                canDodge: true,
+                canParry: false,
+            };
+        case "Caster":
+            return {
+                name: `${entity.enemyElement ? `${entity.enemyElement[0].toUpperCase()}${entity.enemyElement.slice(1)} ` : ""}Bolt`,
+                damage: entity.magicDamage.times(CASTER_DAMAGE_MULTIPLIER),
+                damageElement: entity.enemyElement ?? "shadow",
+                deliveryType: "spell",
+                critChance: entity.critChance,
+                canDodge: true,
+                canParry: false,
+            };
+        case "Support":
+            return {
+                name: "Suppressing Hex",
+                damage: entity.magicDamage.times(SUPPORT_HEX_DAMAGE_MULTIPLIER),
+                damageElement: "shadow",
+                deliveryType: "spell",
+                critChance: entity.critChance,
+                canDodge: true,
+                canParry: false,
+            };
+        case "Boss":
+            if (getHpRatio(entity) <= BOSS_PHASE_SWITCH_THRESHOLD) {
+                return {
+                    name: "Ruin Bolt",
+                    damage: entity.magicDamage.times(BOSS_SPELL_DAMAGE_MULTIPLIER),
+                    damageElement: entity.enemyElement ?? "shadow",
+                    deliveryType: "spell",
+                    critChance: entity.critChance,
+                    canDodge: true,
+                    canParry: false,
+                };
+            }
+
+            return {
+                name: "Overlord Strike",
+                damage: entity.physicalDamage.times(BOSS_MELEE_DAMAGE_MULTIPLIER),
+                damageElement: "physical",
+                deliveryType: "melee",
+                critChance: entity.critChance,
+                canDodge: true,
+                canParry: true,
+            };
+        default:
+            return {
+                name: "Attack",
+                damage: entity.physicalDamage,
+                damageElement: "physical",
+                deliveryType: "melee",
+                critChance: entity.critChance,
+                canDodge: true,
+                canParry: true,
+            };
+    }
+};
+
+const getEnemySupportAction = (entity: Entity, allies: Entity[]): SupportAction | null => {
+    const healTarget = getLowestHpRatioTarget(allies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
+    if (healTarget && getHpRatio(healTarget) < SUPPORT_HEAL_THRESHOLD) {
+        return {
+            type: "heal",
+            name: "Mend Ally",
+            target: healTarget,
+        };
+    }
+
+    const protectTarget = getHighestThreatTarget(allies.filter((ally) => ally.id !== entity.id && ally.guardStacks <= 0));
+    if (protectTarget) {
+        return {
+            type: "guard",
+            name: "Ward Ally",
+            target: protectTarget,
+        };
+    }
+
+    return null;
+};
+
+const selectTarget = (entity: Entity, targets: Entity[], action: DamageAction, randomSource: SimulationRandomSource) => {
+    if (!entity.isEnemy) {
+        return targets[Math.floor(randomSource.next() * targets.length)];
+    }
+
+    switch (inferEnemyArchetype(entity)) {
+        case "Bruiser":
+            return getHighestCurrentHpTarget(targets) ?? targets[0];
+        case "Skirmisher":
+            return getLowestCurrentHpTarget(targets) ?? targets[0];
+        case "Caster":
+            return getLowestResistanceTarget(targets, action.damageElement) ?? targets[0];
+        case "Support":
+            return getHighestThreatTarget(targets) ?? targets[0];
+        case "Boss":
+            if (action.deliveryType === "spell") {
+                return getLowestResistanceTarget(targets, action.damageElement) ?? targets[0];
+            }
+
+            return getHighestCurrentHpTarget(targets) ?? targets[0];
+        default:
+            return targets[Math.floor(randomSource.next() * targets.length)];
+    }
+};
+
 const getDamageAction = (entity: Entity): DamageAction => {
+    if (entity.isEnemy) {
+        return getEnemyDamageAction(entity, inferEnemyArchetype(entity) ?? "Bruiser");
+    }
+
     let action: DamageAction = {
         name: "Attack",
         damage: entity.physicalDamage,
@@ -398,11 +597,9 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
         if (!entity.isEnemy && entity.class === "Cleric") {
             const healCost = new Decimal(35);
-            const healTarget = livingAllies
-                .filter((ally) => ally.currentHp.lt(ally.maxHp))
-                .sort((left, right) => left.currentHp.div(left.maxHp).minus(right.currentHp.div(right.maxHp)).toNumber())[0];
+            const healTarget = getLowestHpRatioTarget(livingAllies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
 
-            if (healTarget && entity.currentResource.gte(healCost) && healTarget.currentHp.div(healTarget.maxHp).lt(0.65)) {
+            if (healTarget && entity.currentResource.gte(healCost) && getHpRatio(healTarget) < 0.65) {
                 const healAmount = entity.magicDamage.times(1.75);
                 setActiveSkill(entity, "Mend");
                 entity.currentResource = entity.currentResource.minus(healCost);
@@ -420,13 +617,50 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             }
         }
 
+        if (entity.isEnemy && inferEnemyArchetype(entity) === "Support") {
+            const supportAction = getEnemySupportAction(entity, livingAllies);
+
+            if (supportAction?.type === "heal") {
+                const healAmount = entity.magicDamage.times(SUPPORT_HEAL_MULTIPLIER);
+                setActiveSkill(entity, supportAction.name);
+                supportAction.target.currentHp = Decimal.min(
+                    supportAction.target.maxHp,
+                    supportAction.target.currentHp.plus(healAmount),
+                );
+                queueCombatEvent({
+                    sourceId: entity.id,
+                    targetId: supportAction.target.id,
+                    kind: "heal",
+                    text: `+${healAmount.floor().toString()}`,
+                    amount: healAmount.floor().toString(),
+                    ttlTicks: COMBAT_EVENT_TICKS,
+                });
+                logMessages.push(`${entity.name} casts ${supportAction.name} on ${supportAction.target.name} for ${healAmount.floor().toString()}!`);
+                return;
+            }
+
+            if (supportAction?.type === "guard") {
+                setActiveSkill(entity, supportAction.name);
+                supportAction.target.guardStacks = 1;
+                queueCombatEvent({
+                    sourceId: entity.id,
+                    targetId: supportAction.target.id,
+                    kind: "skill",
+                    text: "Ward",
+                    ttlTicks: COMBAT_EVENT_TICKS,
+                });
+                logMessages.push(`${entity.name} casts ${supportAction.name} on ${supportAction.target.name}!`);
+                return;
+            }
+        }
+
         const aliveTargets = targets.filter((target) => target.currentHp.gt(0));
         if (aliveTargets.length === 0) {
             return;
         }
 
-        const target = aliveTargets[Math.floor(randomSource.next() * aliveTargets.length)];
         const action = getDamageAction(entity);
+        const target = selectTarget(entity, aliveTargets, action, randomSource);
 
         setActiveSkill(entity, action.name);
 
@@ -480,6 +714,14 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         } else {
             finalDamage = damage.times(1 - target.resistances[action.damageElement]);
         }
+
+        let damageSuffix = "";
+        if (target.guardStacks > 0) {
+            finalDamage = finalDamage.times(1 - SUPPORT_GUARD_REDUCTION);
+            target.guardStacks -= 1;
+            damageSuffix = ` ${target.name}'s Ward softens the blow.`;
+        }
+
         finalDamage = Decimal.max(1, finalDamage);
         target.currentHp = Decimal.max(0, target.currentHp.minus(finalDamage));
 
@@ -499,7 +741,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             target.currentResource = Decimal.min(target.maxResource, target.currentResource.plus(WARRIOR_RAGE_WHEN_HIT));
         }
 
-        logMessages.push(`${entity.name} uses ${action.name} on ${target.name} for ${finalDamage.floor().toString()}! ${isCrit ? "(CRIT)" : ""}`.trim());
+        const critSuffix = isCrit ? " (CRIT)" : "";
+        logMessages.push(`${entity.name} uses ${action.name} on ${target.name} for ${finalDamage.floor().toString()}!${critSuffix}${damageSuffix}`);
 
         if (target.currentHp.gt(0) || !target.isEnemy) {
             return;
