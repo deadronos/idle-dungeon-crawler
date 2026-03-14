@@ -36,7 +36,7 @@ Currently, action resolution uses a lightweight class-aware ruleset:
    * Warriors spend Rage on `Rage Strike` once they have enough stored resource (50 Rage for a 2× damage attack; warriors gain 10 Rage when hitting and 5 Rage when hit).
    * Archers spend Cunning on `Piercing Shot` once they have enough stored resource (25 Cunning for 1.6× damage and +25% crit chance).
    * Resource regeneration is handled per tick: clerics regain `WIS * 0.5` Mana, archers regain `2` Cunning, and warriors generate Rage only through combat triggers. Warriors start runs with 0 Rage, while clerics and archers begin with full resource pools.
-3. **Action Metadata:** Every damaging action declares a `deliveryType` (`melee`, `ranged`, or `spell`) and a `damageElement` (`physical`, `fire`, `water`, `earth`, `air`, `light`, `shadow`). This keeps future attacks extensible without hand-written resolution logic per skill.
+3. **Action Metadata:** Every damaging action declares a `deliveryType` (`melee`, `ranged`, or `spell`) and a `damageElement` (`physical`, `fire`, `water`, `earth`, `air`, `light`, `shadow`). Standard Monster auto-attacks are intentionally `melee + physical`, while Archer basics remain `ranged + physical` and Cleric `Smite` remains `spell + light`. This keeps future attacks extensible without hand-written resolution logic per skill and avoids silently classifying all enemies as ranged attackers.
 4. **Hit Resolution:**
    * Most physical attacks use a contested hit formula based on the attacker's `Accuracy Rating` and the defender's `Evasion Rating`.
    * Spells use a magic-biased variant that adds the attacker's `INT` and defender's `WIS` before clamping the final hit chance.
