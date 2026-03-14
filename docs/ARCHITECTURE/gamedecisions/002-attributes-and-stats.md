@@ -37,8 +37,13 @@ When a unit is created or levels up, their total attributes are summed and used 
 *   **Accuracy Rating:** `50 + (DEX * 1.5) + (INT * 1)`
 *   **Evasion Rating:** `35 + (DEX * 1.0) + (WIS * 1)`
 *   **Parry Rating:** `(STR * 1.75) + (DEX * 0.25)`
+*   **Armor Penetration:** `(STR * 1.0) + (DEX * 0.5)`
+*   **Elemental Penetration:** `(INT * 1.0) + (WIS * 0.5)`
+*   **Tenacity:** `(VIT * 0.75) + (WIS * 1.0)`
 
 These additional ratings are intentionally coupled to the same five core attributes instead of introducing a sixth or seventh combat stat. `DEX` now contributes to both offensive precision and defensive footwork, `STR` helps melee defense through parry, and `WIS` helps magical awareness and avoidance pressure.
+
+The newer long-term scaling ratings follow the same philosophy: `STR` and `DEX` feed physical mitigation bypass, `INT` and `WIS` feed magical mitigation bypass, and `VIT` plus `WIS` provide a bounded anti-spike defense through `Tenacity`.
 
 ### Classes & Secondary Resources
 Classes use secondary resources to cast powerful abilities (future-proofing) or sustain basic actions:
@@ -53,6 +58,8 @@ To prevent infinite scaling breaking the game logic:
 *   **Physical / Ranged Hit Chance:** Uses `Accuracy Rating` vs `Evasion Rating`, then clamps to a floor of `72%` and a ceiling of `97%`.
 *   **Spell Hit Chance:** Uses a magic-biased contest of `Accuracy + INT` versus `Evasion + WIS`, then clamps to `75%` to `98%`.
 *   **Parry Chance:** Applies only to `melee + physical` attacks and is capped at `30%`.
+*   **Penetration Reduction:** Both `Armor Penetration` and `Elemental Penetration` convert through `min(60%, penetration / (penetration + 60))`, so mitigation bypass scales with diminishing returns and cannot erase more than 60% of the target's armor or resistance.
+*   **Tenacity Reduction:** `Tenacity` converts through `min(60%, tenacity / (tenacity + 80))`, so it can only reduce a portion of incoming critical bonus damage.
 
 ### Combat Role Implications
 The new derived ratings reinforce class roles without adding bespoke per-class rules:
@@ -61,7 +68,8 @@ The new derived ratings reinforce class roles without adding bespoke per-class r
 * **Cleric:** gains steadier spell reliability from INT while WIS continues to scale elemental resistance and magical defense.
 * **Archer:** still receives the strongest `Accuracy` and `Evasion` growth through DEX, but the lighter DEX weighting reduces all-in-one stat stacking and keeps the class focused on agility rather than passive durability.
 * **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic. Archetype bias changes which attributes are emphasized, but not how those attributes convert into combat stats.
+* **Tenacity:** currently dampens incoming crit spikes only. It is intentionally reserved as the future hook for status duration/chance resistance once elemental status effects ship.
 
 ## Consequences
 *   **Easier:** Designing items or buffs that grant `+X STR`, `+X DEX`, or `+X WIS` is clearer because those attributes now affect both raw throughput and hit-resolution outcomes.
-*   **Difficult:** Because the same attributes now scale multiple combat layers, balance drift is easier to introduce. Future penetration, status, or tenacity systems should be tuned carefully so DEX- or WIS-stacking does not crowd out other builds.
+*   **Difficult:** Because the same attributes now scale multiple combat layers, balance drift is easier to introduce. Penetration and Tenacity help long-term scaling stay interesting, but future status systems still need to avoid turning `WIS` into an all-purpose answer stat.

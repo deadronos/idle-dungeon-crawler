@@ -42,12 +42,15 @@ describe("entity model", () => {
         expect(upgraded.armor.gt(baseline.armor)).toBe(true);
     });
 
-    it("derives accuracy, evasion, and parry ratings from existing attributes", () => {
+    it("derives combat ratings, penetration, and tenacity from existing attributes", () => {
         const warrior = createHero("hero_1", "Brom", "Warrior");
 
         expect(warrior.accuracyRating).toBeCloseTo(60.5);
         expect(warrior.evasionRating).toBeCloseTo(43);
         expect(warrior.parryRating).toBeCloseTo(18.75);
+        expect(warrior.armorPenetration).toBeCloseTo(12.5);
+        expect(warrior.elementalPenetration).toBeCloseTo(4.5);
+        expect(warrior.tenacity).toBeCloseTo(10.5);
     });
 
     it("creates tougher boss enemies on every tenth floor with the softened boss multipliers", () => {

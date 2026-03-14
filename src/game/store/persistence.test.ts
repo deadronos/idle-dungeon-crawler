@@ -51,7 +51,7 @@ describe("game-state persistence", () => {
         expect(restoredState.combatEvents).toEqual([]);
     });
 
-    it("rehydrates missing combat ratings from older save payloads", () => {
+    it("rehydrates missing combat ratings and scaling stats from older save payloads", () => {
         const exportedState = createInitialGameState({
             party: createStarterParty("Selene", "Cleric"),
             enemies: [createEnemy(3, "enemy_3")],
@@ -67,10 +67,16 @@ describe("game-state persistence", () => {
         delete payload.state.party[0]?.accuracyRating;
         delete payload.state.party[0]?.evasionRating;
         delete payload.state.party[0]?.parryRating;
+        delete payload.state.party[0]?.armorPenetration;
+        delete payload.state.party[0]?.elementalPenetration;
+        delete payload.state.party[0]?.tenacity;
         delete payload.state.party[0]?.guardStacks;
         delete payload.state.enemies[0]?.accuracyRating;
         delete payload.state.enemies[0]?.evasionRating;
         delete payload.state.enemies[0]?.parryRating;
+        delete payload.state.enemies[0]?.armorPenetration;
+        delete payload.state.enemies[0]?.elementalPenetration;
+        delete payload.state.enemies[0]?.tenacity;
         delete payload.state.enemies[0]?.enemyArchetype;
         delete payload.state.enemies[0]?.enemyElement;
         delete payload.state.enemies[0]?.guardStacks;
@@ -80,10 +86,16 @@ describe("game-state persistence", () => {
         expect(restoredState.party[0]?.accuracyRating).toBeGreaterThan(0);
         expect(restoredState.party[0]?.evasionRating).toBeGreaterThan(0);
         expect(restoredState.party[0]?.parryRating).toBeGreaterThan(0);
+        expect(restoredState.party[0]?.armorPenetration).toBeGreaterThan(0);
+        expect(restoredState.party[0]?.elementalPenetration).toBeGreaterThan(0);
+        expect(restoredState.party[0]?.tenacity).toBeGreaterThan(0);
         expect(restoredState.party[0]?.guardStacks).toBe(0);
         expect(restoredState.enemies[0]?.accuracyRating).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.evasionRating).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.parryRating).toBeGreaterThan(0);
+        expect(restoredState.enemies[0]?.armorPenetration).toBeGreaterThan(0);
+        expect(restoredState.enemies[0]?.elementalPenetration).toBeGreaterThan(0);
+        expect(restoredState.enemies[0]?.tenacity).toBeGreaterThan(0);
         expect(restoredState.enemies[0]?.enemyArchetype).toBe("Bruiser");
         expect(restoredState.enemies[0]?.guardStacks).toBe(0);
     });

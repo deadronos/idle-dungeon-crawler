@@ -29,6 +29,9 @@ const heroEntity: Entity = {
     accuracyRating: 66,
     evasionRating: 51,
     parryRating: 9,
+    armorPenetration: 9,
+    elementalPenetration: 13,
+    tenacity: 15.3,
     resistances: { fire: 0.2, water: 0.2, earth: 0.2, air: 0.2, light: 0.2, shadow: 0.2 },
     actionProgress: 25,
     activeSkill: "Casting Mend",
@@ -74,6 +77,9 @@ describe("EntityRoster", () => {
         expect(tooltip).toHaveTextContent(/acc\s*66/i);
         expect(tooltip).toHaveTextContent(/eva\s*51/i);
         expect(tooltip).toHaveTextContent(/par\s*9/i);
+        expect(tooltip).toHaveTextContent(/apen\s*9/i);
+        expect(tooltip).toHaveTextContent(/epen\s*13/i);
+        expect(tooltip).toHaveTextContent(/ten\s*15\.3/i);
         expect(tooltip).toHaveTextContent(/fire\s*20%/i);
         expect(tooltip).toHaveTextContent(/shadow\s*20%/i);
     });
