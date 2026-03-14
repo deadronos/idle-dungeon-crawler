@@ -19,6 +19,7 @@ These images were captured from the running app at a desktop viewport of `1600×
 - `003-shop-sanctum-upgrades.png` — upgrade shop, `Sanctum Upgrades` tab
 - `004-shop-altar-of-souls.png` — upgrade shop, `Altar of Souls` tab
 - `005-dungeon-events-view.png` — main dungeon gameplay view with the bottom-anchored `Events` panel visible and combat outcomes like `Dodge` surfaced inline
+- `006-dungeon-hover-tooltip.png` — dungeon gameplay view with the entity hover tooltip expanded, showing grouped attributes and elemental resistances without truncation
 
 ## Naming convention
 
@@ -49,3 +50,4 @@ The current set covers the distinct top-level screens and tab states presently a
 - dungeon view with `Events`
 - shop overview via `Sanctum Upgrades`
 - shop prestige view via `Altar of Souls`
+- entity hover details in the dungeon roster

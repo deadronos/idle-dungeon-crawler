@@ -25,6 +25,11 @@ interface Props {
   className?: string;
 }
 
+interface TooltipStat {
+  label: string;
+  value: string;
+}
+
 const hpColorFor = (entity: Entity) => {
   const ratio = entity.currentHp.dividedBy(entity.maxHp).toNumber();
   if (ratio <= 0.2) return 'bg-red-500';
@@ -39,8 +44,33 @@ const resourceColorFor = (entity: Entity) => {
   return 'bg-purple-500';
 };
 
-const attributesLabelFor = (entity: Entity) =>
-  `Attributes\nVIT: ${entity.attributes.vit}\nSTR: ${entity.attributes.str}\nDEX: ${entity.attributes.dex}\nINT: ${entity.attributes.int}\nWIS: ${entity.attributes.wis}\nACC: ${Math.round(entity.accuracyRating)}\nEVA: ${Math.round(entity.evasionRating)}\nPAR: ${Math.round(entity.parryRating)}\nRES: F ${Math.round(entity.resistances.fire * 100)}% | W ${Math.round(entity.resistances.water * 100)}% | E ${Math.round(entity.resistances.earth * 100)}%\n     A ${Math.round(entity.resistances.air * 100)}% | L ${Math.round(entity.resistances.light * 100)}% | S ${Math.round(entity.resistances.shadow * 100)}%`;
+const formatTooltipValue = (value: number) => {
+  if (Number.isInteger(value)) {
+    return value.toString();
+  }
+
+  return value.toFixed(1).replace(/\.0$/, "");
+};
+
+const attributeStatsFor = (entity: Entity): TooltipStat[] => [
+  { label: "VIT", value: formatTooltipValue(entity.attributes.vit) },
+  { label: "STR", value: formatTooltipValue(entity.attributes.str) },
+  { label: "DEX", value: formatTooltipValue(entity.attributes.dex) },
+  { label: "INT", value: formatTooltipValue(entity.attributes.int) },
+  { label: "WIS", value: formatTooltipValue(entity.attributes.wis) },
+  { label: "ACC", value: Math.round(entity.accuracyRating).toString() },
+  { label: "EVA", value: Math.round(entity.evasionRating).toString() },
+  { label: "PAR", value: Math.round(entity.parryRating).toString() },
+];
+
+const resistanceStatsFor = (entity: Entity): TooltipStat[] => [
+  { label: "Fire", value: `${Math.round(entity.resistances.fire * 100)}%` },
+  { label: "Water", value: `${Math.round(entity.resistances.water * 100)}%` },
+  { label: "Earth", value: `${Math.round(entity.resistances.earth * 100)}%` },
+  { label: "Air", value: `${Math.round(entity.resistances.air * 100)}%` },
+  { label: "Light", value: `${Math.round(entity.resistances.light * 100)}%` },
+  { label: "Shadow", value: `${Math.round(entity.resistances.shadow * 100)}%` },
+];
 
 const combatEventClassName = (event: CombatEvent) => {
   switch (event.kind) {
@@ -78,7 +108,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 custom-scrollbar snap-y snap-proximity">
         {sortedEntities.map(entity => (
-          <Card key={entity.id} className={`shrink-0 snap-start overflow-hidden border-slate-700/60 bg-slate-800/80 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
+          <Card key={entity.id} className={`shrink-0 snap-start overflow-visible border-slate-700/60 bg-slate-800/80 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
             <div className="p-3 space-y-2.5">
               <div className={`flex justify-between items-center ${alignRight ? 'flex-row-reverse' : ''}`}>
                 <div>
@@ -120,7 +150,11 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                 </div>
               </div>
 
-              <div className="relative group w-full h-12 sm:h-14 flex justify-center items-center">
+              <div
+                className="relative group w-full h-12 sm:h-14 flex justify-center items-center"
+                tabIndex={0}
+                aria-describedby={`${entity.id}-stats-tooltip`}
+              >
                 <img src={entity.image} alt={entity.name} className="h-full object-contain drop-shadow-md" />
                 <div
                   data-testid={`combat-events-${entity.id}`}
@@ -140,10 +174,34 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                     ))}
                 </div>
                 <div
+                  id={`${entity.id}-stats-tooltip`}
                   role="tooltip"
-                  className="absolute z-20 pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity rounded-md border border-slate-600 bg-slate-950/95 px-2 py-1.5 text-[10px] font-mono text-slate-200 shadow-lg whitespace-pre -bottom-1 left-1/2 -translate-x-1/2 translate-y-full"
+                  className="absolute z-30 pointer-events-none w-[min(18rem,calc(100%-0.5rem))] opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-y-full group-hover:opacity-100 group-focus-within:translate-y-full group-focus-within:opacity-100 rounded-xl border border-slate-600/90 bg-slate-950/97 px-3 py-2.5 text-[10px] text-slate-200 shadow-2xl shadow-black/60 -bottom-1 left-1/2 -translate-x-1/2 translate-y-[calc(100%+0.25rem)]"
                 >
-                  {attributesLabelFor(entity)}
+                  <div className="space-y-2">
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.28em] text-amber-200/85">Attributes</p>
+                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                        {attributeStatsFor(entity).map((stat) => (
+                          <div key={stat.label} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
+                            <dt className="text-slate-400">{stat.label}</dt>
+                            <dd className="font-mono font-bold text-slate-50">{stat.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                    <div className="border-t border-slate-800/80 pt-2">
+                      <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-200/80">Resistances</p>
+                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                        {resistanceStatsFor(entity).map((stat) => (
+                          <div key={stat.label} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
+                            <dt className="text-slate-400">{stat.label}</dt>
+                            <dd className="font-mono font-bold text-slate-50">{stat.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  </div>
                 </div>
                 {entity.activeSkill && (
                   <span className="absolute -top-2 rounded-full border border-amber-300/40 bg-slate-950/90 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-amber-200 shadow-lg">
