@@ -83,7 +83,10 @@ const toPartialGameState = (value: unknown): Partial<GameState> => {
     return candidate;
 };
 
-export const getGameStateSnapshot = (state: GameState): GameState => createInitialGameState(state);
+export const getGameStateSnapshot = (state: GameState): GameState => ({
+    ...createInitialGameState(state),
+    combatEvents: [],
+});
 
 export const serializeGameState = (state: GameState) =>
     JSON.stringify(

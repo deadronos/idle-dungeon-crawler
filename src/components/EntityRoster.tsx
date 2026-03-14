@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Skull } from 'lucide-react';
 
 import type { Entity } from '../game/entity';
-import { useGame } from '../game/store/gameStore';
+import type { CombatEvent } from '../game/store/types';
+import { useGame, useGameStore } from '../game/store/gameStore';
 import { formatNumber } from '../utils/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -39,15 +40,34 @@ const resourceColorFor = (entity: Entity) => {
 };
 
 const attributesLabelFor = (entity: Entity) =>
-  `Attributes\nVIT: ${entity.attributes.vit}\nSTR: ${entity.attributes.str}\nDEX: ${entity.attributes.dex}\nINT: ${entity.attributes.int}\nWIS: ${entity.attributes.wis}`;
+  `Attributes\nVIT: ${entity.attributes.vit}\nSTR: ${entity.attributes.str}\nDEX: ${entity.attributes.dex}\nINT: ${entity.attributes.int}\nWIS: ${entity.attributes.wis}\nACC: ${Math.round(entity.accuracyRating)}\nEVA: ${Math.round(entity.evasionRating)}\nPAR: ${Math.round(entity.parryRating)}\nRES: F ${Math.round(entity.resistances.fire * 100)}% | W ${Math.round(entity.resistances.water * 100)}% | E ${Math.round(entity.resistances.earth * 100)}%\n     A ${Math.round(entity.resistances.air * 100)}% | L ${Math.round(entity.resistances.light * 100)}% | S ${Math.round(entity.resistances.shadow * 100)}%`;
+
+const combatEventClassName = (event: CombatEvent) => {
+  switch (event.kind) {
+    case 'damage':
+      return event.isCrit ? 'border-amber-300/60 bg-amber-500/20 text-amber-100' : 'border-red-400/50 bg-red-500/20 text-red-100';
+    case 'heal':
+      return 'border-emerald-300/60 bg-emerald-500/20 text-emerald-100';
+    case 'dodge':
+      return 'border-sky-300/60 bg-sky-500/20 text-sky-100';
+    case 'parry':
+      return 'border-slate-200/60 bg-slate-200/20 text-slate-50';
+    case 'crit':
+      return 'border-amber-300/60 bg-amber-500/20 text-amber-100';
+    case 'defeat':
+      return 'border-slate-400/60 bg-slate-700/40 text-slate-100';
+    case 'skill':
+      return 'border-violet-300/50 bg-violet-500/15 text-violet-100';
+    default:
+      return 'border-slate-300/30 bg-slate-900/70 text-slate-100';
+  }
+};
 
 export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, className }) => {
   const { actions } = useGame();
+  const combatEvents = useGameStore((state) => state.combatEvents);
 
-  const sortedEntities = useMemo(
-    () => [...entities].sort((a, b) => Number(b.currentHp.gt(0)) - Number(a.currentHp.gt(0))),
-    [entities],
-  );
+  const sortedEntities = [...entities].sort((a, b) => Number(b.currentHp.gt(0)) - Number(a.currentHp.gt(0)));
 
   return (
     <Card className={`w-full lg:w-[360px] shrink-0 bg-slate-900/85 backdrop-blur-md border-slate-700/50 shadow-xl flex flex-col h-full min-h-0 overflow-hidden ${alignRight ? 'text-right' : 'text-left'} ${className ?? ''}`}>
@@ -102,6 +122,23 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
 
               <div className="relative group w-full h-12 sm:h-14 flex justify-center items-center">
                 <img src={entity.image} alt={entity.name} className="h-full object-contain drop-shadow-md" />
+                <div
+                  data-testid={`combat-events-${entity.id}`}
+                  className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col items-center gap-1"
+                >
+                  {combatEvents
+                    .filter((event) => event.targetId === entity.id || (event.sourceId === entity.id && event.kind === 'skill'))
+                    .slice(-3)
+                    .reverse()
+                    .map((event) => (
+                      <span
+                        key={event.id}
+                        className={`combat-event-float rounded-full border px-2 py-0.5 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.18em] shadow-lg ${combatEventClassName(event)}`}
+                      >
+                        {event.text}
+                      </span>
+                    ))}
+                </div>
                 <div
                   role="tooltip"
                   className="absolute z-20 pointer-events-none opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity rounded-md border border-slate-600 bg-slate-950/95 px-2 py-1.5 text-[10px] font-mono text-slate-200 shadow-lg whitespace-pre -bottom-1 left-1/2 -translate-x-1/2 translate-y-full"

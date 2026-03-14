@@ -31,6 +31,26 @@ describe("game-state persistence", () => {
         expect(restoredState.activeSection).toBe("shop");
     });
 
+    it("does not persist transient combat events in exported saves", () => {
+        const exportedState = createInitialGameState({
+            party: createStarterParty("Selene", "Cleric"),
+            enemies: [createEnemy(3, "enemy_3")],
+            combatEvents: [
+                {
+                    id: "combat-event-1",
+                    targetId: "enemy_3",
+                    kind: "damage",
+                    text: "-12",
+                    ttlTicks: 8,
+                },
+            ],
+        });
+
+        const restoredState = deserializeGameState(serializeGameState(exportedState));
+
+        expect(restoredState.combatEvents).toEqual([]);
+    });
+
     it("rejects malformed save payloads", () => {
         expect(() => deserializeGameState("[]")).toThrow(/json object/i);
     });

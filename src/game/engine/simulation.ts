@@ -3,14 +3,34 @@ import Decimal from "decimal.js";
 import { BASE_META_UPGRADES, createEnemy, getExpRequirement, recalculateEntity } from "../entity";
 import type { Entity, MetaUpgrades, PrestigeUpgrades } from "../entity";
 import { MAX_PARTY_SIZE } from "../partyProgression";
-import type { GameState } from "../store/types";
+import type { CombatEvent, GameState } from "../store/types";
 
 export const GAME_TICK_RATE = 20;
 export const GAME_TICK_MS = 1000 / GAME_TICK_RATE;
 export const ATB_RATE = 2;
 
 const SKILL_BANNER_TICKS = GAME_TICK_RATE;
+const COMBAT_EVENT_TICKS = Math.round(GAME_TICK_RATE * 1.4);
 const COMBAT_LOG_LIMIT = 10;
+const MIN_PHYSICAL_HIT_CHANCE = 0.72;
+const MAX_PHYSICAL_HIT_CHANCE = 0.97;
+const MIN_SPELL_HIT_CHANCE = 0.75;
+const MAX_SPELL_HIT_CHANCE = 0.98;
+const MAX_PARRY_CHANCE = 0.3;
+let combatEventSequence = 0;
+
+type DamageElement = "physical" | keyof Entity["resistances"];
+type DeliveryType = "melee" | "ranged" | "spell";
+
+interface DamageAction {
+    name: string;
+    damage: Decimal;
+    damageElement: DamageElement;
+    deliveryType: DeliveryType;
+    critChance: number;
+    canDodge: boolean;
+    canParry: boolean;
+}
 
 export type SimulationOutcome = "running" | "paused" | "victory" | "party-wipe";
 
@@ -46,6 +66,9 @@ export const cloneEntity = (entity: Entity): Entity => ({
     armor: new Decimal(entity.armor),
     physicalDamage: new Decimal(entity.physicalDamage),
     magicDamage: new Decimal(entity.magicDamage),
+    accuracyRating: entity.accuracyRating,
+    evasionRating: entity.evasionRating,
+    parryRating: entity.parryRating,
     resistances: { ...entity.resistances },
     activeSkill: entity.activeSkill,
     activeSkillTicks: entity.activeSkillTicks,
@@ -67,6 +90,7 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
     autoFight: overrides?.autoFight ?? true,
     autoAdvance: overrides?.autoAdvance ?? true,
     combatLog: overrides?.combatLog ? [...overrides.combatLog] : [],
+    combatEvents: overrides?.combatEvents ? overrides.combatEvents.map((event) => ({ ...event })) : [],
     metaUpgrades: { ...BASE_META_UPGRADES, ...overrides?.metaUpgrades },
     partyCapacity: overrides?.partyCapacity ?? 1,
     maxPartySize: overrides?.maxPartySize ?? MAX_PARTY_SIZE,
@@ -85,6 +109,7 @@ export const getInitializedPartyState = (state: GameState, party: Entity[]): Par
     party: recalculateParty(party, state.metaUpgrades, state.prestigeUpgrades),
     enemies: createEncounter(1),
     combatLog: [`${party[0]?.name ?? "The party"} leads the party into the dungeon...`],
+    combatEvents: [],
     activeSection: "dungeon",
 });
 
@@ -92,11 +117,13 @@ export const getFloorTransitionState = (state: GameState, floor: number): Partia
     floor,
     enemies: createEncounter(floor),
     combatLog: prependCombatMessages(state.combatLog, `Moved to floor ${floor}...`),
+    combatEvents: [],
 });
 
 export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
     enemies: createEncounter(state.floor),
     combatLog: prependCombatMessages(state.combatLog, `Repeating floor ${state.floor}...`),
+    combatEvents: [],
 });
 
 export const getPartyWipeState = (state: GameState): Partial<GameState> => {
@@ -113,7 +140,99 @@ export const getPartyWipeState = (state: GameState): Partial<GameState> => {
         party: healedParty,
         enemies: createEncounter(1),
         combatLog: prependCombatMessages(state.combatLog, "The party was wiped out! Resetting to Floor 1..."),
+        combatEvents: [],
     };
+};
+
+const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
+
+export const getPhysicalHitChance = (attacker: Entity, defender: Entity) =>
+    clampChance(
+        MIN_PHYSICAL_HIT_CHANCE,
+        MAX_PHYSICAL_HIT_CHANCE,
+        0.84 + ((attacker.accuracyRating - defender.evasionRating) * 0.002),
+    );
+
+export const getSpellHitChance = (attacker: Entity, defender: Entity) =>
+    clampChance(
+        MIN_SPELL_HIT_CHANCE,
+        MAX_SPELL_HIT_CHANCE,
+        0.86 + (((attacker.accuracyRating + attacker.attributes.int) - (defender.evasionRating + defender.attributes.wis)) * 0.0018),
+    );
+
+export const getParryChance = (attacker: Entity, defender: Entity) =>
+    clampChance(
+        0,
+        MAX_PARRY_CHANCE,
+        0.06 + ((defender.parryRating - (attacker.accuracyRating * 0.25)) * 0.003),
+    );
+
+const createCombatEvent = (event: Omit<CombatEvent, "id">): CombatEvent => {
+    combatEventSequence += 1;
+
+    return {
+        ...event,
+        id: `combat-event-${combatEventSequence}`,
+    };
+};
+
+const decrementCombatEvents = (events: CombatEvent[]) => {
+    return events
+        .map((event) => ({ ...event, ttlTicks: event.ttlTicks - 1 }))
+        .filter((event) => event.ttlTicks > 0);
+};
+
+const getDamageAction = (entity: Entity): DamageAction => {
+    let action: DamageAction = {
+        name: "Attack",
+        damage: entity.physicalDamage,
+        damageElement: "physical",
+        deliveryType: entity.class === "Archer" || entity.isEnemy ? "ranged" : "melee",
+        critChance: entity.critChance,
+        canDodge: true,
+        canParry: !(entity.class === "Archer" || entity.isEnemy),
+    };
+
+    if (entity.class === "Cleric") {
+        action = {
+            name: "Smite",
+            damage: entity.magicDamage,
+            damageElement: "light",
+            deliveryType: "spell",
+            critChance: entity.critChance,
+            canDodge: true,
+            canParry: false,
+        };
+    }
+
+    if (!entity.isEnemy && entity.class === "Warrior" && entity.currentResource.gte(50)) {
+        entity.currentResource = entity.currentResource.minus(50);
+        action = {
+            ...action,
+            name: "Rage Strike",
+            damage: entity.physicalDamage.times(2),
+            damageElement: "physical",
+            deliveryType: "melee",
+            canParry: true,
+        };
+    } else if (!entity.isEnemy && entity.class === "Archer" && entity.currentResource.gte(25)) {
+        entity.currentResource = entity.currentResource.minus(25);
+        action = {
+            ...action,
+            name: "Piercing Shot",
+            damage: entity.physicalDamage.times(1.6),
+            damageElement: "physical",
+            deliveryType: "ranged",
+            critChance: Math.min(1, entity.critChance + 0.25),
+            canParry: false,
+        };
+    }
+
+    if (action.deliveryType === "ranged" && action.damageElement === "physical") {
+        action.canParry = false;
+    }
+
+    return action;
 };
 
 export const simulateTick = (state: GameState): SimulationResult => {
@@ -123,12 +242,23 @@ export const simulateTick = (state: GameState): SimulationResult => {
         enemies: state.enemies.map(cloneEntity),
         gold: new Decimal(state.gold),
         combatLog: [...state.combatLog],
+        combatEvents: state.combatEvents.map((event) => ({ ...event })),
         metaUpgrades: { ...state.metaUpgrades },
     };
 
     let anyActionTaken = false;
     let anyVisualUpdate = false;
     const logMessages: string[] = [];
+    const combatEvents: CombatEvent[] = decrementCombatEvents(draft.combatEvents);
+    if (combatEvents.length !== draft.combatEvents.length) {
+        anyVisualUpdate = true;
+    }
+    draft.combatEvents = combatEvents;
+
+    const queueCombatEvent = (event: Omit<CombatEvent, "id">) => {
+        draft.combatEvents.push(createCombatEvent(event));
+        anyVisualUpdate = true;
+    };
 
     const updateSkillBanner = (entity: Entity) => {
         if (entity.activeSkillTicks <= 0) {
@@ -147,6 +277,12 @@ export const simulateTick = (state: GameState): SimulationResult => {
         entity.activeSkill = `Casting ${skill}`;
         entity.activeSkillTicks = SKILL_BANNER_TICKS;
         anyVisualUpdate = true;
+        queueCombatEvent({
+            sourceId: entity.id,
+            kind: "skill",
+            text: skill,
+            ttlTicks: COMBAT_EVENT_TICKS,
+        });
     };
 
     draft.party.forEach(updateSkillBanner);
@@ -203,6 +339,14 @@ export const simulateTick = (state: GameState): SimulationResult => {
                 setActiveSkill(entity, "Mend");
                 entity.currentResource = entity.currentResource.minus(healCost);
                 healTarget.currentHp = Decimal.min(healTarget.maxHp, healTarget.currentHp.plus(healAmount));
+                queueCombatEvent({
+                    sourceId: entity.id,
+                    targetId: healTarget.id,
+                    kind: "heal",
+                    text: `+${healAmount.floor().toString()}`,
+                    amount: healAmount.floor().toString(),
+                    ttlTicks: COMBAT_EVENT_TICKS,
+                });
                 logMessages.push(`${entity.name} casts Mend on ${healTarget.name} for ${healAmount.floor().toString()}!`);
                 return;
             }
@@ -214,48 +358,70 @@ export const simulateTick = (state: GameState): SimulationResult => {
         }
 
         const target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
+        const action = getDamageAction(entity);
 
-        type DamageElement = "physical" | keyof Entity["resistances"];
+        setActiveSkill(entity, action.name);
 
-        let actionName = "Attack";
-        let critChance = entity.critChance;
-        let damage = entity.physicalDamage;
-        let damageElement: DamageElement = "physical";
+        const hitChance = action.deliveryType === "spell"
+            ? getSpellHitChance(entity, target)
+            : getPhysicalHitChance(entity, target);
 
-        if (entity.class === "Cleric") {
-            actionName = "Smite";
-            damage = entity.magicDamage;
-            damageElement = "light";
+        if (action.canDodge && Math.random() >= hitChance) {
+            queueCombatEvent({
+                sourceId: entity.id,
+                targetId: target.id,
+                kind: "dodge",
+                text: "Dodge",
+                ttlTicks: COMBAT_EVENT_TICKS,
+            });
+            logMessages.push(`${target.name} dodges ${entity.name}'s ${action.name}!`);
+            return;
         }
 
-        if (!entity.isEnemy && entity.class === "Warrior" && entity.currentResource.gte(50)) {
-            entity.currentResource = entity.currentResource.minus(50);
-            damage = entity.physicalDamage.times(2);
-            actionName = "Rage Strike";
-            damageElement = "physical";
-        } else if (!entity.isEnemy && entity.class === "Archer" && entity.currentResource.gte(25)) {
-            entity.currentResource = entity.currentResource.minus(25);
-            damage = entity.physicalDamage.times(1.6);
-            critChance = Math.min(1, entity.critChance + 0.25);
-            actionName = "Piercing Shot";
-            damageElement = "physical";
+        if (action.canParry && action.deliveryType === "melee" && action.damageElement === "physical" && Math.random() < getParryChance(entity, target)) {
+            queueCombatEvent({
+                sourceId: entity.id,
+                targetId: target.id,
+                kind: "parry",
+                text: "Parry",
+                ttlTicks: COMBAT_EVENT_TICKS,
+            });
+            logMessages.push(`${target.name} parries ${entity.name}'s ${action.name}!`);
+            return;
         }
 
-        setActiveSkill(entity, actionName);
-
-        const isCrit = Math.random() < critChance;
+        let damage = action.damage;
+        const isCrit = Math.random() < action.critChance;
         if (isCrit) {
             damage = damage.times(entity.critDamage);
+            queueCombatEvent({
+                sourceId: entity.id,
+                targetId: target.id,
+                kind: "crit",
+                text: "CRIT",
+                isCrit: true,
+                ttlTicks: COMBAT_EVENT_TICKS,
+            });
         }
 
         let finalDamage = damage;
-        if (damageElement === "physical") {
+        if (action.damageElement === "physical") {
             finalDamage = damage.minus(target.armor);
         } else {
-            finalDamage = damage.times(1 - target.resistances[damageElement]);
+            finalDamage = damage.times(1 - target.resistances[action.damageElement]);
         }
         finalDamage = Decimal.max(1, finalDamage);
         target.currentHp = Decimal.max(0, target.currentHp.minus(finalDamage));
+
+        queueCombatEvent({
+            sourceId: entity.id,
+            targetId: target.id,
+            kind: "damage",
+            text: `-${finalDamage.floor().toString()}`,
+            amount: finalDamage.floor().toString(),
+            isCrit,
+            ttlTicks: COMBAT_EVENT_TICKS,
+        });
 
         if (entity.class === "Warrior") {
             entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(10));
@@ -265,12 +431,19 @@ export const simulateTick = (state: GameState): SimulationResult => {
             target.currentResource = Decimal.min(target.maxResource, target.currentResource.plus(5));
         }
 
-        logMessages.push(`${entity.name} uses ${actionName} on ${target.name} for ${finalDamage.floor().toString()}! ${isCrit ? "(CRIT)" : ""}`.trim());
+        logMessages.push(`${entity.name} uses ${action.name} on ${target.name} for ${finalDamage.floor().toString()}! ${isCrit ? "(CRIT)" : ""}`.trim());
 
         if (target.currentHp.gt(0) || !target.isEnemy) {
             return;
         }
 
+        queueCombatEvent({
+            sourceId: entity.id,
+            targetId: target.id,
+            kind: "defeat",
+            text: "Defeated",
+            ttlTicks: COMBAT_EVENT_TICKS,
+        });
         logMessages.push(`${target.name} was defeated!`);
 
         const baseExp = new Decimal(draft.floor).times(10).plus(target.attributes.vit);
