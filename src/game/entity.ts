@@ -79,6 +79,8 @@ export const BASE_META_UPGRADES: MetaUpgrades = {
 };
 
 export const HERO_CLASSES: HeroClass[] = ["Warrior", "Cleric", "Archer"];
+export const BOSS_VITALITY_MULTIPLIER = 2;
+export const BOSS_STRENGTH_MULTIPLIER = 1.3;
 
 const HERO_NAME_POOLS: Record<HeroClass, string[]> = {
     Warrior: ["Brom", "Tarin", "Mira", "Hale", "Sable"],
@@ -323,8 +325,8 @@ export const createEnemy = (level: number, id: string): Entity => {
 
     // Boss floor
     if (level % 10 === 0) {
-        enemy.attributes.vit *= 3;
-        enemy.attributes.str *= 2;
+        enemy.attributes.vit *= BOSS_VITALITY_MULTIPLIER;
+        enemy.attributes.str *= BOSS_STRENGTH_MULTIPLIER;
         enemy.name = `Boss: ${enemy.name}`;
     }
 

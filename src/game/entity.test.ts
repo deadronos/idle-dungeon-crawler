@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE_META_UPGRADES, createEnemy, createHero, createRecruitHero, createStarterParty } from "./entity";
+import { BASE_META_UPGRADES, BOSS_STRENGTH_MULTIPLIER, BOSS_VITALITY_MULTIPLIER, createEnemy, createHero, createRecruitHero, createStarterParty } from "./entity";
 
 describe("entity model", () => {
     it("creates a single-hero starter party around the selected leader", () => {
@@ -41,12 +41,13 @@ describe("entity model", () => {
         expect(warrior.parryRating).toBeCloseTo(18.75);
     });
 
-    it("creates tougher boss enemies on every tenth floor", () => {
-        const floorNineEnemy = createEnemy(9, "enemy_9");
+    it("creates tougher boss enemies on every tenth floor with the softened boss multipliers", () => {
         const bossEnemy = createEnemy(10, "enemy_10");
+        const expectedBaseVit = 5 + (10 * 2);
+        const expectedBaseStr = 5 + (10 * 1.5);
 
         expect(bossEnemy.name.startsWith("Boss:")).toBe(true);
-        expect(bossEnemy.maxHp.gt(floorNineEnemy.maxHp)).toBe(true);
-        expect(bossEnemy.physicalDamage.gt(floorNineEnemy.physicalDamage)).toBe(true);
+        expect(bossEnemy.attributes.vit).toBe(expectedBaseVit * BOSS_VITALITY_MULTIPLIER);
+        expect(bossEnemy.attributes.str).toBe(expectedBaseStr * BOSS_STRENGTH_MULTIPLIER);
     });
 });

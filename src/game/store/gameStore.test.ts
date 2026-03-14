@@ -93,11 +93,11 @@ describe("createGameStore", () => {
         expect(state.combatLog[0]).toMatch(/repeating floor 4/i);
     });
 
-    it("unlocks party slots and recruits duplicate classes after milestone clears", () => {
+    it("unlocks party slots and recruits duplicate classes after the retuned milestone clears", () => {
         const store = createGameStore({
             gold: new Decimal(500),
             party: createStarterParty("Ayla", "Warrior"),
-            highestFloorCleared: 10,
+            highestFloorCleared: 8,
         });
 
         store.getState().unlockPartySlot();
@@ -112,6 +112,12 @@ describe("createGameStore", () => {
         expect(state.party).toHaveLength(2);
         expect(state.party.every((hero) => hero.class === "Warrior")).toBe(true);
         expect(state.gold.toString()).toBe("410");
+
+        store.getState().unlockPartySlot();
+
+        state = store.getState();
+        expect(state.partyCapacity).toBe(3);
+        expect(state.gold.toString()).toBe("230");
     });
 
     it("preserves recruited heroes and unlocked slots through a party wipe", () => {

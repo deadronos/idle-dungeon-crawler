@@ -36,9 +36,9 @@ Gold can be invested into persistent party-wide upgrades before a wipe occurs. T
 * **Fortification:** Increases all hero armor by `10%` per level.
 * **Party Slot Expansion:** Active party capacity starts at `1` and can be permanently increased to `5` by clearing milestone floors and then purchasing the next slot in the shop.
   * Capacity `2`: clear Floor `3`, then pay `60` Gold
-  * Capacity `3`: clear Floor `10`, then pay `180` Gold
-  * Capacity `4`: clear Floor `20`, then pay `500` Gold
-  * Capacity `5`: clear Floor `35`, then pay `1200` Gold
+  * Capacity `3`: clear Floor `8`, then pay `180` Gold
+  * Capacity `4`: clear Floor `18`, then pay `500` Gold
+  * Capacity `5`: clear Floor `28`, then pay `1200` Gold
 * **Recruitment:** After an empty slot is available, the player can recruit a new active hero in the shop and choose that hero's class. Duplicate classes are allowed. Recruit costs scale with current party size:
   * Party size `1` → recruit cost `30` Gold
   * Party size `2` → recruit cost `90` Gold
@@ -57,7 +57,7 @@ Instead of tracking separate enemy classes, standard monsters scale their intern
 * `INT & WIS: 2 + Level`
 
 **Boss Encounters:**
-Every 10th floor is flagged as a Boss floor. Boss floors spawn exactly **one** enemy regardless of player party size, and that generated boss has their final calculated VIT multiplied by `3` and their STR multiplied by `2`, forming a focused spike in required damage and durability to overcome.
+Every 10th floor is flagged as a Boss floor. Boss floors spawn exactly **one** enemy regardless of player party size, and that generated boss has their calculated VIT multiplied by `2` and their STR multiplied by `1.3`. This keeps bosses meaningfully tougher than adjacent floors without recreating the old solo/duo progression wall at Floor `10` or pushing the same pacing problem forward to the later slot milestones.
 
 ### Party Wipe & Hard Reset
 
