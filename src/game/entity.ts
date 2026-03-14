@@ -6,6 +6,8 @@ export type HeroClass = Exclude<EntityClass, "Monster">;
 export type DamageElement = "physical" | keyof Elements;
 export type EnemyElement = Exclude<DamageElement, "physical">;
 export type EnemyArchetype = "Bruiser" | "Skirmisher" | "Caster" | "Support" | "Boss";
+export type StatusEffectKey = "burn" | "slow" | "weaken";
+export type StatusEffectPolarity = "buff" | "debuff";
 
 export interface MetaUpgrades {
     training: number;
@@ -34,6 +36,16 @@ export interface Elements {
     air: number;
     light: number;
     shadow: number;
+}
+
+export interface StatusEffect {
+    key: StatusEffectKey;
+    polarity: StatusEffectPolarity;
+    sourceId: string;
+    remainingTicks: number;
+    stacks: number;
+    maxStacks: number;
+    potency: number;
 }
 
 export interface Entity {
@@ -81,6 +93,7 @@ export interface Entity {
     activeSkill: string | null;
     activeSkillTicks: number;
     guardStacks: number;
+    statusEffects: StatusEffect[];
 }
 
 export interface CreateEnemyOptions {
@@ -108,6 +121,32 @@ const HERO_NAME_POOLS: Record<HeroClass, string[]> = {
 const OFFENSIVE_ENEMY_ARCHETYPES: Array<Exclude<EnemyArchetype, "Support" | "Boss">> = ["Bruiser", "Skirmisher", "Caster"];
 
 const capitalizeLabel = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+export const getStatusEffectName = (statusKey: StatusEffectKey) => {
+    switch (statusKey) {
+        case "burn":
+            return "Burn";
+        case "slow":
+            return "Slow";
+        case "weaken":
+            return "Weaken";
+        default:
+            return capitalizeLabel(statusKey);
+    }
+};
+
+export const getStatusEffectBadge = (statusEffect: Pick<StatusEffect, "key" | "stacks">) => {
+    switch (statusEffect.key) {
+        case "burn":
+            return statusEffect.stacks > 1 ? `BRN x${statusEffect.stacks}` : "BRN";
+        case "slow":
+            return "SLW";
+        case "weaken":
+            return "WKN";
+        default:
+            return capitalizeLabel(statusEffect.key).slice(0, 3).toUpperCase();
+    }
+};
 
 const applyEnemyArchetypeBias = (attributes: Attributes, archetype: EnemyArchetype): Attributes => {
     switch (archetype) {
@@ -368,6 +407,7 @@ export const createHero = (
         activeSkill: null,
         activeSkillTicks: 0,
         guardStacks: 0,
+        statusEffects: [],
     };
 
     hero = recalculateEntity(hero, upgrades, prestigeUpgrades);
@@ -478,6 +518,7 @@ export const createEnemy = (level: number, id: string, options: CreateEnemyOptio
         activeSkill: null,
         activeSkillTicks: 0,
         guardStacks: 0,
+        statusEffects: [],
     };
 
     // Boss floor

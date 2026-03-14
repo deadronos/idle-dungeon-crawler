@@ -14,6 +14,7 @@ import {
     getPhysicalHitChance,
     getPenetrationReduction,
     getSpellHitChance,
+    getStatusApplicationChance,
     isBossFloor,
     simulateTick,
 } from "./simulation";
@@ -494,6 +495,230 @@ describe("simulation engine", () => {
 
         expect(spellHit).toBeGreaterThan(physicalHit);
         expect(spellHit - physicalHit).toBeLessThan(0.08);
+    });
+
+    it("lets tenacity reduce elemental status application pressure", () => {
+        const caster = createEnemy(10, "enemy_caster", { archetype: "Caster", element: "fire" });
+        const lowTenacityHero = createHero("hero_1", "Brom", "Warrior");
+        const highTenacityHero = createHero("hero_2", "Ayla", "Cleric");
+        highTenacityHero.tenacity = 250;
+
+        const lowTenacityChance = getStatusApplicationChance(caster, lowTenacityHero, 0.45);
+        const highTenacityChance = getStatusApplicationChance(caster, highTenacityHero, 0.45);
+
+        expect(lowTenacityChance).toBeGreaterThan(highTenacityChance);
+        expect(highTenacityChance).toBeGreaterThanOrEqual(0.15);
+    });
+
+    it("applies burn from fire hits and refreshes stacks up to the cap", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.currentHp = new Decimal(10_000);
+
+        const caster = createEnemy(8, "enemy_caster", { archetype: "Caster", element: "fire" });
+        caster.actionProgress = 99;
+        caster.critChance = 0;
+
+        const initialState = createInitialGameState({
+            party: [warrior],
+            enemies: [caster],
+            combatLog: [],
+        });
+
+        const firstResult = simulateTick(initialState, createSequenceRandomSource(0, 0.9, 0));
+        expect(firstResult.state.party[0].statusEffects).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    key: "burn",
+                    stacks: 1,
+                }),
+            ]),
+        );
+
+        const nextCaster = firstResult.state.enemies[0];
+        nextCaster.actionProgress = 99;
+        nextCaster.critChance = 0;
+
+        const secondResult = simulateTick(
+            createInitialGameState({
+                party: firstResult.state.party,
+                enemies: [nextCaster],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0.9, 0),
+        );
+
+        const burnStatus = secondResult.state.party[0].statusEffects.find((statusEffect) => statusEffect.key === "burn");
+        expect(burnStatus?.stacks).toBe(2);
+        expect(secondResult.state.combatLog.some((entry) => /burn/i.test(entry))).toBe(true);
+        expect(secondResult.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "apply")).toBe(true);
+    });
+
+    it("ticks burn once per second, expires it, and awards kill rewards from burn defeats", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.currentHp = new Decimal(6);
+        warrior.actionProgress = -999;
+        warrior.statusEffects = [
+            {
+                key: "burn",
+                polarity: "debuff",
+                sourceId: "enemy_fire",
+                remainingTicks: 20,
+                stacks: 1,
+                maxStacks: 2,
+                potency: 6,
+            },
+        ];
+
+        const enemy = createEnemy(4, "enemy_4");
+        enemy.actionProgress = -999;
+
+        const result = advanceTicks(
+            createInitialGameState({
+                floor: 4,
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+            20,
+        );
+
+        expect(result.state.party[0].currentHp.eq(0)).toBe(true);
+        expect(result.state.party[0].statusEffects).toEqual([]);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "tick")).toBe(true);
+        expect(result.state.combatLog.some((entry) => /burn damage/i.test(entry))).toBe(true);
+        expect(result.outcome).toBe("party-wipe");
+
+        const enemyWithBurn = createEnemy(4, "enemy_burning");
+        enemyWithBurn.currentHp = new Decimal(6);
+        enemyWithBurn.actionProgress = -999;
+        enemyWithBurn.statusEffects = [
+            {
+                key: "burn",
+                polarity: "debuff",
+                sourceId: "hero_fire",
+                remainingTicks: 20,
+                stacks: 1,
+                maxStacks: 2,
+                potency: 6,
+            },
+        ];
+
+        const burnKillResult = advanceTicks(
+            createInitialGameState({
+                floor: 4,
+                party: [createHero("hero_9", "Ione", "Cleric")],
+                enemies: [enemyWithBurn],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+            20,
+        );
+
+        expect(burnKillResult.state.enemies[0].currentHp.eq(0)).toBe(true);
+        expect(burnKillResult.state.gold.eq(new Decimal(13))).toBe(true);
+        expect(burnKillResult.state.combatLog).toContain("Sewer Rat Lv4 was defeated!");
+        expect(burnKillResult.outcome).toBe("victory");
+    });
+
+    it("reduces ATB gain while slowed and restores normal gain after expiry", () => {
+        const baselineWarrior = createHero("hero_1", "Brom", "Warrior");
+        baselineWarrior.actionProgress = 0;
+        const slowedWarrior = createHero("hero_2", "Thess", "Warrior");
+        slowedWarrior.actionProgress = 0;
+        slowedWarrior.statusEffects = [
+            {
+                key: "slow",
+                polarity: "debuff",
+                sourceId: "enemy_water",
+                remainingTicks: 2,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.2,
+            },
+        ];
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const baselineAfterOneTick = simulateTick(
+            createInitialGameState({
+                party: [baselineWarrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        const slowedAfterOneTick = simulateTick(
+            createInitialGameState({
+                party: [slowedWarrior],
+                enemies: [createEnemy(1, "enemy_slow_1")],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        expect(slowedAfterOneTick.state.party[0].actionProgress).toBeLessThan(baselineAfterOneTick.state.party[0].actionProgress);
+
+        const slowedAfterExpiry = simulateTick(slowedAfterOneTick.state, createSequenceRandomSource(0));
+        const slowedIncrementAfterExpiry =
+            slowedAfterExpiry.state.party[0].actionProgress - slowedAfterOneTick.state.party[0].actionProgress;
+
+        expect(slowedIncrementAfterExpiry).toBeCloseTo(baselineAfterOneTick.state.party[0].actionProgress, 5);
+        expect(slowedAfterExpiry.state.party[0].statusEffects).toEqual([]);
+    });
+
+    it("reduces outgoing damage while weakened", () => {
+        const baselineWarrior = createHero("hero_1", "Brom", "Warrior");
+        baselineWarrior.actionProgress = 99;
+        baselineWarrior.critChance = 0;
+
+        const weakenedWarrior = createHero("hero_2", "Mira", "Warrior");
+        weakenedWarrior.actionProgress = 99;
+        weakenedWarrior.critChance = 0;
+        weakenedWarrior.statusEffects = [
+            {
+                key: "weaken",
+                polarity: "debuff",
+                sourceId: "enemy_earth",
+                remainingTicks: 60,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.15,
+            },
+        ];
+
+        const baselineEnemy = createEnemy(1, "enemy_base");
+        baselineEnemy.parryRating = 0;
+        baselineEnemy.evasionRating = 0;
+
+        const weakenedEnemy = createEnemy(1, "enemy_weakened");
+        weakenedEnemy.parryRating = 0;
+        weakenedEnemy.evasionRating = 0;
+
+        const baselineResult = simulateTick(
+            createInitialGameState({
+                party: [baselineWarrior],
+                enemies: [baselineEnemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0.9),
+        );
+
+        const weakenedResult = simulateTick(
+            createInitialGameState({
+                party: [weakenedWarrior],
+                enemies: [weakenedEnemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0.9),
+        );
+
+        const baselineDamage = baselineEnemy.currentHp.minus(baselineResult.state.enemies[0].currentHp);
+        const weakenedDamage = weakenedEnemy.currentHp.minus(weakenedResult.state.enemies[0].currentHp);
+
+        expect(weakenedDamage.lt(baselineDamage)).toBe(true);
     });
 
     it("lets warriors reach Rage Strike within a few exchanged actions", () => {

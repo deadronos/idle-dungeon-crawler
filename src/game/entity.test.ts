@@ -51,6 +51,7 @@ describe("entity model", () => {
         expect(warrior.armorPenetration).toBeCloseTo(12.5);
         expect(warrior.elementalPenetration).toBeCloseTo(4.5);
         expect(warrior.tenacity).toBeCloseTo(10.5);
+        expect(warrior.statusEffects).toEqual([]);
     });
 
     it("creates tougher boss enemies on every tenth floor with the softened boss multipliers", () => {

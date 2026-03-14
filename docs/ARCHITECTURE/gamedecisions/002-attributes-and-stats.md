@@ -60,6 +60,7 @@ To prevent infinite scaling breaking the game logic:
 *   **Parry Chance:** Applies only to `melee + physical` attacks and is capped at `30%`.
 *   **Penetration Reduction:** Both `Armor Penetration` and `Elemental Penetration` convert through `min(60%, penetration / (penetration + 60))`, so mitigation bypass scales with diminishing returns and cannot erase more than 60% of the target's armor or resistance.
 *   **Tenacity Reduction:** `Tenacity` converts through `min(60%, tenacity / (tenacity + 80))`, so it can only reduce a portion of incoming critical bonus damage.
+*   **Status Application Chance:** Elemental status riders use `clamp(15%, 75%, baseChance + (attacker.ElementalPenetration - defender.Tenacity) * 0.3%)`, so high penetration helps elemental pressure while Tenacity is the first resistance hook against ongoing combat conditions.
 
 ### Combat Role Implications
 The new derived ratings reinforce class roles without adding bespoke per-class rules:
@@ -68,8 +69,17 @@ The new derived ratings reinforce class roles without adding bespoke per-class r
 * **Cleric:** gains steadier spell reliability from INT while WIS continues to scale elemental resistance and magical defense.
 * **Archer:** still receives the strongest `Accuracy` and `Evasion` growth through DEX, but the lighter DEX weighting reduces all-in-one stat stacking and keeps the class focused on agility rather than passive durability.
 * **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic. Archetype bias changes which attributes are emphasized, but not how those attributes convert into combat stats.
-* **Tenacity:** currently dampens incoming crit spikes only. It is intentionally reserved as the future hook for status duration/chance resistance once elemental status effects ship.
+* **Tenacity:** now does two jobs: it still dampens incoming crit spikes, and it also resists elemental status pressure such as `Burn`, `Slow`, and `Weaken`. It remains bounded, so it softens those systems without shutting them off entirely.
+
+### Elemental Status Hooks
+The first shipped reusable status-effect framework still derives its pressure from the same five attributes rather than introducing a new ailment stat:
+
+* **Fire -> Burn:** a timed damage-over-time effect. Burn potency is snapshot from the applier's spell power when the effect lands.
+* **Water -> Slow:** temporarily reduces ATB gain by a bounded percentage.
+* **Earth -> Weaken:** temporarily reduces outgoing damage by a bounded percentage.
+
+These status effects deliberately reuse `Elemental Penetration` on the attacker side and `Tenacity` on the defender side. That keeps status pressure aligned with the existing magical combat stats instead of adding a sixth defensive axis.
 
 ## Consequences
 *   **Easier:** Designing items or buffs that grant `+X STR`, `+X DEX`, or `+X WIS` is clearer because those attributes now affect both raw throughput and hit-resolution outcomes.
-*   **Difficult:** Because the same attributes now scale multiple combat layers, balance drift is easier to introduce. Penetration and Tenacity help long-term scaling stay interesting, but future status systems still need to avoid turning `WIS` into an all-purpose answer stat.
+*   **Difficult:** Because the same attributes now scale multiple combat layers, balance drift is easier to introduce. Penetration and Tenacity help long-term scaling stay interesting, but future status systems still need to avoid turning `WIS` plus `Tenacity` into an all-purpose answer package.

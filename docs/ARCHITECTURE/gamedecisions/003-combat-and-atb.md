@@ -23,6 +23,7 @@ If `Autofight` is disabled, the simulation pauses in place: ATB does not fill, a
 
 * **Base ATB Rate:** `2.0` per tick.
 * **Speed Bonus:** Dexterity provides a speed bonus calculation: `+ (DEX * 0.06)` per tick.
+* **Status Timing:** reusable timed effects decrement once per game tick, while periodic effects such as Burn resolve once per second (`20` ticks).
 
 When an entity's `actionProgress` reaches or exceeds `100`, they consume their bar (reset to `0`) and perform an action.
 
@@ -53,11 +54,24 @@ Currently, action resolution uses a lightweight class-aware ruleset:
    * Archers have a `2.0x` Crit Multiplier.
    * All other classes have a `1.5x` Crit Multiplier.
 8. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, the attacker's `Armor Penetration` first converts through `min(60%, penetration / (penetration + 60))` and reduces the target's effective armor by that proportion, then damage is reduced with the existing diminishing-return armor curve: `rawDamage * (100 / (100 + effectiveArmor * 2))`. If the element is magical (e.g. `light`, `fire`), the attacker's `Elemental Penetration` uses the same bounded conversion to reduce the target's effective elemental resistance before the percentage-based resistance reduction is applied. Minimum damage remains `1`.
-9. **Protection Effects:** `Ward Ally` is a lightweight support-only protection effect. It reduces the next damaging hit against the warded target by `35%`, then expires immediately. This gives enemy support units an ally-protection hook without introducing a full buff/debuff framework yet.
-10. **Resource Triggers:** Warrior Rage generation now happens after any resolved Warrior attack action, including dodges or parries, plus whenever a Warrior takes damage. This keeps Rage tied to combat participation without requiring every melee swing to connect.
-11. **Tenacity:** If the action crits, the defender's `Tenacity` dampens only the bonus portion of the crit multiplier through `min(60%, tenacity / (tenacity + 80))`. This means Tenacity does not change crit chance and cannot turn a crit into a normal hit; it only softens long-term crit spikes. The same stat is reserved as the future hook for status-duration or status-chance resistance.
+9. **Status Application:** After a damaging elemental hit lands and deals damage, the engine may apply a timed status rider. The first shipped mappings are `fire -> Burn`, `water -> Slow`, and `earth -> Weaken`. Application uses `clamp(15%, 75%, baseChance + (attacker.ElementalPenetration - defender.Tenacity) * 0.3%)`, so elemental pressure stays bounded and shares the same offensive/defensive stats as spell damage.
+10. **Protection Effects:** `Ward Ally` remains a lightweight support-only protection effect. It reduces the next damaging hit against the warded target by `35%`, then expires immediately. It still lives outside the timed-status framework because it is a single-hit shield, not a duration-based condition.
+11. **Resource Triggers:** Warrior Rage generation now happens after any resolved Warrior attack action, including dodges or parries, plus whenever a Warrior takes damage. This keeps Rage tied to combat participation without requiring every melee swing to connect.
+12. **Tenacity:** If the action crits, the defender's `Tenacity` dampens only the bonus portion of the crit multiplier through `min(60%, tenacity / (tenacity + 80))`. The same stat also resists elemental status application through the bounded status formula above. Tenacity still does not change crit chance and cannot hard-immunize units against statuses.
 
 Cleric `Smite` is the first shipped non-physical attack in this system and is tagged as `light`, so it already respects Light resistance. Additional elemental attacks can reuse the same mitigation path in future expansions.
+
+### Timed Status Effects
+
+The combat engine now supports a reusable timed-effect payload on every entity rather than hard-coding status logic into individual classes or enemy archetypes. Each active effect stores a key, polarity, source id, remaining duration, stack count, stack cap, and effect-specific potency.
+
+The first pass intentionally ships only three debuffs:
+
+* **Burn (`fire`):** `45%` base application chance, `4s` duration, ticks once per second, and deals `15%` of the source's magic damage per tick. Burn stacks up to `2`, and reapplication refreshes the duration.
+* **Slow (`water`):** `35%` base application chance, `3s` duration, and reduces ATB gain by `20%`. It does not stack; stronger reapplications refresh duration.
+* **Weaken (`earth`):** `35%` base application chance, `4s` duration, and reduces outgoing physical and magic damage by `15%`. It does not stack; stronger reapplications refresh duration.
+
+Active statuses are part of encounter state and therefore persist through save/export/import when the run is saved mid-fight. They are cleared when a new encounter is generated so temporary combat conditions do not leak across floors.
 
 ### Enemy Archetypes
 
@@ -85,7 +99,7 @@ The first deeper-combat pass uses bounded formulas to stay stable under long-ter
 
 Whenever an entity resolves an action, the UI displays a short-lived skill banner near that unit's portrait (for example, `Casting Mend` or `Casting Rage Strike`) so the player can read combat intent at a glance without relying only on the combat log.
 
-The dungeon UI now also renders transient floating combat events near unit portraits for key outcomes such as damage, healing, `Dodge`, `Parry`, `CRIT`, and defeat. This keeps the fast ATB loop readable without bloating the permanent card layout.
+The dungeon UI now also renders transient floating combat events near unit portraits for key outcomes such as damage, healing, `Dodge`, `Parry`, `CRIT`, defeat, plus status application/tick/expiry. This keeps the fast ATB loop readable without bloating the permanent card layout.
 
 ### UI Readability Conventions
 
@@ -93,8 +107,9 @@ To support higher-entity encounters (up to five party members and five enemies),
 
 * **Living-first ordering:** living entities are listed before defeated ones so the actionable combat state is always near the top of each roster.
 * **Compact bars with preserved scanability:** HP, resource, and action-readiness bars remain visible at reduced card density to avoid panel collapse at larger party sizes.
+* **Persistent status chips:** active timed effects render as short uppercase chips such as `BRN x2`, `SLW`, or `WKN` so the player can read ongoing pressure without waiting for the combat log.
 * **Subtle role labels:** enemy roster cards and the encounter stage surface the current archetype in small uppercase labels so the player can read combat roles without adding a new panel or badge-heavy layout.
-* **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) plus combat-facing ratings (`ACC`, `EVA`, `PAR`, `APEN`, `EPEN`, `TEN`) and elemental resistances are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
+* **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) plus combat-facing ratings (`ACC`, `EVA`, `PAR`, `APEN`, `EPEN`, `TEN`), elemental resistances, and active statuses are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
 * **Scrollable roster columns:** party and enemy panels remain independently scrollable when total unit count exceeds available viewport height.
 * **Anchored combat log:** the middle-column log remains pinned to the bottom of the dungeon view while the encounter showcase keeps a stable footprint, so rapid kills or floor transitions do not cause the log panel to jump upward.
 * **Adjustable log depth:** players can still choose how much recent combat history to expose by expanding the log or dragging its resize handle upward for more visible entries.
@@ -106,5 +121,5 @@ The combat loop now advances through a provider-backed `zustand` store action (`
 
 ## Consequences
 
-* **Easier:** Combat is more readable and less deterministic. The same core attributes now support both raw throughput and hit-resolution gameplay without introducing a separate stat sheet, and enemy variety can increase without building a full parallel class roster.
-* **Difficult:** Because hit chance, dodge pressure, parry, resistance, penetration, tenacity, and archetype targeting all scale from shared attributes, balance drift becomes easier to introduce at high levels. Future combat additions should prefer bounded formulas and explicit caps rather than open-ended avoidance stacking or mitigation bypass that fully invalidates earlier systems.
+* **Easier:** Combat is more readable and less deterministic. The same core attributes now support both raw throughput and hit-resolution gameplay without introducing a separate stat sheet, and the new timed-effect payload gives future cleric/support buffs or debuffs a clear extension path.
+* **Difficult:** Because hit chance, dodge pressure, parry, resistance, penetration, tenacity, archetype targeting, and status application all scale from shared attributes, balance drift becomes easier to introduce at high levels. Future combat additions should prefer bounded formulas and explicit caps rather than open-ended avoidance stacking, stun chains, or mitigation bypass that fully invalidates earlier systems.
