@@ -110,6 +110,35 @@ describe("simulation engine", () => {
         expect(result.state.combatEvents.some((event) => event.kind === "parry")).toBe(true);
     });
 
+    it("lets heroes parry melee enemy attacks", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.parryRating = 200;
+        warrior.currentHp = warrior.maxHp;
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = 99;
+        enemy.critChance = 0;
+        const startingHp = warrior.currentHp;
+
+        vi.spyOn(Math, "random")
+            .mockReturnValueOnce(0)
+            .mockReturnValueOnce(0)
+            .mockReturnValueOnce(0.2);
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+        );
+
+        expect(result.state.party[0].currentHp.eq(startingHp)).toBe(true);
+        expect(result.state.combatLog[0]).toMatch(/parries/i);
+        expect(result.state.combatLog[0]).toMatch(/Brom parries Sewer Rat Lv1's Attack!/);
+        expect(result.state.combatEvents.some((event) => event.kind === "parry" && event.targetId === warrior.id)).toBe(true);
+    });
+
     it("does not let ranged physical attacks be parried", () => {
         const archer = createHero("hero_1", "Vera", "Archer");
         archer.actionProgress = 99;

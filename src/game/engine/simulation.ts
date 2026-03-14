@@ -208,10 +208,10 @@ const getDamageAction = (entity: Entity): DamageAction => {
         name: "Attack",
         damage: entity.physicalDamage,
         damageElement: "physical",
-        deliveryType: entity.class === "Archer" || entity.isEnemy ? "ranged" : "melee",
+        deliveryType: entity.class === "Archer" ? "ranged" : "melee",
         critChance: entity.critChance,
         canDodge: true,
-        canParry: !(entity.class === "Archer" || entity.isEnemy),
+        canParry: entity.class !== "Archer",
     };
 
     if (entity.class === "Cleric") {
