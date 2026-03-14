@@ -36,8 +36,8 @@ describe("entity model", () => {
     it("derives accuracy, evasion, and parry ratings from existing attributes", () => {
         const warrior = createHero("hero_1", "Brom", "Warrior");
 
-        expect(warrior.accuracyRating).toBe(63);
-        expect(warrior.evasionRating).toBeCloseTo(45.5);
+        expect(warrior.accuracyRating).toBeCloseTo(60.5);
+        expect(warrior.evasionRating).toBeCloseTo(43);
         expect(warrior.parryRating).toBeCloseTo(18.75);
     });
 

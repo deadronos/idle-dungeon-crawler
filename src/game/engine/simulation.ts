@@ -8,15 +8,23 @@ import type { CombatEvent, GameState } from "../store/types";
 export const GAME_TICK_RATE = 20;
 export const GAME_TICK_MS = 1000 / GAME_TICK_RATE;
 export const ATB_RATE = 2;
+export const DEX_ATB_RATE = 0.06;
+export const WARRIOR_RAGE_STRIKE_COST = 40;
+export const WARRIOR_RAGE_PER_ATTACK = 8;
+export const WARRIOR_RAGE_WHEN_HIT = 5;
+export const ARCHER_PIERCING_SHOT_COST = 35;
+export const ARCHER_PIERCING_SHOT_CRIT_BONUS = 0.15;
+export const ARCHER_CUNNING_REGEN_PER_TICK = 0.75;
+export const ARMOR_MITIGATION_SCALE = 2;
 
 const SKILL_BANNER_TICKS = GAME_TICK_RATE;
 const COMBAT_EVENT_TICKS = Math.round(GAME_TICK_RATE * 1.4);
 const COMBAT_LOG_LIMIT = 10;
 const MIN_PHYSICAL_HIT_CHANCE = 0.72;
 const MAX_PHYSICAL_HIT_CHANCE = 0.97;
-const MIN_SPELL_HIT_CHANCE = 0.75;
-const MAX_SPELL_HIT_CHANCE = 0.98;
-const MAX_PARRY_CHANCE = 0.3;
+const MIN_SPELL_HIT_CHANCE = 0.74;
+const MAX_SPELL_HIT_CHANCE = 0.96;
+const MAX_PARRY_CHANCE = 0.25;
 let combatEventSequence = 0;
 
 type DamageElement = "physical" | keyof Entity["resistances"];
@@ -38,6 +46,30 @@ export interface SimulationResult {
     state: GameState;
     outcome: SimulationOutcome;
 }
+
+export interface SimulationRandomSource {
+    next: () => number;
+}
+
+const defaultRandomSource: SimulationRandomSource = {
+    next: () => Math.random(),
+};
+
+export const createSequenceRandomSource = (...rolls: number[]): SimulationRandomSource => {
+    let index = 0;
+
+    return {
+        next: () => {
+            if (rolls.length === 0) {
+                return 0;
+            }
+
+            const nextRoll = rolls[Math.min(index, rolls.length - 1)];
+            index += 1;
+            return nextRoll;
+        },
+    };
+};
 
 export const isBossFloor = (floor: number) => floor % 10 === 0;
 
@@ -171,22 +203,29 @@ export const getPhysicalHitChance = (attacker: Entity, defender: Entity) =>
     clampChance(
         MIN_PHYSICAL_HIT_CHANCE,
         MAX_PHYSICAL_HIT_CHANCE,
-        0.84 + ((attacker.accuracyRating - defender.evasionRating) * 0.002),
+        0.82 + ((attacker.accuracyRating - defender.evasionRating) * 0.002),
     );
 
 export const getSpellHitChance = (attacker: Entity, defender: Entity) =>
     clampChance(
         MIN_SPELL_HIT_CHANCE,
         MAX_SPELL_HIT_CHANCE,
-        0.86 + (((attacker.accuracyRating + attacker.attributes.int) - (defender.evasionRating + defender.attributes.wis)) * 0.0018),
+        0.82
+            + ((attacker.accuracyRating - defender.evasionRating) * 0.0016)
+            + ((attacker.attributes.int - defender.attributes.wis) * 0.0008),
     );
 
 export const getParryChance = (attacker: Entity, defender: Entity) =>
     clampChance(
         0,
         MAX_PARRY_CHANCE,
-        0.06 + ((defender.parryRating - (attacker.accuracyRating * 0.25)) * 0.003),
+        0.04 + ((defender.parryRating - (attacker.accuracyRating * 0.3)) * 0.0025),
     );
+
+export const applyPhysicalMitigation = (rawDamage: Decimal, armor: Decimal) => {
+    const mitigatedDamage = rawDamage.times(100).div(new Decimal(100).plus(armor.times(ARMOR_MITIGATION_SCALE)));
+    return Decimal.max(1, mitigatedDamage);
+};
 
 const createCombatEvent = (event: Omit<CombatEvent, "id">): CombatEvent => {
     combatEventSequence += 1;
@@ -226,25 +265,25 @@ const getDamageAction = (entity: Entity): DamageAction => {
         };
     }
 
-    if (!entity.isEnemy && entity.class === "Warrior" && entity.currentResource.gte(50)) {
-        entity.currentResource = entity.currentResource.minus(50);
+    if (!entity.isEnemy && entity.class === "Warrior" && entity.currentResource.gte(WARRIOR_RAGE_STRIKE_COST)) {
+        entity.currentResource = entity.currentResource.minus(WARRIOR_RAGE_STRIKE_COST);
         action = {
             ...action,
             name: "Rage Strike",
             damage: entity.physicalDamage.times(2),
             damageElement: "physical",
             deliveryType: "melee",
-            canParry: true,
+            canParry: false,
         };
-    } else if (!entity.isEnemy && entity.class === "Archer" && entity.currentResource.gte(25)) {
-        entity.currentResource = entity.currentResource.minus(25);
+    } else if (!entity.isEnemy && entity.class === "Archer" && entity.currentResource.gte(ARCHER_PIERCING_SHOT_COST)) {
+        entity.currentResource = entity.currentResource.minus(ARCHER_PIERCING_SHOT_COST);
         action = {
             ...action,
             name: "Piercing Shot",
             damage: entity.physicalDamage.times(1.6),
             damageElement: "physical",
             deliveryType: "ranged",
-            critChance: Math.min(1, entity.critChance + 0.25),
+            critChance: Math.min(1, entity.critChance + ARCHER_PIERCING_SHOT_CRIT_BONUS),
             canParry: false,
         };
     }
@@ -256,7 +295,15 @@ const getDamageAction = (entity: Entity): DamageAction => {
     return action;
 };
 
-export const simulateTick = (state: GameState): SimulationResult => {
+const grantWarriorAttackRage = (entity: Entity) => {
+    if (entity.class !== "Warrior") {
+        return;
+    }
+
+    entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(WARRIOR_RAGE_PER_ATTACK));
+};
+
+export const simulateTick = (state: GameState, randomSource: SimulationRandomSource = defaultRandomSource): SimulationResult => {
     const draft: GameState = {
         ...state,
         party: state.party.map(cloneEntity),
@@ -330,10 +377,10 @@ export const simulateTick = (state: GameState): SimulationResult => {
         }
 
         const hasteBonus = draft.prestigeUpgrades.gameSpeed * 0.1; // +10% speed up per level
-        entity.actionProgress += (ATB_RATE + (entity.attributes.dex * 0.1)) * (1 + hasteBonus);
+        entity.actionProgress += (ATB_RATE + (entity.attributes.dex * DEX_ATB_RATE)) * (1 + hasteBonus);
 
         if (entity.class === "Cleric" || entity.class === "Archer") {
-            const regen = entity.class === "Cleric" ? entity.attributes.wis * 0.5 : 2;
+            const regen = entity.class === "Cleric" ? entity.attributes.wis * 0.5 : ARCHER_CUNNING_REGEN_PER_TICK;
             entity.currentResource = entity.currentResource.plus(regen);
             if (entity.currentResource.gt(entity.maxResource)) {
                 entity.currentResource = entity.maxResource;
@@ -378,7 +425,7 @@ export const simulateTick = (state: GameState): SimulationResult => {
             return;
         }
 
-        const target = aliveTargets[Math.floor(Math.random() * aliveTargets.length)];
+        const target = aliveTargets[Math.floor(randomSource.next() * aliveTargets.length)];
         const action = getDamageAction(entity);
 
         setActiveSkill(entity, action.name);
@@ -387,7 +434,8 @@ export const simulateTick = (state: GameState): SimulationResult => {
             ? getSpellHitChance(entity, target)
             : getPhysicalHitChance(entity, target);
 
-        if (action.canDodge && Math.random() >= hitChance) {
+        if (action.canDodge && randomSource.next() >= hitChance) {
+            grantWarriorAttackRage(entity);
             queueCombatEvent({
                 sourceId: entity.id,
                 targetId: target.id,
@@ -399,7 +447,8 @@ export const simulateTick = (state: GameState): SimulationResult => {
             return;
         }
 
-        if (action.canParry && action.deliveryType === "melee" && action.damageElement === "physical" && Math.random() < getParryChance(entity, target)) {
+        if (action.canParry && action.deliveryType === "melee" && action.damageElement === "physical" && randomSource.next() < getParryChance(entity, target)) {
+            grantWarriorAttackRage(entity);
             queueCombatEvent({
                 sourceId: entity.id,
                 targetId: target.id,
@@ -412,7 +461,7 @@ export const simulateTick = (state: GameState): SimulationResult => {
         }
 
         let damage = action.damage;
-        const isCrit = Math.random() < action.critChance;
+        const isCrit = randomSource.next() < action.critChance;
         if (isCrit) {
             damage = damage.times(entity.critDamage);
             queueCombatEvent({
@@ -427,7 +476,7 @@ export const simulateTick = (state: GameState): SimulationResult => {
 
         let finalDamage = damage;
         if (action.damageElement === "physical") {
-            finalDamage = damage.minus(target.armor);
+            finalDamage = applyPhysicalMitigation(damage, target.armor);
         } else {
             finalDamage = damage.times(1 - target.resistances[action.damageElement]);
         }
@@ -444,12 +493,10 @@ export const simulateTick = (state: GameState): SimulationResult => {
             ttlTicks: COMBAT_EVENT_TICKS,
         });
 
-        if (entity.class === "Warrior") {
-            entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(10));
-        }
+        grantWarriorAttackRage(entity);
 
-        if (target.class === "Warrior" && target.currentHp.gt(0)) {
-            target.currentResource = Decimal.min(target.maxResource, target.currentResource.plus(5));
+        if (target.class === "Warrior") {
+            target.currentResource = Decimal.min(target.maxResource, target.currentResource.plus(WARRIOR_RAGE_WHEN_HIT));
         }
 
         logMessages.push(`${entity.name} uses ${action.name} on ${target.name} for ${finalDamage.floor().toString()}! ${isCrit ? "(CRIT)" : ""}`.trim());
@@ -504,7 +551,6 @@ export const simulateTick = (state: GameState): SimulationResult => {
                     nextHero.attributes.vit += 1;
                     nextHero.attributes.int += 1;
                     nextHero.attributes.wis += 1;
-                    nextHero.attributes.dex += Math.random() > 0.5 ? 1 : 0;
                 }
 
                 nextHero = recalculateEntity(nextHero, draft.metaUpgrades, draft.prestigeUpgrades);

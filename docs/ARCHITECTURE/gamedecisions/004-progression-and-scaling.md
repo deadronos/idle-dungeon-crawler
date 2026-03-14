@@ -26,7 +26,7 @@ When an EXP threshold is reached, the hero levels up, deducting the required amo
 
 * **Warrior:** +2 STR, +2 VIT, +1 DEX, +1 INT, +1 WIS
 * **Cleric:** +2 INT, +2 WIS, +1 STR, +1 VIT, +1 DEX
-* **Archer:** +2 DEX, +1 STR, +1 VIT, +1 INT, +1 WIS, (and a 50% chance for an extra +1 DEX)
+* **Archer:** +2 DEX, +1 STR, +1 VIT, +1 INT, +1 WIS
 
 ### Persistent Gold Upgrades
 

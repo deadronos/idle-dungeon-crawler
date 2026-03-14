@@ -22,7 +22,7 @@ If `Autofight` is disabled, the simulation pauses in place: ATB does not fill, a
 `Autoadvance` is a separate control. When enabled, the party moves to the next floor after winning an encounter. When disabled, the party immediately starts a fresh encounter on the same floor, allowing the player to continuously farm a target floor without climbing past it.
 
 * **Base ATB Rate:** `2.0` per tick.
-* **Speed Bonus:** Dexterity provides a speed bonus calculation: `+ (DEX * 0.1)` per tick.
+* **Speed Bonus:** Dexterity provides a speed bonus calculation: `+ (DEX * 0.06)` per tick.
 
 When an entity's `actionProgress` reaches or exceeds `100`, they consume their bar (reset to `0`) and perform an action.
 
@@ -33,26 +33,26 @@ Currently, action resolution uses a lightweight class-aware ruleset:
 1. **Target Selection:** The acting unit selects a random living target from the opposing side.
 2. **Class Skill Check:**
    * Clerics first check for a badly injured ally and, if sufficient Mana is available, cast a heal instead of attacking (Mend costs **35 Mana**).
-   * Warriors spend Rage on `Rage Strike` once they have enough stored resource (50 Rage for a 2× damage attack; warriors gain 10 Rage when hitting and 5 Rage when hit).
-   * Archers spend Cunning on `Piercing Shot` once they have enough stored resource (25 Cunning for 1.6× damage and +25% crit chance).
-   * Resource regeneration is handled per tick: clerics regain `WIS * 0.5` Mana, archers regain `2` Cunning, and warriors generate Rage only through combat triggers. Warriors start runs with 0 Rage, while clerics and archers begin with full resource pools.
+   * Warriors spend Rage on `Rage Strike` once they have enough stored resource (40 Rage for a 2× damage attack; `Rage Strike` cannot be parried; warriors gain 8 Rage after resolving an attack and 5 Rage when hit).
+   * Archers spend Cunning on `Piercing Shot` once they have enough stored resource (35 Cunning for 1.6× damage and +15% crit chance).
+   * Resource regeneration is handled per tick: clerics regain `WIS * 0.5` Mana, archers regain `0.75` Cunning, and warriors generate Rage only through combat triggers. Warriors start runs with 0 Rage, while clerics and archers begin with full resource pools.
 3. **Action Metadata:** Every damaging action declares a `deliveryType` (`melee`, `ranged`, or `spell`) and a `damageElement` (`physical`, `fire`, `water`, `earth`, `air`, `light`, `shadow`). Standard Monster auto-attacks are intentionally `melee + physical`, while Archer basics remain `ranged + physical` and Cleric `Smite` remains `spell + light`. This keeps future attacks extensible without hand-written resolution logic per skill and avoids silently classifying all enemies as ranged attackers.
 4. **Hit Resolution:**
    * Most physical attacks use a contested hit formula based on the attacker's `Accuracy Rating` and the defender's `Evasion Rating`.
-   * Spells use a magic-biased variant that adds the attacker's `INT` and defender's `WIS` before clamping the final hit chance.
+   * Spells use a magic-biased variant that still compares `Accuracy` versus `Evasion`, but also layers in a smaller `INT` versus `WIS` pressure term before clamping the final hit chance.
    * If the hit roll fails, the action is surfaced as a `dodge` event in the log/UI.
 5. **Parry Check:**
    * `Parry` applies only to `melee + physical` attacks.
    * Ranged physical attacks such as `Piercing Shot` can still miss or be dodged, but they cannot be parried by default.
-   * If a parry succeeds, the hit is fully negated and on-hit resource triggers do not fire.
+   * If a parry succeeds, the hit is fully negated.
 6. **Damage Roll:**
    * Clerics use their `Magic Damage` stat when attacking.
    * Warriors and Archers use their `Physical Damage` stat.
 7. **Critical Hit Check:** The unit's `Crit Chance` (base 5%, boosted by DEX) is rolled. If successful, damage is multiplied.
    * Archers have a `2.0x` Crit Multiplier.
    * All other classes have a `1.5x` Crit Multiplier.
-8. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, damage is reduced by subtracting the target's `Armor` value. If the element is magical (e.g. `light`, `fire`), damage is reduced by a percentage equal to the target's corresponding elemental resistance (minimum 1 damage).
-9. **Resource Triggers:** Warrior Rage generation now happens only on landed hits or when a Warrior is actually hit. Dodged or parried attacks do not grant Rage.
+8. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, damage is reduced with a diminishing-return armor curve: `rawDamage * (100 / (100 + armor * 2))`. If the element is magical (e.g. `light`, `fire`), damage is reduced by a percentage equal to the target's corresponding elemental resistance (minimum 1 damage).
+9. **Resource Triggers:** Warrior Rage generation now happens after any resolved Warrior attack action, including dodges or parries, plus whenever a Warrior takes damage. This keeps Rage tied to combat participation without requiring every melee swing to connect.
 
 Cleric `Smite` is the first shipped non-physical attack in this system and is tagged as `light`, so it already respects Light resistance. Additional elemental attacks can reuse the same mitigation path in future expansions.
 
@@ -60,9 +60,9 @@ Cleric `Smite` is the first shipped non-physical attack in this system and is ta
 
 The first deeper-combat pass uses bounded formulas to stay stable under long-term idle scaling:
 
-* **Physical / Ranged Hit Chance:** `clamp(72%, 97%, 84% + (attacker.Accuracy - defender.Evasion) * 0.2%)`
-* **Spell Hit Chance:** `clamp(75%, 98%, 86% + ((attacker.Accuracy + attacker.INT) - (defender.Evasion + defender.WIS)) * 0.18%)`
-* **Parry Chance:** `clamp(0%, 30%, 6% + (defender.Parry - attacker.Accuracy * 0.25) * 0.3%)`
+* **Physical / Ranged Hit Chance:** `clamp(72%, 97%, 82% + (attacker.Accuracy - defender.Evasion) * 0.2%)`
+* **Spell Hit Chance:** `clamp(74%, 96%, 82% + (attacker.Accuracy - defender.Evasion) * 0.16% + (attacker.INT - defender.WIS) * 0.08%)`
+* **Parry Chance:** `clamp(0%, 25%, 4% + (defender.Parry - attacker.Accuracy * 0.3) * 0.25%)`
 
 ### Combat Readability
 
