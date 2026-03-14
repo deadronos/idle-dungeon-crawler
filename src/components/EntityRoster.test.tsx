@@ -67,9 +67,14 @@ describe("EntityRoster", () => {
         );
 
         expect(screen.getByText("+21")).toBeInTheDocument();
-        expect(screen.getByText(/ACC: 66/i)).toBeInTheDocument();
-        expect(screen.getByText(/EVA: 51/i)).toBeInTheDocument();
-        expect(screen.getByText(/PAR: 9/i)).toBeInTheDocument();
+        const tooltip = screen.getByRole("tooltip");
+        expect(tooltip).toHaveTextContent(/attributes/i);
+        expect(tooltip).toHaveTextContent(/resistances/i);
+        expect(tooltip).toHaveTextContent(/acc\s*66/i);
+        expect(tooltip).toHaveTextContent(/eva\s*51/i);
+        expect(tooltip).toHaveTextContent(/par\s*9/i);
+        expect(tooltip).toHaveTextContent(/fire\s*20%/i);
+        expect(tooltip).toHaveTextContent(/shadow\s*20%/i);
     });
 
     it("keeps roster cards at full height inside the scrollable panel when the list grows", () => {
@@ -91,7 +96,7 @@ describe("EntityRoster", () => {
         const entityCards = scrollPanel?.querySelectorAll('[data-slot="card"]');
         expect(entityCards).toHaveLength(roster.length);
         entityCards?.forEach((card) => {
-            expect(card).toHaveClass("shrink-0", "snap-start");
+            expect(card).toHaveClass("shrink-0", "snap-start", "overflow-visible");
         });
     });
 });
