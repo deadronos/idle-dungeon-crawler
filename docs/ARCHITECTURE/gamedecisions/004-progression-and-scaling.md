@@ -50,14 +50,28 @@ These upgrades persist through wipes, but unspent Gold is still lost on party de
 ### Enemy Scaling
 
 Dungeon generation scales enemy counts independently from player party size. On standard floors, encounters spawn `ceil(Floor / 5)` enemies, capped at `5` total enemies, so the dungeon still ramps upward in discrete bands as the player climbs. Unlocking or recruiting additional party members does not increase enemy count by itself.
-Instead of tracking separate enemy classes, standard monsters scale their internal attributes directly based on the floor number (represented as `level` internally during generation):
+Instead of tracking separate enemy classes, standard monsters scale their internal attributes directly based on the floor number (represented as `level` internally during generation), then receive a lightweight archetype bias:
 
 * `VIT: 5 + (Level * 2)`
 * `STR & DEX: 5 + (Level * 1.5)`
 * `INT & WIS: 2 + Level`
 
+Archetype composition is deterministic per encounter so the system stays easy to test and tune:
+
+* Floors `1-4`: encounter pool is `Bruiser`, `Skirmisher`
+* Floors `5-9`: add `Caster`
+* Floors `11+` on standard floors: add at most one `Support`, always placed in the final encounter slot so the stage view does not default to a healer
+* The offensive archetypes rotate by floor and encounter slot, so repeated climbs naturally cycle different stat and damage profiles without introducing a huge enemy roster
+
+Archetypes bias both stats and behavior:
+
+* **Bruiser:** higher `VIT` and `STR`, lower `DEX`, high-HP melee pressure
+* **Skirmisher:** higher `DEX`, lighter durability, fast ranged pressure
+* **Caster:** higher `INT` / `WIS`, lower `STR`, elemental spell pressure
+* **Support:** higher `WIS` / `INT`, lighter direct pressure, triage healing and ally protection
+
 **Boss Encounters:**
-Every 10th floor is flagged as a Boss floor. Boss floors spawn exactly **one** enemy regardless of player party size, and that generated boss has their calculated VIT multiplied by `2` and their STR multiplied by `1.3`. This keeps bosses meaningfully tougher than adjacent floors without recreating the old solo/duo progression wall at Floor `10` or pushing the same pacing problem forward to the later slot milestones.
+Every 10th floor is flagged as a Boss floor. Boss floors spawn exactly **one** enemy regardless of player party size, and that generated boss uses a dedicated `Boss` archetype layered on top of floor scaling. Bosses still receive the softened durability / strength multipliers (`VIT * 2`, `STR * 1.3`), but they also gain broader DEX / INT / WIS reinforcement and a deterministic elemental theme for their phase-two spell pressure. This keeps bosses meaningfully tougher than adjacent floors without recreating the old solo/duo progression wall at Floor `10` or pushing the same pacing problem forward to the later slot milestones.
 
 ### Party Wipe & Hard Reset
 
@@ -65,5 +79,5 @@ If all party members reach 0 HP, a wipe is triggered. The party is fully healed,
 
 ## Consequences
 
-* **Easier:** Auto-allocation of attributes on level-up prevents the user from being interrupted in an idle game. The wipe loop guarantees eventual success just through passive farming.
-* **Difficult:** Because enemy VIT and STR scale linearly per level/floor, and the EXP requirement scales exponentially (1.5x each level), there will still be a mathematical "wall" where the enemies eventually out-scale the heroes' raw level-up stats. Persistent upgrades soften this, but additional progression layers (more upgrade paths, loot, or prestige currencies) will still be needed for long-term scaling.
+* **Easier:** Auto-allocation of attributes on level-up prevents the user from being interrupted in an idle game. The wipe loop guarantees eventual success just through passive farming, and archetypes add encounter variety without forcing a large enemy-content pipeline.
+* **Difficult:** Because enemy VIT and STR still scale linearly per level/floor, and the EXP requirement scales exponentially (1.5x each level), there will still be a mathematical "wall" where the enemies eventually out-scale the heroes' raw level-up stats. Archetype bias and boss stat packages make those spikes more interesting, but they also make balancing reward curves and support/healer encounters more sensitive.

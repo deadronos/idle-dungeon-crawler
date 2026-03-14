@@ -24,7 +24,7 @@ Each hero class begins with a predefined spread of attributes to reinforce its r
 * **Cleric:** VIT 7, STR 4, DEX 4, INT 8, WIS 10
 * **Archer:** VIT 6, STR 5, DEX 12, INT 4, WIS 4
 
-Monsters use a simple base of 5 in each attribute, which is then scaled by floor level during encounter generation.  Documenting the starting templates helps designers understand baseline differences between classes.
+Monsters use a simple base of 5 in each attribute, which is then scaled by floor level during encounter generation. Enemy archetypes now apply a second pass of role-specific stat bias on top of that baseline so bruisers, skirmishers, casters, supports, and bosses can all inherit the same formulas without needing a separate stat system. Documenting the starting templates helps designers understand baseline differences between classes.
 
 ### Derived Stat Formulas
 When a unit is created or levels up, their total attributes are summed and used to calculate derived stats:
@@ -60,7 +60,7 @@ The new derived ratings reinforce class roles without adding bespoke per-class r
 * **Warrior:** naturally develops the highest `Parry Rating` thanks to STR-heavy growth and retains a sturdier melee identity now that DEX contributes less to avoidance stacking.
 * **Cleric:** gains steadier spell reliability from INT while WIS continues to scale elemental resistance and magical defense.
 * **Archer:** still receives the strongest `Accuracy` and `Evasion` growth through DEX, but the lighter DEX weighting reduces all-in-one stat stacking and keeps the class focused on agility rather than passive durability.
-* **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic.
+* **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic. Archetype bias changes which attributes are emphasized, but not how those attributes convert into combat stats.
 
 ## Consequences
 *   **Easier:** Designing items or buffs that grant `+X STR`, `+X DEX`, or `+X WIS` is clearer because those attributes now affect both raw throughput and hit-resolution outcomes.

@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 
-import { BASE_META_UPGRADES, BOSS_STRENGTH_MULTIPLIER, BOSS_VITALITY_MULTIPLIER, createEnemy, createHero, createRecruitHero, createStarterParty } from "./entity";
+import {
+    BASE_META_UPGRADES,
+    BOSS_STRENGTH_MULTIPLIER,
+    BOSS_VITALITY_MULTIPLIER,
+    createEnemy,
+    createHero,
+    createRecruitHero,
+    createStarterParty,
+    getEnemyArchetypeLabel,
+} from "./entity";
 
 describe("entity model", () => {
     it("creates a single-hero starter party around the selected leader", () => {
@@ -47,7 +56,22 @@ describe("entity model", () => {
         const expectedBaseStr = 5 + (10 * 1.5);
 
         expect(bossEnemy.name.startsWith("Boss:")).toBe(true);
-        expect(bossEnemy.attributes.vit).toBe(expectedBaseVit * BOSS_VITALITY_MULTIPLIER);
-        expect(bossEnemy.attributes.str).toBe(expectedBaseStr * BOSS_STRENGTH_MULTIPLIER);
+        expect(bossEnemy.attributes.vit).toBe(expectedBaseVit * 1.25 * BOSS_VITALITY_MULTIPLIER);
+        expect(bossEnemy.attributes.str).toBe(expectedBaseStr * 1.15 * BOSS_STRENGTH_MULTIPLIER);
+    });
+
+    it("applies archetype stat biases and labels to generated enemies", () => {
+        const bruiser = createEnemy(8, "enemy_bruiser", { archetype: "Bruiser" });
+        const skirmisher = createEnemy(8, "enemy_skirmisher", { archetype: "Skirmisher" });
+        const caster = createEnemy(8, "enemy_caster", { archetype: "Caster", element: "fire" });
+
+        expect(bruiser.enemyArchetype).toBe("Bruiser");
+        expect(skirmisher.enemyArchetype).toBe("Skirmisher");
+        expect(caster.enemyArchetype).toBe("Caster");
+        expect(caster.enemyElement).toBe("fire");
+        expect(bruiser.maxHp.gt(skirmisher.maxHp)).toBe(true);
+        expect(skirmisher.evasionRating).toBeGreaterThan(bruiser.evasionRating);
+        expect(caster.magicDamage.gt(bruiser.magicDamage)).toBe(true);
+        expect(getEnemyArchetypeLabel(caster)).toBe("Fire Caster");
     });
 });

@@ -29,4 +29,23 @@ describe('MainGameView', () => {
     expect(screen.getByRole('button', { name: /^log$/i })).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`${defeatedEnemy.name} was defeated!`, 'i'))).toBeInTheDocument();
   });
+
+  it('shows the primary enemy archetype beneath the encounter stage art', () => {
+    const casterEnemy = createEnemy(5, 'enemy_5', { archetype: 'Caster', element: 'fire' });
+
+    render(
+      <GameProvider
+        initialState={{
+          party: createStarterParty('Ayla', 'Warrior'),
+          enemies: [casterEnemy],
+          combatLog: [],
+        }}
+      >
+        <MainGameView />
+      </GameProvider>,
+    );
+
+    expect(screen.getAllByText(new RegExp(casterEnemy.name, 'i')).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/fire caster/i).length).toBeGreaterThan(0);
+  });
 });

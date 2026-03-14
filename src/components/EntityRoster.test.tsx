@@ -33,6 +33,7 @@ const heroEntity: Entity = {
     actionProgress: 25,
     activeSkill: "Casting Mend",
     activeSkillTicks: 10,
+    guardStacks: 0,
 };
 
 describe("EntityRoster", () => {

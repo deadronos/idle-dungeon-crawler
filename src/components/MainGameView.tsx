@@ -1,4 +1,5 @@
 import React from "react";
+import { getEnemyArchetypeLabel } from "../game/entity";
 import { useGameStore } from "../game/store/gameStore";
 import { EntityRoster } from "./EntityRoster";
 import { CombatLog } from "./CombatLog";
@@ -18,6 +19,7 @@ export const MainGameView: React.FC = () => {
 
     const hasLivingEnemy = enemies.some((enemy) => enemy.currentHp.gt(0));
     const primaryEnemy = enemies.find((enemy) => enemy.currentHp.gt(0)) ?? enemies[0];
+    const primaryEnemyLabel = primaryEnemy ? getEnemyArchetypeLabel(primaryEnemy) : null;
 
     const runStateLabel = autoAdvance
         ? "Auto-advance enabled"
@@ -113,12 +115,18 @@ export const MainGameView: React.FC = () => {
                             className="pointer-events-none flex min-h-[180px] lg:min-h-[260px] lg:flex-1 w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/1 p-4 lg:p-8"
                         >
                             {primaryEnemy && hasLivingEnemy ? (
-                                <img
-                                    src={primaryEnemy.image}
-                                    alt="Enemy"
-                                    className="pointer-events-none h-auto w-full max-w-[280px] animate-[idle-float_3s_ease-in-out_infinite] object-contain drop-shadow-[0_0_25px_rgba(0,0,0,0.8)]"
-                                    draggable={false}
-                                />
+                                <div className="flex flex-col items-center gap-3 text-center">
+                                    <img
+                                        src={primaryEnemy.image}
+                                        alt="Enemy"
+                                        className="pointer-events-none h-auto w-full max-w-[280px] animate-[idle-float_3s_ease-in-out_infinite] object-contain drop-shadow-[0_0_25px_rgba(0,0,0,0.8)]"
+                                        draggable={false}
+                                    />
+                                    <div className="rounded-full border border-white/10 bg-slate-950/55 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.24em] text-slate-200 shadow-[0_0_18px_rgba(15,23,42,0.35)]">
+                                        {primaryEnemy.name}
+                                        {primaryEnemyLabel ? ` • ${primaryEnemyLabel}` : ""}
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="flex max-w-sm flex-col items-center gap-2 text-center text-slate-200">
                                     <Swords className="size-8 text-amber-300/80" aria-hidden="true" />
