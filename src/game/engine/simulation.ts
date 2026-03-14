@@ -66,9 +66,9 @@ export const cloneEntity = (entity: Entity): Entity => ({
     armor: new Decimal(entity.armor),
     physicalDamage: new Decimal(entity.physicalDamage),
     magicDamage: new Decimal(entity.magicDamage),
-    accuracyRating: entity.accuracyRating,
-    evasionRating: entity.evasionRating,
-    parryRating: entity.parryRating,
+    accuracyRating: entity.accuracyRating ?? 0,
+    evasionRating: entity.evasionRating ?? 0,
+    parryRating: entity.parryRating ?? 0,
     resistances: { ...entity.resistances },
     activeSkill: entity.activeSkill,
     activeSkillTicks: entity.activeSkillTicks,
@@ -82,28 +82,49 @@ export const prependCombatMessages = (combatLog: string[], ...messages: string[]
     return [...messages.filter(Boolean), ...combatLog].slice(0, COMBAT_LOG_LIMIT);
 };
 
-export const createInitialGameState = (overrides?: Partial<GameState>): GameState => ({
-    party: overrides?.party?.map(cloneEntity) ?? [],
-    enemies: overrides?.enemies?.map(cloneEntity) ?? [],
-    gold: new Decimal(overrides?.gold ?? 0),
-    floor: overrides?.floor ?? 1,
-    autoFight: overrides?.autoFight ?? true,
-    autoAdvance: overrides?.autoAdvance ?? true,
-    combatLog: overrides?.combatLog ? [...overrides.combatLog] : [],
-    combatEvents: overrides?.combatEvents ? overrides.combatEvents.map((event) => ({ ...event })) : [],
-    metaUpgrades: { ...BASE_META_UPGRADES, ...overrides?.metaUpgrades },
-    partyCapacity: overrides?.partyCapacity ?? 1,
-    maxPartySize: overrides?.maxPartySize ?? MAX_PARTY_SIZE,
-    highestFloorCleared: overrides?.highestFloorCleared ?? 0,
-    activeSection: overrides?.activeSection ?? "dungeon",
-    heroSouls: new Decimal(overrides?.heroSouls ?? 0),
-    prestigeUpgrades: {
+const hasValidCombatRatings = (entity: Partial<Entity>) => {
+    return [entity.accuracyRating, entity.evasionRating, entity.parryRating].every(
+        (rating) => typeof rating === "number" && Number.isFinite(rating),
+    );
+};
+
+const hydrateEntity = (entity: Entity, upgrades: MetaUpgrades, prestigeUpgrades?: PrestigeUpgrades) => {
+    const cloned = cloneEntity(entity);
+
+    if (hasValidCombatRatings(entity)) {
+        return cloned;
+    }
+
+    return recalculateEntity(cloned, upgrades, prestigeUpgrades);
+};
+
+export const createInitialGameState = (overrides?: Partial<GameState>): GameState => {
+    const metaUpgrades = { ...BASE_META_UPGRADES, ...overrides?.metaUpgrades };
+    const prestigeUpgrades = {
         costReducer: overrides?.prestigeUpgrades?.costReducer ?? 0,
         hpMultiplier: overrides?.prestigeUpgrades?.hpMultiplier ?? 0,
         gameSpeed: overrides?.prestigeUpgrades?.gameSpeed ?? 0,
         xpMultiplier: overrides?.prestigeUpgrades?.xpMultiplier ?? 0,
-    },
-});
+    };
+
+    return {
+        party: overrides?.party?.map((entity) => hydrateEntity(entity, metaUpgrades, prestigeUpgrades)) ?? [],
+        enemies: overrides?.enemies?.map((entity) => hydrateEntity(entity, BASE_META_UPGRADES)) ?? [],
+        gold: new Decimal(overrides?.gold ?? 0),
+        floor: overrides?.floor ?? 1,
+        autoFight: overrides?.autoFight ?? true,
+        autoAdvance: overrides?.autoAdvance ?? true,
+        combatLog: overrides?.combatLog ? [...overrides.combatLog] : [],
+        combatEvents: overrides?.combatEvents ? overrides.combatEvents.map((event) => ({ ...event })) : [],
+        metaUpgrades,
+        partyCapacity: overrides?.partyCapacity ?? 1,
+        maxPartySize: overrides?.maxPartySize ?? MAX_PARTY_SIZE,
+        highestFloorCleared: overrides?.highestFloorCleared ?? 0,
+        activeSection: overrides?.activeSection ?? "dungeon",
+        heroSouls: new Decimal(overrides?.heroSouls ?? 0),
+        prestigeUpgrades,
+    };
+};
 
 export const getInitializedPartyState = (state: GameState, party: Entity[]): Partial<GameState> => ({
     party: recalculateParty(party, state.metaUpgrades, state.prestigeUpgrades),
@@ -250,7 +271,7 @@ export const simulateTick = (state: GameState): SimulationResult => {
     let anyVisualUpdate = false;
     const logMessages: string[] = [];
     const combatEvents: CombatEvent[] = decrementCombatEvents(draft.combatEvents);
-    if (combatEvents.length !== draft.combatEvents.length) {
+    if (draft.combatEvents.length > 0) {
         anyVisualUpdate = true;
     }
     draft.combatEvents = combatEvents;

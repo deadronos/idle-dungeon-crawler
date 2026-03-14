@@ -1,11 +1,15 @@
 import Decimal from "decimal.js";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createEnemy, createHero } from "../entity";
 
 import { createEncounter, createInitialGameState, getEncounterSize, isBossFloor, simulateTick } from "./simulation";
 
 describe("simulation engine", () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it("scales standard encounters by floor instead of player party size", () => {
         expect(getEncounterSize(1)).toBe(1);
         expect(getEncounterSize(6)).toBe(2);
@@ -37,7 +41,8 @@ describe("simulation engine", () => {
         vi.spyOn(Math, "random")
             .mockReturnValueOnce(0)
             .mockReturnValueOnce(0)
-            .mockReturnValueOnce(0.9);
+            .mockReturnValueOnce(0.9)
+            .mockReturnValue(0.9);
 
         const result = simulateTick(
             createInitialGameState({
@@ -118,7 +123,8 @@ describe("simulation engine", () => {
         vi.spyOn(Math, "random")
             .mockReturnValueOnce(0)
             .mockReturnValueOnce(0)
-            .mockReturnValueOnce(0.9);
+            .mockReturnValueOnce(0.9)
+            .mockReturnValue(0.9);
 
         const result = simulateTick(
             createInitialGameState({
