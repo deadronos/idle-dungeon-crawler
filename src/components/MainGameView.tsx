@@ -110,7 +110,7 @@ export const MainGameView: React.FC = () => {
                     <div className="flex min-h-0 w-full flex-1 flex-col justify-end gap-4 lg:gap-6">
                         <div
                             data-testid="encounter-stage"
-                            className="pointer-events-none flex min-h-[180px] lg:min-h-[260px] lg:flex-1 w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/40 p-4 backdrop-blur-sm lg:p-8"
+                            className="pointer-events-none flex min-h-[180px] lg:min-h-[260px] lg:flex-1 w-full items-center justify-center rounded-2xl border border-white/10 bg-slate-900/1 p-4 lg:p-8"
                         >
                             {primaryEnemy && hasLivingEnemy ? (
                                 <img

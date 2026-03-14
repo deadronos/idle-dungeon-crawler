@@ -53,7 +53,7 @@ const AppHeader: React.FC = () => {
   }, [menuOpen]);
 
   return (
-    <header className="h-auto min-h-[90px] flex items-center justify-between px-6 lg:px-12 py-4 bg-gradient-to-br from-slate-900 to-slate-800 border-b border-slate-700/50 shadow-lg z-10 backdrop-blur-md relative">
+    <header className="h-auto min-h-[90px] flex items-center justify-between px-6 lg:px-12 py-4 bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-b border-slate-700/50 shadow-lg z-10 relative">
       <div className="flex items-center gap-3 text-2xl lg:text-3xl font-extrabold text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.3)]">
         {formatNumber(gold)} Gold
       </div>
