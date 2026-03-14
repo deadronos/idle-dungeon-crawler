@@ -31,6 +31,56 @@ describe("game-state persistence", () => {
         expect(restoredState.activeSection).toBe("shop");
     });
 
+    it("does not persist transient combat events in exported saves", () => {
+        const exportedState = createInitialGameState({
+            party: createStarterParty("Selene", "Cleric"),
+            enemies: [createEnemy(3, "enemy_3")],
+            combatEvents: [
+                {
+                    id: "combat-event-1",
+                    targetId: "enemy_3",
+                    kind: "damage",
+                    text: "-12",
+                    ttlTicks: 8,
+                },
+            ],
+        });
+
+        const restoredState = deserializeGameState(serializeGameState(exportedState));
+
+        expect(restoredState.combatEvents).toEqual([]);
+    });
+
+    it("rehydrates missing combat ratings from older save payloads", () => {
+        const exportedState = createInitialGameState({
+            party: createStarterParty("Selene", "Cleric"),
+            enemies: [createEnemy(3, "enemy_3")],
+        });
+
+        const payload = JSON.parse(serializeGameState(exportedState)) as {
+            state: {
+                party: Array<Record<string, unknown>>;
+                enemies: Array<Record<string, unknown>>;
+            };
+        };
+
+        delete payload.state.party[0]?.accuracyRating;
+        delete payload.state.party[0]?.evasionRating;
+        delete payload.state.party[0]?.parryRating;
+        delete payload.state.enemies[0]?.accuracyRating;
+        delete payload.state.enemies[0]?.evasionRating;
+        delete payload.state.enemies[0]?.parryRating;
+
+        const restoredState = deserializeGameState(JSON.stringify(payload));
+
+        expect(restoredState.party[0]?.accuracyRating).toBeGreaterThan(0);
+        expect(restoredState.party[0]?.evasionRating).toBeGreaterThan(0);
+        expect(restoredState.party[0]?.parryRating).toBeGreaterThan(0);
+        expect(restoredState.enemies[0]?.accuracyRating).toBeGreaterThan(0);
+        expect(restoredState.enemies[0]?.evasionRating).toBeGreaterThan(0);
+        expect(restoredState.enemies[0]?.parryRating).toBeGreaterThan(0);
+    });
+
     it("rejects malformed save payloads", () => {
         expect(() => deserializeGameState("[]")).toThrow(/json object/i);
     });

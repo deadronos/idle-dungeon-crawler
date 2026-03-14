@@ -61,6 +61,10 @@ export interface Entity {
     critChance: number; // 0 to 1 (e.g. 0.05 = 5%)
     critDamage: number; // multiplier, e.g. 1.5
 
+    accuracyRating: number;
+    evasionRating: number;
+    parryRating: number;
+
     resistances: Elements;
 
     // Combat State
@@ -93,6 +97,12 @@ export const STAT_MULTS = {
     RESOURCE_PER_INT: 5,
     CRIT_CHANCE_PER_DEX: 0.005, // 0.5% per Dex
     RESIST_PER_WIS: 0.01, // 1% per Wis
+    ACCURACY_PER_DEX: 2,
+    ACCURACY_PER_INT: 1,
+    EVASION_PER_DEX: 1.5,
+    EVASION_PER_WIS: 1,
+    PARRY_PER_STR: 1.5,
+    PARRY_PER_DEX: 0.75,
 };
 
 // Start Stats Helpers
@@ -140,6 +150,11 @@ export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: Prestig
     // Crit
     entity.critChance = Math.min(0.05 + (attrs.dex * STAT_MULTS.CRIT_CHANCE_PER_DEX), 1.0); // Cap at 100%
     entity.critDamage = entity.class === "Archer" ? 2.0 : 1.5;
+
+    // Combat ratings
+    entity.accuracyRating = 50 + (attrs.dex * STAT_MULTS.ACCURACY_PER_DEX) + (attrs.int * STAT_MULTS.ACCURACY_PER_INT);
+    entity.evasionRating = 35 + (attrs.dex * STAT_MULTS.EVASION_PER_DEX) + (attrs.wis * STAT_MULTS.EVASION_PER_WIS);
+    entity.parryRating = (attrs.str * STAT_MULTS.PARRY_PER_STR) + (attrs.dex * STAT_MULTS.PARRY_PER_DEX);
 
     // Resists
     const resistVal = Math.min(attrs.wis * STAT_MULTS.RESIST_PER_WIS, 0.75); // Cap at 75%
@@ -200,6 +215,7 @@ export const createHero = (
         maxResource: new Decimal(1), currentResource: new Decimal(0), // Rage starts at 0, others start full
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
         critChance: 0.05, critDamage: 1.5,
+        accuracyRating: 0, evasionRating: 0, parryRating: 0,
         resistances: { fire: 0, water: 0, earth: 0, air: 0, light: 0, shadow: 0 },
         actionProgress: 0,
         activeSkill: null,
@@ -298,6 +314,7 @@ export const createEnemy = (level: number, id: string): Entity => {
         maxResource: new Decimal(100), currentResource: new Decimal(0),
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
         critChance: 0.05, critDamage: 1.5,
+        accuracyRating: 0, evasionRating: 0, parryRating: 0,
         resistances: { fire: 0, water: 0, earth: 0, air: 0, light: 0, shadow: 0 },
         actionProgress: 0,
         activeSkill: null,

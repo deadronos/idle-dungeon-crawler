@@ -92,6 +92,7 @@ export const useGame = () => {
         autoFight: useGameStore((store) => store.autoFight),
         autoAdvance: useGameStore((store) => store.autoAdvance),
         combatLog: useGameStore((store) => store.combatLog),
+        combatEvents: useGameStore((store) => store.combatEvents),
         metaUpgrades: useGameStore((store) => store.metaUpgrades),
         partyCapacity: useGameStore((store) => store.partyCapacity),
         maxPartySize: useGameStore((store) => store.maxPartySize),

@@ -5,6 +5,18 @@ import type { Entity, HeroClass, MetaUpgrades } from "../entity";
 import type { PartySlotUnlock } from "../partyProgression";
 
 export type AppSection = "dungeon" | "shop";
+export type CombatEventKind = "damage" | "heal" | "dodge" | "parry" | "crit" | "defeat" | "skill";
+
+export interface CombatEvent {
+    id: string;
+    sourceId?: string;
+    targetId?: string;
+    kind: CombatEventKind;
+    text: string;
+    amount?: string;
+    isCrit?: boolean;
+    ttlTicks: number;
+}
 
 export interface HotSimulationSlice {
     party: Entity[];
@@ -14,6 +26,7 @@ export interface HotSimulationSlice {
     autoFight: boolean;
     autoAdvance: boolean;
     combatLog: string[];
+    combatEvents: CombatEvent[];
 }
 
 export interface PrestigeUpgrades {

@@ -34,6 +34,11 @@ When a unit is created or levels up, their total attributes are summed and used 
 *   **Physical Damage (Melee):** `10 + (STR * 1.5)`
 *   **Ranged Damage (Archers):** `10 + (DEX * 1.5)`
 *   **Magic Damage:** `5 + (INT * 2.0)`
+*   **Accuracy Rating:** `50 + (DEX * 2) + (INT * 1)`
+*   **Evasion Rating:** `35 + (DEX * 1.5) + (WIS * 1)`
+*   **Parry Rating:** `(STR * 1.5) + (DEX * 0.75)`
+
+These additional ratings are intentionally coupled to the same five core attributes instead of introducing a sixth or seventh combat stat. `DEX` now contributes to both offensive precision and defensive footwork, `STR` helps melee defense through parry, and `WIS` helps magical awareness and avoidance pressure.
 
 ### Classes & Secondary Resources
 Classes use secondary resources to cast powerful abilities (future-proofing) or sustain basic actions:
@@ -45,7 +50,18 @@ Classes use secondary resources to cast powerful abilities (future-proofing) or 
 To prevent infinite scaling breaking the game logic:
 *   **Critical Hit Chance:** Scales at `+0.5% per DEX`. Base is `5%`. Hard capped at `100% (1.0)`.
 *   **Elemental Resistances:** Affects Fire, Water, Earth, Air, Light, and Shadow. Scales at `+1% per WIS`. Hard capped at `75% (0.75)`.
+*   **Physical / Ranged Hit Chance:** Uses `Accuracy Rating` vs `Evasion Rating`, then clamps to a floor of `72%` and a ceiling of `97%`.
+*   **Spell Hit Chance:** Uses a magic-biased contest of `Accuracy + INT` versus `Evasion + WIS`, then clamps to `75%` to `98%`.
+*   **Parry Chance:** Applies only to `melee + physical` attacks and is capped at `30%`.
+
+### Combat Role Implications
+The new derived ratings reinforce class roles without adding bespoke per-class rules:
+
+* **Warrior:** naturally develops the highest `Parry Rating` thanks to STR-heavy growth and remains the most reliable melee bruiser.
+* **Cleric:** gains steadier spell reliability from INT while WIS continues to scale elemental resistance and magical defense.
+* **Archer:** receives the strongest `Accuracy` and `Evasion` growth through DEX, making the class agile rather than parry-oriented.
+* **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic.
 
 ## Consequences
-*   **Easier:** Designing items or buffs that grant `+X STR` is clearer since the direct impact on Armor and Physical Damage is known.
-*   **Difficult:** Classes generally need one primary damage stat (STR, DEX, or INT) and one defensive stat (VIT or WIS) to be effective, leading to rigid "stat allocation" meta paths unless hybrid designs are introduced early on.
+*   **Easier:** Designing items or buffs that grant `+X STR`, `+X DEX`, or `+X WIS` is clearer because those attributes now affect both raw throughput and hit-resolution outcomes.
+*   **Difficult:** Because the same attributes now scale multiple combat layers, balance drift is easier to introduce. Future penetration, status, or tenacity systems should be tuned carefully so DEX- or WIS-stacking does not crowd out other builds.

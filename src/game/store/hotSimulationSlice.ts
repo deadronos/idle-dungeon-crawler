@@ -19,6 +19,7 @@ export const selectHotSimulationState = (state: GameState): HotSimulationSlice =
     autoFight: state.autoFight,
     autoAdvance: state.autoAdvance,
     combatLog: state.combatLog,
+    combatEvents: state.combatEvents,
 });
 
 export const createHotSimulationSlice = (

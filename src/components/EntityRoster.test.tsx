@@ -26,6 +26,9 @@ const heroEntity: Entity = {
     magicDamage: new Decimal(21),
     critChance: 0.07,
     critDamage: 1.5,
+    accuracyRating: 66,
+    evasionRating: 51,
+    parryRating: 9,
     resistances: { fire: 0.2, water: 0.2, earth: 0.2, air: 0.2, light: 0.2, shadow: 0.2 },
     actionProgress: 25,
     activeSkill: "Casting Mend",
@@ -41,5 +44,31 @@ describe("EntityRoster", () => {
         );
 
         expect(screen.getByText(/casting mend/i)).toBeInTheDocument();
+    });
+
+    it("renders floating combat events and expanded derived stat details", () => {
+        render(
+            <GameProvider
+                initialState={{
+                    party: [heroEntity],
+                    combatEvents: [
+                        {
+                            id: "combat-event-1",
+                            targetId: heroEntity.id,
+                            kind: "heal",
+                            text: "+21",
+                            ttlTicks: 10,
+                        },
+                    ],
+                }}
+            >
+                <EntityRoster title="Party" entities={[heroEntity]} />
+            </GameProvider>,
+        );
+
+        expect(screen.getByText("+21")).toBeInTheDocument();
+        expect(screen.getByText(/ACC: 66/i)).toBeInTheDocument();
+        expect(screen.getByText(/EVA: 51/i)).toBeInTheDocument();
+        expect(screen.getByText(/PAR: 9/i)).toBeInTheDocument();
     });
 });
