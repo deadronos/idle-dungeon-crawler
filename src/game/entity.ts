@@ -13,6 +13,7 @@ export interface PrestigeUpgrades {
     costReducer: number;
     hpMultiplier: number;
     gameSpeed: number;
+    xpMultiplier?: number;
 }
 
 export interface Attributes {
@@ -99,12 +100,12 @@ export const STAT_MULTS = {
     RESOURCE_PER_INT: 5,
     CRIT_CHANCE_PER_DEX: 0.005, // 0.5% per Dex
     RESIST_PER_WIS: 0.01, // 1% per Wis
-    ACCURACY_PER_DEX: 2,
+    ACCURACY_PER_DEX: 1.5,
     ACCURACY_PER_INT: 1,
-    EVASION_PER_DEX: 1.5,
+    EVASION_PER_DEX: 1,
     EVASION_PER_WIS: 1,
-    PARRY_PER_STR: 1.5,
-    PARRY_PER_DEX: 0.75,
+    PARRY_PER_STR: 1.75,
+    PARRY_PER_DEX: 0.25,
 };
 
 // Start Stats Helpers

@@ -34,17 +34,17 @@ When a unit is created or levels up, their total attributes are summed and used 
 *   **Physical Damage (Melee):** `10 + (STR * 1.5)`
 *   **Ranged Damage (Archers):** `10 + (DEX * 1.5)`
 *   **Magic Damage:** `5 + (INT * 2.0)`
-*   **Accuracy Rating:** `50 + (DEX * 2) + (INT * 1)`
-*   **Evasion Rating:** `35 + (DEX * 1.5) + (WIS * 1)`
-*   **Parry Rating:** `(STR * 1.5) + (DEX * 0.75)`
+*   **Accuracy Rating:** `50 + (DEX * 1.5) + (INT * 1)`
+*   **Evasion Rating:** `35 + (DEX * 1.0) + (WIS * 1)`
+*   **Parry Rating:** `(STR * 1.75) + (DEX * 0.25)`
 
 These additional ratings are intentionally coupled to the same five core attributes instead of introducing a sixth or seventh combat stat. `DEX` now contributes to both offensive precision and defensive footwork, `STR` helps melee defense through parry, and `WIS` helps magical awareness and avoidance pressure.
 
 ### Classes & Secondary Resources
 Classes use secondary resources to cast powerful abilities (future-proofing) or sustain basic actions:
-*   **Warrior (Rage):** Fixed maximum of `100`. Starts at `0`. Generates `10` Rage when hitting an enemy, and `5` Rage when hit by an enemy.
+*   **Warrior (Rage):** Fixed maximum of `100`. Starts at `0`. Generates `8` Rage after resolving an attack action and `5` Rage when taking damage.
 *   **Cleric (Mana):** Maximum is `50 + (INT * 5)`. Starts full. Regenerates passively based on Wisdom (`WIS * 0.5` per action tick).
-*   **Archer (Cunning):** Maximum is `50 + (INT * 5)`. Starts full. Regenerates at a fixed flat rate (`2` per action tick).
+*   **Archer (Cunning):** Maximum is `50 + (INT * 5)`. Starts full. Regenerates at a fixed flat rate (`0.75` per action tick).
 
 ### Hard Caps
 To prevent infinite scaling breaking the game logic:
@@ -57,9 +57,9 @@ To prevent infinite scaling breaking the game logic:
 ### Combat Role Implications
 The new derived ratings reinforce class roles without adding bespoke per-class rules:
 
-* **Warrior:** naturally develops the highest `Parry Rating` thanks to STR-heavy growth and remains the most reliable melee bruiser.
+* **Warrior:** naturally develops the highest `Parry Rating` thanks to STR-heavy growth and retains a sturdier melee identity now that DEX contributes less to avoidance stacking.
 * **Cleric:** gains steadier spell reliability from INT while WIS continues to scale elemental resistance and magical defense.
-* **Archer:** receives the strongest `Accuracy` and `Evasion` growth through DEX, making the class agile rather than parry-oriented.
+* **Archer:** still receives the strongest `Accuracy` and `Evasion` growth through DEX, but the lighter DEX weighting reduces all-in-one stat stacking and keeps the class focused on agility rather than passive durability.
 * **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic.
 
 ## Consequences
