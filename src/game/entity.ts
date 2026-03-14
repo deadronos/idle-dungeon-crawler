@@ -70,6 +70,9 @@ export interface Entity {
     accuracyRating: number;
     evasionRating: number;
     parryRating: number;
+    armorPenetration: number;
+    elementalPenetration: number;
+    tenacity: number;
 
     resistances: Elements;
 
@@ -237,6 +240,12 @@ export const STAT_MULTS = {
     EVASION_PER_WIS: 1,
     PARRY_PER_STR: 1.75,
     PARRY_PER_DEX: 0.25,
+    ARMOR_PEN_PER_STR: 1,
+    ARMOR_PEN_PER_DEX: 0.5,
+    ELEMENTAL_PEN_PER_INT: 1,
+    ELEMENTAL_PEN_PER_WIS: 0.5,
+    TENACITY_PER_VIT: 0.75,
+    TENACITY_PER_WIS: 1,
 };
 
 // Start Stats Helpers
@@ -289,6 +298,9 @@ export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: Prestig
     entity.accuracyRating = 50 + (attrs.dex * STAT_MULTS.ACCURACY_PER_DEX) + (attrs.int * STAT_MULTS.ACCURACY_PER_INT);
     entity.evasionRating = 35 + (attrs.dex * STAT_MULTS.EVASION_PER_DEX) + (attrs.wis * STAT_MULTS.EVASION_PER_WIS);
     entity.parryRating = (attrs.str * STAT_MULTS.PARRY_PER_STR) + (attrs.dex * STAT_MULTS.PARRY_PER_DEX);
+    entity.armorPenetration = (attrs.str * STAT_MULTS.ARMOR_PEN_PER_STR) + (attrs.dex * STAT_MULTS.ARMOR_PEN_PER_DEX);
+    entity.elementalPenetration = (attrs.int * STAT_MULTS.ELEMENTAL_PEN_PER_INT) + (attrs.wis * STAT_MULTS.ELEMENTAL_PEN_PER_WIS);
+    entity.tenacity = (attrs.vit * STAT_MULTS.TENACITY_PER_VIT) + (attrs.wis * STAT_MULTS.TENACITY_PER_WIS);
 
     // Resists
     const resistVal = Math.min(attrs.wis * STAT_MULTS.RESIST_PER_WIS, 0.75); // Cap at 75%
@@ -350,6 +362,7 @@ export const createHero = (
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
         critChance: 0.05, critDamage: 1.5,
         accuracyRating: 0, evasionRating: 0, parryRating: 0,
+        armorPenetration: 0, elementalPenetration: 0, tenacity: 0,
         resistances: { fire: 0, water: 0, earth: 0, air: 0, light: 0, shadow: 0 },
         actionProgress: 0,
         activeSkill: null,
@@ -459,6 +472,7 @@ export const createEnemy = (level: number, id: string, options: CreateEnemyOptio
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
         critChance: 0.05, critDamage: 1.5,
         accuracyRating: 0, evasionRating: 0, parryRating: 0,
+        armorPenetration: 0, elementalPenetration: 0, tenacity: 0,
         resistances: { fire: 0, water: 0, earth: 0, air: 0, light: 0, shadow: 0 },
         actionProgress: 0,
         activeSkill: null,

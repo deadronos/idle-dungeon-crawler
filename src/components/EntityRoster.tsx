@@ -45,7 +45,11 @@ const resourceColorFor = (entity: Entity) => {
   return 'bg-purple-500';
 };
 
-const formatTooltipValue = (value: number) => {
+const formatTooltipValue = (value?: number) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return "0";
+  }
+
   if (Number.isInteger(value)) {
     return value.toString();
   }
@@ -62,6 +66,9 @@ const attributeStatsFor = (entity: Entity): TooltipStat[] => [
   { label: "ACC", value: Math.round(entity.accuracyRating).toString() },
   { label: "EVA", value: Math.round(entity.evasionRating).toString() },
   { label: "PAR", value: Math.round(entity.parryRating).toString() },
+  { label: "APEN", value: formatTooltipValue(entity.armorPenetration) },
+  { label: "EPEN", value: formatTooltipValue(entity.elementalPenetration) },
+  { label: "TEN", value: formatTooltipValue(entity.tenacity) },
 ];
 
 const resistanceStatsFor = (entity: Entity): TooltipStat[] => [

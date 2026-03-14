@@ -24,6 +24,10 @@ export const ARCHER_PIERCING_SHOT_COST = 35;
 export const ARCHER_PIERCING_SHOT_CRIT_BONUS = 0.15;
 export const ARCHER_CUNNING_REGEN_PER_TICK = 0.75;
 export const ARMOR_MITIGATION_SCALE = 2;
+export const MAX_PENETRATION_REDUCTION = 0.6;
+export const PENETRATION_SOFTCAP = 60;
+export const MAX_TENACITY_REDUCTION = 0.6;
+export const TENACITY_SOFTCAP = 80;
 
 const SKILL_BANNER_TICKS = GAME_TICK_RATE;
 const COMBAT_EVENT_TICKS = Math.round(GAME_TICK_RATE * 1.4);
@@ -142,6 +146,9 @@ export const cloneEntity = (entity: Entity): Entity => ({
     accuracyRating: entity.accuracyRating ?? 0,
     evasionRating: entity.evasionRating ?? 0,
     parryRating: entity.parryRating ?? 0,
+    armorPenetration: entity.armorPenetration ?? 0,
+    elementalPenetration: entity.elementalPenetration ?? 0,
+    tenacity: entity.tenacity ?? 0,
     resistances: { ...entity.resistances },
     activeSkill: entity.activeSkill,
     activeSkillTicks: entity.activeSkillTicks,
@@ -157,7 +164,14 @@ export const prependCombatMessages = (combatLog: string[], ...messages: string[]
 };
 
 const hasValidCombatRatings = (entity: Partial<Entity>) => {
-    return [entity.accuracyRating, entity.evasionRating, entity.parryRating].every(
+    return [
+        entity.accuracyRating,
+        entity.evasionRating,
+        entity.parryRating,
+        entity.armorPenetration,
+        entity.elementalPenetration,
+        entity.tenacity,
+    ].every(
         (rating) => typeof rating === "number" && Number.isFinite(rating),
     );
 };
@@ -265,9 +279,43 @@ export const getParryChance = (attacker: Entity, defender: Entity) =>
         0.04 + ((defender.parryRating - (attacker.accuracyRating * 0.3)) * 0.0025),
     );
 
-export const applyPhysicalMitigation = (rawDamage: Decimal, armor: Decimal) => {
-    const mitigatedDamage = rawDamage.times(100).div(new Decimal(100).plus(armor.times(ARMOR_MITIGATION_SCALE)));
+export const getPenetrationReduction = (penetration: number) => {
+    if (penetration <= 0) {
+        return 0;
+    }
+
+    return Math.min(MAX_PENETRATION_REDUCTION, penetration / (penetration + PENETRATION_SOFTCAP));
+};
+
+export const getEffectiveArmor = (armor: Decimal, armorPenetration: number) => {
+    return armor.times(1 - getPenetrationReduction(armorPenetration));
+};
+
+export const applyPhysicalMitigation = (rawDamage: Decimal, armor: Decimal, armorPenetration = 0) => {
+    const mitigatedArmor = getEffectiveArmor(armor, armorPenetration);
+    const mitigatedDamage = rawDamage.times(100).div(new Decimal(100).plus(mitigatedArmor.times(ARMOR_MITIGATION_SCALE)));
     return Decimal.max(1, mitigatedDamage);
+};
+
+export const getEffectiveResistance = (resistance: number, elementalPenetration: number) => {
+    return resistance * (1 - getPenetrationReduction(elementalPenetration));
+};
+
+export const applyElementalMitigation = (rawDamage: Decimal, resistance: number, elementalPenetration = 0) => {
+    return Decimal.max(1, rawDamage.times(1 - getEffectiveResistance(resistance, elementalPenetration)));
+};
+
+export const getTenacityReduction = (tenacity: number) => {
+    if (tenacity <= 0) {
+        return 0;
+    }
+
+    return Math.min(MAX_TENACITY_REDUCTION, tenacity / (tenacity + TENACITY_SOFTCAP));
+};
+
+export const getEffectiveCritMultiplier = (critDamage: number, targetTenacity: number) => {
+    const critBonus = Math.max(0, critDamage - 1);
+    return 1 + (critBonus * (1 - getTenacityReduction(targetTenacity)));
 };
 
 const createCombatEvent = (event: Omit<CombatEvent, "id">): CombatEvent => {
@@ -697,7 +745,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         let damage = action.damage;
         const isCrit = randomSource.next() < action.critChance;
         if (isCrit) {
-            damage = damage.times(entity.critDamage);
+            damage = damage.times(getEffectiveCritMultiplier(entity.critDamage, target.tenacity));
             queueCombatEvent({
                 sourceId: entity.id,
                 targetId: target.id,
@@ -710,9 +758,13 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
         let finalDamage = damage;
         if (action.damageElement === "physical") {
-            finalDamage = applyPhysicalMitigation(damage, target.armor);
+            finalDamage = applyPhysicalMitigation(damage, target.armor, entity.armorPenetration);
         } else {
-            finalDamage = damage.times(1 - target.resistances[action.damageElement]);
+            finalDamage = applyElementalMitigation(
+                damage,
+                target.resistances[action.damageElement],
+                entity.elementalPenetration,
+            );
         }
 
         let damageSuffix = "";

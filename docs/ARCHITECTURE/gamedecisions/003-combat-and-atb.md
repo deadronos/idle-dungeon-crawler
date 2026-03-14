@@ -52,9 +52,10 @@ Currently, action resolution uses a lightweight class-aware ruleset:
 7. **Critical Hit Check:** The unit's `Crit Chance` (base 5%, boosted by DEX) is rolled. If successful, damage is multiplied.
    * Archers have a `2.0x` Crit Multiplier.
    * All other classes have a `1.5x` Crit Multiplier.
-8. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, damage is reduced with a diminishing-return armor curve: `rawDamage * (100 / (100 + armor * 2))`. If the element is magical (e.g. `light`, `fire`), damage is reduced by a percentage equal to the target's corresponding elemental resistance (minimum 1 damage).
+8. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, the attacker's `Armor Penetration` first converts through `min(60%, penetration / (penetration + 60))` and reduces the target's effective armor by that proportion, then damage is reduced with the existing diminishing-return armor curve: `rawDamage * (100 / (100 + effectiveArmor * 2))`. If the element is magical (e.g. `light`, `fire`), the attacker's `Elemental Penetration` uses the same bounded conversion to reduce the target's effective elemental resistance before the percentage-based resistance reduction is applied. Minimum damage remains `1`.
 9. **Protection Effects:** `Ward Ally` is a lightweight support-only protection effect. It reduces the next damaging hit against the warded target by `35%`, then expires immediately. This gives enemy support units an ally-protection hook without introducing a full buff/debuff framework yet.
 10. **Resource Triggers:** Warrior Rage generation now happens after any resolved Warrior attack action, including dodges or parries, plus whenever a Warrior takes damage. This keeps Rage tied to combat participation without requiring every melee swing to connect.
+11. **Tenacity:** If the action crits, the defender's `Tenacity` dampens only the bonus portion of the crit multiplier through `min(60%, tenacity / (tenacity + 80))`. This means Tenacity does not change crit chance and cannot turn a crit into a normal hit; it only softens long-term crit spikes. The same stat is reserved as the future hook for status-duration or status-chance resistance.
 
 Cleric `Smite` is the first shipped non-physical attack in this system and is tagged as `light`, so it already respects Light resistance. Additional elemental attacks can reuse the same mitigation path in future expansions.
 
@@ -77,6 +78,8 @@ The first deeper-combat pass uses bounded formulas to stay stable under long-ter
 * **Physical / Ranged Hit Chance:** `clamp(72%, 97%, 82% + (attacker.Accuracy - defender.Evasion) * 0.2%)`
 * **Spell Hit Chance:** `clamp(74%, 96%, 82% + (attacker.Accuracy - defender.Evasion) * 0.16% + (attacker.INT - defender.WIS) * 0.08%)`
 * **Parry Chance:** `clamp(0%, 25%, 4% + (defender.Parry - attacker.Accuracy * 0.3) * 0.25%)`
+* **Penetration Reduction:** `min(60%, penetration / (penetration + 60))`
+* **Tenacity Reduction:** `min(60%, tenacity / (tenacity + 80))`
 
 ### Combat Readability
 
@@ -91,7 +94,7 @@ To support higher-entity encounters (up to five party members and five enemies),
 * **Living-first ordering:** living entities are listed before defeated ones so the actionable combat state is always near the top of each roster.
 * **Compact bars with preserved scanability:** HP, resource, and action-readiness bars remain visible at reduced card density to avoid panel collapse at larger party sizes.
 * **Subtle role labels:** enemy roster cards and the encounter stage surface the current archetype in small uppercase labels so the player can read combat roles without adding a new panel or badge-heavy layout.
-* **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) plus combat-facing ratings (`ACC`, `EVA`, `PAR`) and elemental resistances are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
+* **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) plus combat-facing ratings (`ACC`, `EVA`, `PAR`, `APEN`, `EPEN`, `TEN`) and elemental resistances are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
 * **Scrollable roster columns:** party and enemy panels remain independently scrollable when total unit count exceeds available viewport height.
 * **Anchored combat log:** the middle-column log remains pinned to the bottom of the dungeon view while the encounter showcase keeps a stable footprint, so rapid kills or floor transitions do not cause the log panel to jump upward.
 * **Adjustable log depth:** players can still choose how much recent combat history to expose by expanding the log or dragging its resize handle upward for more visible entries.
@@ -104,4 +107,4 @@ The combat loop now advances through a provider-backed `zustand` store action (`
 ## Consequences
 
 * **Easier:** Combat is more readable and less deterministic. The same core attributes now support both raw throughput and hit-resolution gameplay without introducing a separate stat sheet, and enemy variety can increase without building a full parallel class roster.
-* **Difficult:** Because hit chance, dodge pressure, parry, elemental resistance, and now archetype targeting all scale from shared attributes, balance drift becomes easier to introduce at high levels. Future combat additions should prefer bounded formulas and explicit caps rather than open-ended avoidance stacking.
+* **Difficult:** Because hit chance, dodge pressure, parry, resistance, penetration, tenacity, and archetype targeting all scale from shared attributes, balance drift becomes easier to introduce at high levels. Future combat additions should prefer bounded formulas and explicit caps rather than open-ended avoidance stacking or mitigation bypass that fully invalidates earlier systems.
