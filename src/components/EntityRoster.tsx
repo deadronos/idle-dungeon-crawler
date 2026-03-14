@@ -100,15 +100,15 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
   const sortedEntities = [...entities].sort((a, b) => Number(b.currentHp.gt(0)) - Number(a.currentHp.gt(0)));
 
   return (
-    <Card className={`w-full lg:w-[360px] shrink-0 bg-slate-900/85 backdrop-blur-md border-slate-700/50 shadow-xl flex flex-col h-full min-h-0 overflow-hidden ${alignRight ? 'text-right' : 'text-left'} ${className ?? ''}`}>
-      <CardHeader className="pb-3 border-b border-slate-800">
+    <Card className={`w-full lg:w-[360px] shrink-0 bg-slate-900/15 border-slate-700/50 shadow-xl flex flex-col h-full min-h-0 overflow-hidden ${alignRight ? 'text-right' : 'text-left'} ${className ?? ''}`}>
+      <CardHeader className="pb-3 border-b border-slate-800/50">
         <CardTitle className="text-xl font-black uppercase tracking-widest text-slate-200">
           {title}
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 custom-scrollbar snap-y snap-proximity">
         {sortedEntities.map(entity => (
-          <Card key={entity.id} className={`shrink-0 snap-start overflow-visible border-slate-700/60 bg-slate-800/80 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
+          <Card key={entity.id} className={`shrink-0 snap-start overflow-visible border-slate-700/60 bg-slate-800/40 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
             <div className="p-3 space-y-2.5">
               <div className={`flex justify-between items-center ${alignRight ? 'flex-row-reverse' : ''}`}>
                 <div>
@@ -117,7 +117,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>
-                  {!entity.isEnemy && entity.id !== "hero_1" && entity.level >= 5 && (
+                  {!entity.isEnemy && entity.id !== "hero_1" && entity.level >= 0 && (
                     <AlertDialog>
                       <AlertDialogTrigger
                         className="text-slate-500 hover:text-red-400 transition-colors bg-slate-800/50 hover:bg-slate-800 p-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 focus:ring-offset-slate-900"
