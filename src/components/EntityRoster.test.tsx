@@ -112,6 +112,53 @@ describe("EntityRoster", () => {
         expect(tooltip).toHaveTextContent(/shadow\s*20%/i);
     });
 
+    it("renders buff chips in emerald and debuff chips in red for mixed status states", () => {
+        const mixedStatusEntity = {
+            ...heroEntity,
+            statusEffects: [
+                {
+                    key: "regen" as const,
+                    polarity: "buff" as const,
+                    sourceId: "hero_cleric",
+                    remainingTicks: 60,
+                    stacks: 1,
+                    maxStacks: 1,
+                    potency: 3.0,
+                },
+                {
+                    key: "hex" as const,
+                    polarity: "debuff" as const,
+                    sourceId: "enemy_shadow",
+                    remainingTicks: 40,
+                    stacks: 1,
+                    maxStacks: 1,
+                    potency: 0.3,
+                },
+            ],
+        };
+
+        const { container } = render(
+            <GameProvider initialState={{ party: [mixedStatusEntity] }}>
+                <EntityRoster title="Party" entities={[mixedStatusEntity]} />
+            </GameProvider>,
+        );
+
+        // Status chips are <span> elements with rounded-full border classes
+        const chips = container.querySelectorAll('span.rounded-full.border');
+        const regenChip = Array.from(chips).find((el) => el.textContent === "RGN");
+        const hexChip = Array.from(chips).find((el) => el.textContent === "HEX");
+
+        expect(regenChip).toBeDefined();
+        expect(hexChip).toBeDefined();
+        expect(regenChip).toHaveClass("text-emerald-100");
+        expect(hexChip).toHaveClass("text-red-100");
+
+        const tooltip = screen.getByRole("tooltip");
+        expect(tooltip).toHaveTextContent(/statuses/i);
+        expect(tooltip).toHaveTextContent(/regen/i);
+        expect(tooltip).toHaveTextContent(/hex/i);
+    });
+
     it("keeps roster cards at full height inside the scrollable panel when the list grows", () => {
         const roster = Array.from({ length: 5 }, (_, index) => ({
             ...heroEntity,

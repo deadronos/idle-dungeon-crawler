@@ -42,6 +42,12 @@ export const SLOW_ATB_REDUCTION = 0.2;
 export const WEAKEN_BASE_CHANCE = 0.35;
 export const WEAKEN_DURATION_TICKS = GAME_TICK_RATE * 4;
 export const WEAKEN_DAMAGE_REDUCTION = 0.15;
+export const REGEN_DURATION_TICKS = GAME_TICK_RATE * 4;
+export const REGEN_TICK_HEAL_MULTIPLIER = 0.15;
+export const HEX_BASE_CHANCE = 0.35;
+export const HEX_DURATION_TICKS = GAME_TICK_RATE * 3;
+export const HEX_HEALING_REDUCTION = 0.3;
+export const CLERIC_BLESS_COST = 25;
 
 const SKILL_BANNER_TICKS = GAME_TICK_RATE;
 const COMBAT_EVENT_TICKS = Math.round(GAME_TICK_RATE * 1.4);
@@ -369,6 +375,10 @@ const getAtbMultiplier = (entity: Entity) => {
     return Math.max(0.1, 1 - getStatusPotency(entity, "slow"));
 };
 
+const getHealingMultiplier = (entity: Entity) => {
+    return Math.max(0, 1 - getStatusPotency(entity, "hex"));
+};
+
 const getStatusConfig = (key: StatusEffectKey): Omit<StatusEffect, "sourceId"> => {
     switch (key) {
         case "burn":
@@ -398,6 +408,24 @@ const getStatusConfig = (key: StatusEffectKey): Omit<StatusEffect, "sourceId"> =
                 maxStacks: 1,
                 potency: WEAKEN_DAMAGE_REDUCTION,
             };
+        case "regen":
+            return {
+                key,
+                polarity: "buff",
+                remainingTicks: REGEN_DURATION_TICKS,
+                stacks: 1,
+                maxStacks: 1,
+                potency: REGEN_TICK_HEAL_MULTIPLIER,
+            };
+        case "hex":
+            return {
+                key,
+                polarity: "debuff",
+                remainingTicks: HEX_DURATION_TICKS,
+                stacks: 1,
+                maxStacks: 1,
+                potency: HEX_HEALING_REDUCTION,
+            };
         default:
             return {
                 key,
@@ -418,6 +446,8 @@ const getStatusKeyForElement = (damageElement: DamageElement): StatusEffectKey |
             return "slow";
         case "earth":
             return "weaken";
+        case "shadow":
+            return "hex";
         default:
             return null;
     }
@@ -431,6 +461,8 @@ const getStatusBaseChance = (statusKey: StatusEffectKey) => {
             return SLOW_BASE_CHANCE;
         case "weaken":
             return WEAKEN_BASE_CHANCE;
+        case "hex":
+            return HEX_BASE_CHANCE;
         default:
             return SLOW_BASE_CHANCE;
     }
@@ -771,6 +803,13 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 logMessages.push(`${entity.name} suffers ${burnDamage.toString()} burn damage.`);
             }
 
+            if (statusEffect.key === "regen" && nextRemainingTicks % GAME_TICK_RATE === 0) {
+                const healAmount = Decimal.max(1, new Decimal(nextStatusEffect.potency)).floor();
+                entity.currentHp = Decimal.min(entity.maxHp, entity.currentHp.plus(healAmount));
+                queueStatusEvent(entity, "regen", "tick", `${getStatusEffectName("regen")} +${healAmount.toString()}`, healAmount.toString());
+                logMessages.push(`${entity.name} regenerates ${healAmount.toString()} HP.`);
+            }
+
             if (nextRemainingTicks <= 0 || entity.currentHp.lte(0)) {
                 queueStatusEvent(entity, statusEffect.key, "expire", `${getStatusEffectName(statusEffect.key)} fades`);
                 logMessages.push(`${entity.name}'s ${getStatusEffectName(statusEffect.key)} fades.`);
@@ -938,7 +977,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             const healTarget = getLowestHpRatioTarget(livingAllies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
 
             if (healTarget && entity.currentResource.gte(healCost) && getHpRatio(healTarget) < 0.65) {
-                const healAmount = entity.magicDamage.times(1.75);
+                const rawHealAmount = entity.magicDamage.times(1.75);
+                const healAmount = rawHealAmount.times(getHealingMultiplier(healTarget));
                 setActiveSkill(entity, "Mend");
                 entity.currentResource = entity.currentResource.minus(healCost);
                 healTarget.currentHp = Decimal.min(healTarget.maxHp, healTarget.currentHp.plus(healAmount));
@@ -953,13 +993,38 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 logMessages.push(`${entity.name} casts Mend on ${healTarget.name} for ${healAmount.floor().toString()}!`);
                 return;
             }
+
+            const blessCost = new Decimal(CLERIC_BLESS_COST);
+            const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((se) => se.key === "regen"));
+            if (blessTarget && entity.currentResource.gte(blessCost)) {
+                const regenPotency = entity.magicDamage.times(REGEN_TICK_HEAL_MULTIPLIER).toNumber();
+                const regenEffect: StatusEffect = {
+                    ...getStatusConfig("regen"),
+                    sourceId: entity.id,
+                    potency: regenPotency,
+                };
+                const existingRegen = blessTarget.statusEffects.find((se) => se.key === "regen");
+                if (existingRegen) {
+                    existingRegen.remainingTicks = regenEffect.remainingTicks;
+                    existingRegen.potency = Math.max(existingRegen.potency, regenEffect.potency);
+                    existingRegen.sourceId = entity.id;
+                } else {
+                    blessTarget.statusEffects.push(regenEffect);
+                }
+                setActiveSkill(entity, "Bless");
+                entity.currentResource = entity.currentResource.minus(blessCost);
+                queueStatusEvent(blessTarget, "regen", "apply", getStatusEffectName("regen"));
+                logMessages.push(`${entity.name} casts Bless on ${blessTarget.name}!`);
+                return;
+            }
         }
 
         if (entity.isEnemy && inferEnemyArchetype(entity) === "Support") {
             const supportAction = getEnemySupportAction(entity, livingAllies);
 
             if (supportAction?.type === "heal") {
-                const healAmount = entity.magicDamage.times(SUPPORT_HEAL_MULTIPLIER);
+                const rawHealAmount = entity.magicDamage.times(SUPPORT_HEAL_MULTIPLIER);
+                const healAmount = rawHealAmount.times(getHealingMultiplier(supportAction.target));
                 setActiveSkill(entity, supportAction.name);
                 supportAction.target.currentHp = Decimal.min(
                     supportAction.target.maxHp,
