@@ -90,7 +90,7 @@ describe("UpgradesPanel", () => {
         expect(screen.getByText(/current recruit cost: 90 gold/i)).toBeInTheDocument();
     });
 
-    it("unlocks the third party slot after floor 10 has been cleared", async () => {
+    it("unlocks the third party slot after floor 8 has been cleared", async () => {
         const user = userEvent.setup();
 
         render(
@@ -99,7 +99,7 @@ describe("UpgradesPanel", () => {
                     gold: new Decimal(1000),
                     party: createStarterParty("Ayla", "Warrior"),
                     partyCapacity: 2,
-                    highestFloorCleared: 11,
+                    highestFloorCleared: 8,
                 }}
             >
                 <UpgradesPanel />

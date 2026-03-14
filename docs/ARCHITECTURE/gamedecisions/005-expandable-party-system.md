@@ -39,9 +39,9 @@ The slot ladder is:
 | Unlocks Capacity | Milestone Floor Reached | Gold Cost |
 | --- | --- | --- |
 | 2 heroes | Floor 3 | 60 |
-| 3 heroes | Floor 10 | 180 |
-| 4 heroes | Floor 20 | 500 |
-| 5 heroes | Floor 35 | 1200 |
+| 3 heroes | Floor 8 | 180 |
+| 4 heroes | Floor 18 | 500 |
+| 5 heroes | Floor 28 | 1200 |
 
 Recruitment is a separate purchase from capacity. Recruit costs scale with current party size:
 
@@ -100,6 +100,6 @@ The first version of this system should intentionally stay narrow:
 
 * **Easier:** The player gains a clearer sense of long-term growth because party expansion becomes a visible reward path rather than a one-time starting grant.
 * **Easier:** The Upgrade Shop becomes a more meaningful strategic hub because it now governs both stat upgrades and roster growth.
-* **Difficult:** Early-game balance must be re-tuned for solo starts so the first few floors remain survivable and rewarding.
+* **Difficult:** Early-game balance must stay aligned with the slot ladder so new capacity unlocks arrive before the next major boss or encounter-size spike rather than after it.
 * **Difficult:** Encounter generation and roster UI may need to scale beyond the current assumptions that naturally fit a three-hero party.
 * **Difficult:** Tests and state management become more complex because party size is now dynamic and persistent across wipes.
