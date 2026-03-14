@@ -76,9 +76,9 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 custom-scrollbar">
+      <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 custom-scrollbar snap-y snap-proximity">
         {sortedEntities.map(entity => (
-          <Card key={entity.id} className={`overflow-hidden border-slate-700/60 bg-slate-800/80 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
+          <Card key={entity.id} className={`shrink-0 snap-start overflow-hidden border-slate-700/60 bg-slate-800/80 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
             <div className="p-3 space-y-2.5">
               <div className={`flex justify-between items-center ${alignRight ? 'flex-row-reverse' : ''}`}>
                 <div>

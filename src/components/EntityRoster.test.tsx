@@ -71,4 +71,27 @@ describe("EntityRoster", () => {
         expect(screen.getByText(/EVA: 51/i)).toBeInTheDocument();
         expect(screen.getByText(/PAR: 9/i)).toBeInTheDocument();
     });
+
+    it("keeps roster cards at full height inside the scrollable panel when the list grows", () => {
+        const roster = Array.from({ length: 5 }, (_, index) => ({
+            ...heroEntity,
+            id: `hero_${index + 1}`,
+            name: `Hero ${index + 1}`,
+        }));
+
+        const { container } = render(
+            <GameProvider initialState={{ party: roster }}>
+                <EntityRoster title="Party" entities={roster} />
+            </GameProvider>,
+        );
+
+        const scrollPanel = container.querySelector('[data-slot="card-content"]');
+        expect(scrollPanel).toHaveClass("overflow-y-auto", "snap-y", "snap-proximity");
+
+        const entityCards = scrollPanel?.querySelectorAll('[data-slot="card"]');
+        expect(entityCards).toHaveLength(roster.length);
+        entityCards?.forEach((card) => {
+            expect(card).toHaveClass("shrink-0", "snap-start");
+        });
+    });
 });
