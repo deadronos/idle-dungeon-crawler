@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { HERO_CLASS_ORDER, createCurrentCombatSnapshot, createLegacyCombatSnapshot, createRepresentativeMilestoneWinRates, getCombatIdentityDistribution } from "./balanceSnapshot";
+import {
+    HERO_CLASS_ORDER,
+    createBuildAwareMilestoneWinRates,
+    createCurrentCombatSnapshot,
+    createLegacyCombatSnapshot,
+    createRepresentativeMilestoneWinRates,
+    getCombatIdentityDistribution,
+} from "./balanceSnapshot";
 
 const SHARED_ATTRIBUTES = { vit: 8, str: 6, dex: 9, int: 6, wis: 6 };
 
@@ -218,5 +225,69 @@ describe("balance snapshots", () => {
         expect(summary.floor20Boss.trioWarriorClericArcherLevel12).toBeGreaterThan(summary.floor20Boss.trioWarriorClericArcherLevel11);
         expect(summary.floor20Boss.trioWarriorClericArcherLevel12).toBeGreaterThanOrEqual(0.5);
         expect(summary.floor28Slot5.quadWarriorClericClericArcherLevel13).toBe(0);
+    });
+
+    it("captures build-aware milestone pressure under baseline, expected, and curated assumptions", () => {
+        const summary = createBuildAwareMilestoneWinRates(12);
+
+        expect(summary.floor10Boss.duoWarriorClericLevel5.expectedBuild).toBeGreaterThan(summary.floor10Boss.duoWarriorClericLevel5.baseline);
+        expect(summary.floor10Boss.duoClericArcherLevel5.curatedBuild).toBeGreaterThanOrEqual(summary.floor10Boss.duoClericArcherLevel5.expectedBuild);
+        expect(summary.floor18Slot4.trioWarriorClericArcherLevel10.curatedBuild).toBe(0);
+        expect(summary.floor28Slot5.quadWarriorClericClericArcherLevel13.curatedBuild).toBe(0);
+
+        expect(roundValue(summary)).toMatchInlineSnapshot(`
+          {
+            "floor10Boss": {
+              "duoClericArcherLevel5": {
+                "baseline": 0.333,
+                "curatedBuild": 1,
+                "expectedBuild": 0.833,
+              },
+              "duoWarriorClericLevel5": {
+                "baseline": 0.25,
+                "curatedBuild": 1,
+                "expectedBuild": 0.917,
+              },
+            },
+            "floor18Slot4": {
+              "trioWarriorClericArcherLevel10": {
+                "baseline": 0,
+                "curatedBuild": 0,
+                "expectedBuild": 0,
+              },
+            },
+            "floor20Boss": {
+              "trioWarriorClericArcherLevel11": {
+                "baseline": 0.167,
+                "curatedBuild": 1,
+                "expectedBuild": 1,
+              },
+              "trioWarriorClericArcherLevel12": {
+                "baseline": 0.75,
+                "curatedBuild": 1,
+                "expectedBuild": 0.917,
+              },
+            },
+            "floor28Slot5": {
+              "quadWarriorClericClericArcherLevel13": {
+                "baseline": 0,
+                "curatedBuild": 0,
+                "expectedBuild": 0,
+              },
+            },
+            "floor8Duo": {
+              "clericArcherLevel4": {
+                "baseline": 0.667,
+                "curatedBuild": 1,
+                "expectedBuild": 1,
+              },
+              "warriorClericLevel4": {
+                "baseline": 0.5,
+                "curatedBuild": 1,
+                "expectedBuild": 1,
+              },
+            },
+          }
+        `);
     });
 });
