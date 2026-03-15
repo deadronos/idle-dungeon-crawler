@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
 
 import { createEnemy, createRecruitHero, createStarterParty } from "@/game/entity";
+import { createLegacyEquipmentProgression } from "@/game/equipmentProgression";
 
 import { createGameStore } from "./gameStore";
 
@@ -243,6 +244,7 @@ describe("createGameStore", () => {
                     hero_1: 1,
                 },
             },
+            equipmentProgression: createLegacyEquipmentProgression(["sunlit-censer"], {}),
         });
 
         const startingMagicDamage = store.getState().party[0]?.magicDamage;
@@ -257,7 +259,7 @@ describe("createGameStore", () => {
         store.getState().equipItem("hero_1", "sunlit-censer");
         state = store.getState();
 
-        expect(state.equipmentProgression.equippedItemIdsByHeroId.hero_1).toContain("sunlit-censer");
+        expect(state.equipmentProgression.equippedItemInstanceIdsByHeroId.hero_1).toHaveLength(1);
 
         const gearedMagicDamage = state.party[0]?.magicDamage;
         expect(gearedMagicDamage?.gt(startingMagicDamage ?? 0)).toBe(true);
@@ -265,7 +267,49 @@ describe("createGameStore", () => {
         store.getState().unequipItem("hero_1", "weapon");
         state = store.getState();
 
-        expect(state.equipmentProgression.equippedItemIdsByHeroId.hero_1).toEqual([]);
+        expect(state.equipmentProgression.equippedItemInstanceIdsByHeroId.hero_1).toEqual([]);
+    });
+
+    it("expands inventory capacity and sells stash items through progression actions", () => {
+        const seededEquipment = createLegacyEquipmentProgression(["sunlit-censer"], {});
+        const store = createGameStore({
+            gold: new Decimal(50),
+            highestFloorCleared: 3,
+            party: createStarterParty("Ayla", "Cleric"),
+            equipmentProgression: seededEquipment,
+        });
+
+        store.getState().buyInventoryCapacityUpgrade();
+
+        let state = store.getState();
+        expect(state.equipmentProgression.inventoryCapacity).toBe(18);
+        expect(state.gold.toString()).toBe("10");
+
+        const itemInstanceId = state.equipmentProgression.inventoryItems[0]?.instanceId;
+        if (!itemInstanceId) {
+            throw new Error("Expected seeded equipment instance.");
+        }
+
+        const sellValue = state.equipmentProgression.inventoryItems[0]?.sellValue ?? 0;
+        store.getState().sellInventoryItem(itemInstanceId);
+        state = store.getState();
+
+        expect(state.equipmentProgression.inventoryItems).toEqual([]);
+        expect(state.gold.toString()).toBe(String(10 + sellValue));
+    });
+
+    it("awards dropped loot through the victory loop", () => {
+        const store = createGameStore({
+            party: createStarterParty("Ayla", "Cleric"),
+            enemies: [],
+            autoAdvance: false,
+        });
+
+        store.getState().stepSimulation();
+        const state = store.getState();
+
+        expect(state.highestFloorCleared).toBe(1);
+        expect(state.equipmentProgression.inventoryItems.length).toBeGreaterThan(0);
     });
 
     it("stores presentational UI state separately from combat state", () => {

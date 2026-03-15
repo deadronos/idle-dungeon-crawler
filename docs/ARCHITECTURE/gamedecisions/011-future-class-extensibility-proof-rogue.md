@@ -151,16 +151,21 @@ Implication:
 
 If later class work wants package logic to become more data-driven, this field is the natural place to formalize that.
 
-### 3. Equipment restrictions exist, but affinity metadata does not
+### 3. Equipment affinity metadata now exists, but soft-affinity depth is still shallow
 
-The current equipment model supports class-restricted items and shared rating/effect bonuses, which is enough for a first Rogue rollout.
+The current equipment model now supports:
 
-What it does **not** yet model explicitly:
+* class-restricted items
+* repeated item drops with tier/rank scaling
+* affinity tags on item families and item instances
 
-* preferred weapon families
-* soft affinities such as "Rogue likes haste leathers" without hard-locking other gear
+What it still does **not** model deeply:
 
-That is a documentation/data-shape gap, not a blocker for first implementation.
+* richer weighting across more specific weapon families
+* affinity-aware drop tuning for future classes beyond the current light tag set
+* stronger soft-affinity rules such as "Rogue strongly prefers haste leathers" without hard-locking other gear
+
+That keeps Rogue implementation unblocked, but the affinity layer should grow if future classes need sharper item-family identity than the current tags provide.
 
 ### 4. Status-heavy or utility-heavy Rogue variants would need more hooks
 

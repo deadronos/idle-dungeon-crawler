@@ -1,8 +1,10 @@
+import Decimal from "decimal.js";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createRecruitHero, createStarterParty } from "@/game/entity";
+import { createLegacyEquipmentProgression } from "@/game/equipmentProgression";
 import { GameProvider } from "@/game/gameState";
 
 import { PartyView } from "./PartyView";
@@ -103,10 +105,33 @@ describe("PartyView", () => {
 
         await user.click(screen.getByRole("button", { name: /equipment/i }));
 
-        expect(screen.getByText(/weapon/i)).toBeInTheDocument();
-        expect(screen.getByText(/armor/i)).toBeInTheDocument();
-        expect(screen.getAllByText(/charm/i).length).toBeGreaterThanOrEqual(1);
-        expect(screen.getByText(/trinket/i)).toBeInTheDocument();
+        expect(screen.getByText(/^weapon$/i)).toBeInTheDocument();
+        expect(screen.getByText(/^armor$/i)).toBeInTheDocument();
+        expect(screen.getAllByText(/^charm$/i).length).toBeGreaterThanOrEqual(1);
+        expect(screen.getByText(/^trinket$/i)).toBeInTheDocument();
+    });
+
+    it("shows stash management details in the equipment panel when gear is available", async () => {
+        const user = userEvent.setup();
+
+        render(
+            <GameProvider
+                initialState={{
+                    party: createStarterParty("Ayla", "Cleric"),
+                    equipmentProgression: createLegacyEquipmentProgression(["sunlit-censer"], {}),
+                    gold: new Decimal(50),
+                    highestFloorCleared: 3,
+                }}
+            >
+                <PartyView />
+            </GameProvider>,
+        );
+
+        await user.click(screen.getByRole("button", { name: /equipment/i }));
+
+        expect(screen.getByText(/^armory$/i)).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: /expand stash/i })).toBeInTheDocument();
+        expect(screen.getAllByRole("button", { name: /sell 24g/i }).length).toBeGreaterThan(0);
     });
 
     it("paginates between heroes when there are multiple party members", async () => {

@@ -1,9 +1,11 @@
 import { getFortificationUpgradeCost as calculateFortificationUpgradeCost, getTrainingUpgradeCost as calculateTrainingUpgradeCost } from "../upgrades";
 import { createRecruitHero } from "../entity";
 import type { HeroClass } from "../entity";
+import { canSellInventoryItem, getNextInventoryCapacityUpgrade } from "../equipmentProgression";
 import {
-    canHeroEquipItem,
-    getEquipmentItem,
+    findEquipableInventoryItem,
+    resolveEquipmentItem,
+    getEquipmentInstance,
     getEquipmentOwnerId,
     getTalentDefinition,
     synchronizeEquipmentProgression,
@@ -113,6 +115,9 @@ export const createProgressionSlice = (
         getRecruitCost: () => {
             return calculateRecruitCost(get().party.length);
         },
+        getInventoryCapacityUpgradeCost: () => {
+            return getNextInventoryCapacityUpgrade(get().equipmentProgression.inventoryCapacityLevel)?.cost ?? null;
+        },
         recruitHero: (heroClass) => {
             set((state) => {
                 const cost = calculateRecruitCost(state.party.length);
@@ -210,34 +215,29 @@ export const createProgressionSlice = (
         equipItem: (heroId: string, itemId: string) => {
             set((state) => {
                 const hero = state.party.find((partyMember) => partyMember.id === heroId);
-                const item = getEquipmentItem(itemId);
-
-                if (!hero || hero.isEnemy || !item) {
+                if (!hero || hero.isEnemy) {
                     return {};
                 }
                 const heroClass = hero.class as HeroClass;
-                if (!canHeroEquipItem(heroClass, item)) {
+                const item = findEquipableInventoryItem(itemId, heroClass, state.equipmentProgression);
+                if (!item) {
                     return {};
                 }
 
-                if (!state.equipmentProgression.inventoryItemIds.includes(itemId)) {
-                    return {};
-                }
-
-                const ownerId = getEquipmentOwnerId(itemId, state.equipmentProgression);
+                const ownerId = getEquipmentOwnerId(item.id, state.equipmentProgression);
                 if (ownerId && ownerId !== heroId) {
                     return {};
                 }
 
-                const currentItemIds = state.equipmentProgression.equippedItemIdsByHeroId[heroId] ?? [];
+                const currentItemIds = state.equipmentProgression.equippedItemInstanceIdsByHeroId[heroId] ?? [];
                 const nextItemIds = currentItemIds
-                    .filter((equippedItemId) => getEquipmentItem(equippedItemId)?.slot !== item.slot)
-                    .concat(itemId);
+                    .filter((equippedItemId) => getEquipmentInstance(equippedItemId, state.equipmentProgression)?.slot !== item.slot)
+                    .concat(item.id);
 
                 const equipmentProgression = synchronizeEquipmentProgression(state.party, {
                     ...state.equipmentProgression,
-                    equippedItemIdsByHeroId: {
-                        ...state.equipmentProgression.equippedItemIdsByHeroId,
+                    equippedItemInstanceIdsByHeroId: {
+                        ...state.equipmentProgression.equippedItemInstanceIdsByHeroId,
                         [heroId]: nextItemIds,
                     },
                 });
@@ -259,16 +259,16 @@ export const createProgressionSlice = (
                     return {};
                 }
 
-                const currentItemIds = state.equipmentProgression.equippedItemIdsByHeroId[heroId] ?? [];
-                const nextItemIds = currentItemIds.filter((itemId) => getEquipmentItem(itemId)?.slot !== slot);
+                const currentItemIds = state.equipmentProgression.equippedItemInstanceIdsByHeroId[heroId] ?? [];
+                const nextItemIds = currentItemIds.filter((itemId) => getEquipmentInstance(itemId, state.equipmentProgression)?.slot !== slot);
                 if (nextItemIds.length === currentItemIds.length) {
                     return {};
                 }
 
                 const equipmentProgression = synchronizeEquipmentProgression(state.party, {
                     ...state.equipmentProgression,
-                    equippedItemIdsByHeroId: {
-                        ...state.equipmentProgression.equippedItemIdsByHeroId,
+                    equippedItemInstanceIdsByHeroId: {
+                        ...state.equipmentProgression.equippedItemInstanceIdsByHeroId,
                         [heroId]: nextItemIds,
                     },
                 });
@@ -280,6 +280,53 @@ export const createProgressionSlice = (
                         equipmentProgression,
                     }),
                     combatLog: prependCombatMessages(state.combatLog, `${hero.name} cleared their ${slot} slot.`),
+                };
+            });
+        },
+        buyInventoryCapacityUpgrade: () => {
+            set((state) => {
+                const nextUpgrade = getNextInventoryCapacityUpgrade(state.equipmentProgression.inventoryCapacityLevel);
+                if (!nextUpgrade || state.highestFloorCleared < nextUpgrade.milestoneFloor || state.gold.lt(nextUpgrade.cost)) {
+                    return {};
+                }
+
+                const equipmentProgression = synchronizeEquipmentProgression(state.party, {
+                    ...state.equipmentProgression,
+                    inventoryCapacityLevel: nextUpgrade.level,
+                    inventoryCapacity: nextUpgrade.capacity,
+                });
+
+                return {
+                    gold: state.gold.minus(nextUpgrade.cost),
+                    equipmentProgression,
+                    combatLog: prependCombatMessages(state.combatLog, `Inventory capacity expanded to ${nextUpgrade.capacity}.`),
+                };
+            });
+        },
+        sellInventoryItem: (itemInstanceId: string) => {
+            set((state) => {
+                if (!canSellInventoryItem(itemInstanceId, state.equipmentProgression)) {
+                    return {};
+                }
+
+                const item = getEquipmentInstance(itemInstanceId, state.equipmentProgression);
+                if (!item) {
+                    return {};
+                }
+                const resolvedItem = resolveEquipmentItem(item);
+
+                const equipmentProgression = synchronizeEquipmentProgression(state.party, {
+                    ...state.equipmentProgression,
+                    inventoryItems: state.equipmentProgression.inventoryItems.filter((inventoryItem) => inventoryItem.instanceId !== itemInstanceId),
+                });
+
+                return {
+                    gold: state.gold.plus(item.sellValue),
+                    equipmentProgression,
+                    combatLog: prependCombatMessages(
+                        state.combatLog,
+                        `Sold ${resolvedItem?.name ?? item.definitionId} for ${item.sellValue} gold.`,
+                    ),
                 };
             });
         },

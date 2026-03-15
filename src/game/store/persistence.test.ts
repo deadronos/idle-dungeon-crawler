@@ -2,8 +2,8 @@ import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
 
 import { createEnemy, createStarterParty } from "@/game/entity";
+import { createLegacyEquipmentProgression } from "@/game/equipmentProgression";
 import { createInitialGameState } from "@/game/engine/simulation";
-import { getDefaultEquipmentInventoryItemIds } from "@/game/heroBuilds";
 
 import { deserializeGameState, GAME_STATE_EXPORT_VERSION, serializeGameState } from "./persistence";
 
@@ -41,12 +41,12 @@ describe("game-state persistence", () => {
                     hero_1: 2,
                 },
             },
-            equipmentProgression: {
-                inventoryItemIds: ["oak-staff", "saintly-charm"],
-                equippedItemIdsByHeroId: {
-                    hero_1: ["oak-staff"],
+            equipmentProgression: createLegacyEquipmentProgression(
+                ["sunlit-censer", "iron-prayer-bead"],
+                {
+                    hero_1: ["sunlit-censer"],
                 },
-            },
+            ),
         });
 
         const serializedState = serializeGameState(exportedState);
@@ -156,10 +156,14 @@ describe("game-state persistence", () => {
             },
         });
         expect(restoredState.equipmentProgression).toEqual({
-            inventoryItemIds: getDefaultEquipmentInventoryItemIds(),
-            equippedItemIdsByHeroId: {
+            inventoryItems: [],
+            equippedItemInstanceIdsByHeroId: {
                 hero_1: [],
             },
+            highestUnlockedEquipmentTier: 1,
+            inventoryCapacityLevel: 0,
+            inventoryCapacity: 12,
+            nextInstanceSequence: 1,
         });
     });
 

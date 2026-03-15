@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 
 import { createStarterParty } from "@/game/entity";
+import { createLegacyEquipmentProgression } from "@/game/equipmentProgression";
 import { GameProvider } from "@/game/gameState";
 
 import { HeroBuildPanel } from "./HeroBuildPanel";
@@ -21,6 +22,7 @@ describe("HeroBuildPanel", () => {
                             hero_1: 1,
                         },
                     },
+                    equipmentProgression: createLegacyEquipmentProgression(["sunlit-censer"], {}),
                 }}
             >
                 <HeroBuildPanel />

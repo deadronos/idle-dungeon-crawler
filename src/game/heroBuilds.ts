@@ -1,6 +1,6 @@
 import type { HeroCombatRating } from "./classTemplates";
 import type { Entity, HeroClass } from "./entity";
-import type { EquipmentProgressionState, TalentProgressionState } from "./store/types";
+import type { EquipmentItemInstance, EquipmentProgressionState, TalentProgressionState } from "./store/types";
 
 export type EquipmentSlot = "weapon" | "armor" | "charm" | "trinket";
 
@@ -14,6 +14,12 @@ export interface HeroBuildEffects {
     resourceOnResolvedAttackBonus?: number;
     resourceOnTakeDamageBonus?: number;
     maxResourceFlatBonus?: number;
+}
+
+interface EquipmentScalingDefinition {
+    base: HeroBuildEffects;
+    perTier?: HeroBuildEffects;
+    perRank?: HeroBuildEffects;
 }
 
 export interface ClassPassiveDefinition {
@@ -38,6 +44,18 @@ export interface EquipmentItemDefinition {
     name: string;
     description: string;
     heroClasses?: HeroClass[];
+    affinityTags: string[];
+    scaling: EquipmentScalingDefinition;
+    sellValueBase: number;
+    sellValuePerTier: number;
+    sellValuePerRank: number;
+}
+
+export interface ResolvedEquipmentItem extends EquipmentItemInstance {
+    id: string;
+    name: string;
+    description: string;
+    heroClasses?: HeroClass[];
     effects: HeroBuildEffects;
 }
 
@@ -49,7 +67,7 @@ export interface HeroBuildState {
 export interface HeroBuildProfile {
     passive: ClassPassiveDefinition | null;
     talents: TalentDefinition[];
-    equippedItems: EquipmentItemDefinition[];
+    equippedItems: ResolvedEquipmentItem[];
     effects: Required<Omit<HeroBuildEffects, "ratingBonuses">> & {
         ratingBonuses: Partial<Record<HeroCombatRating, number>>;
     };
@@ -57,6 +75,16 @@ export interface HeroBuildProfile {
 
 const EMPTY_RATING_BONUSES: Partial<Record<HeroCombatRating, number>> = {};
 const HERO_RATING_KEYS: HeroCombatRating[] = ["power", "spellPower", "precision", "haste", "guard", "resolve", "potency", "crit"];
+const BUILD_EFFECT_KEYS: Array<keyof Omit<HeroBuildEffects, "ratingBonuses">> = [
+    "specialAttackCostDelta",
+    "specialAttackDamageMultiplierBonus",
+    "specialAttackCritChanceBonus",
+    "healMultiplierBonus",
+    "blessRegenMultiplierBonus",
+    "resourceOnResolvedAttackBonus",
+    "resourceOnTakeDamageBonus",
+    "maxResourceFlatBonus",
+];
 
 export const EQUIPMENT_SLOT_LABELS: Record<EquipmentSlot, string> = {
     weapon: "Weapon",
@@ -158,16 +186,22 @@ export const TALENT_DEFINITIONS: TalentDefinition[] = [
     },
 ];
 
-export const EQUIPMENT_ITEMS: EquipmentItemDefinition[] = [
+export const EQUIPMENT_DEFINITIONS: EquipmentItemDefinition[] = [
     {
         id: "greatblade-of-embers",
         slot: "weapon",
         name: "Greatblade of Embers",
         description: "Warrior-only greatblade tuned for relentless frontline pressure.",
         heroClasses: ["Warrior"],
-        effects: {
-            ratingBonuses: { power: 5, guard: 2 },
+        affinityTags: ["warrior", "offense", "guard"],
+        scaling: {
+            base: { ratingBonuses: { power: 5, guard: 2 } },
+            perTier: { ratingBonuses: { power: 1, guard: 1 } },
+            perRank: { ratingBonuses: { power: 1 } },
         },
+        sellValueBase: 24,
+        sellValuePerTier: 10,
+        sellValuePerRank: 6,
     },
     {
         id: "sunlit-censer",
@@ -175,9 +209,15 @@ export const EQUIPMENT_ITEMS: EquipmentItemDefinition[] = [
         name: "Sunlit Censer",
         description: "Cleric-only holy focus that steadies spells and support.",
         heroClasses: ["Cleric"],
-        effects: {
-            ratingBonuses: { spellPower: 5, resolve: 2 },
+        affinityTags: ["cleric", "support", "spell"],
+        scaling: {
+            base: { ratingBonuses: { spellPower: 5, resolve: 2 } },
+            perTier: { ratingBonuses: { spellPower: 1, resolve: 1 } },
+            perRank: { ratingBonuses: { spellPower: 1 } },
         },
+        sellValueBase: 24,
+        sellValuePerTier: 10,
+        sellValuePerRank: 6,
     },
     {
         id: "hawkstring-bow",
@@ -185,99 +225,167 @@ export const EQUIPMENT_ITEMS: EquipmentItemDefinition[] = [
         name: "Hawkstring Bow",
         description: "Archer-only bow that sharpens ranged accuracy and crits.",
         heroClasses: ["Archer"],
-        effects: {
-            ratingBonuses: { precision: 5, crit: 3 },
+        affinityTags: ["archer", "precision", "tempo"],
+        scaling: {
+            base: { ratingBonuses: { precision: 5, crit: 3 } },
+            perTier: { ratingBonuses: { precision: 1, crit: 1 } },
+            perRank: { ratingBonuses: { precision: 1 } },
         },
+        sellValueBase: 24,
+        sellValuePerTier: 10,
+        sellValuePerRank: 6,
     },
     {
         id: "bastion-plate",
         slot: "armor",
         name: "Bastion Plate",
         description: "Heavy armor for heroes who want sturdier physical defenses.",
-        effects: {
-            ratingBonuses: { guard: 5, resolve: 1 },
+        affinityTags: ["warrior", "defense", "universal"],
+        scaling: {
+            base: { ratingBonuses: { guard: 5, resolve: 1 } },
+            perTier: { ratingBonuses: { guard: 1, resolve: 1 } },
+            perRank: { ratingBonuses: { guard: 1 } },
         },
+        sellValueBase: 18,
+        sellValuePerTier: 8,
+        sellValuePerRank: 5,
     },
     {
         id: "pilgrim-vestments",
         slot: "armor",
         name: "Pilgrim Vestments",
         description: "Light ceremonial robes with magical staying power.",
-        effects: {
-            ratingBonuses: { resolve: 4, spellPower: 2 },
+        affinityTags: ["cleric", "resolve", "universal"],
+        scaling: {
+            base: { ratingBonuses: { resolve: 4, spellPower: 2 } },
+            perTier: { ratingBonuses: { resolve: 1, spellPower: 1 } },
+            perRank: { ratingBonuses: { resolve: 1 } },
         },
+        sellValueBase: 18,
+        sellValuePerTier: 8,
+        sellValuePerRank: 5,
     },
     {
         id: "shadowhide-leathers",
         slot: "armor",
         name: "Shadowhide Leathers",
         description: "Flexible leathers that favor action speed and shot setup.",
-        effects: {
-            ratingBonuses: { haste: 4, precision: 2 },
+        affinityTags: ["archer", "tempo", "precision"],
+        scaling: {
+            base: { ratingBonuses: { haste: 4, precision: 2 } },
+            perTier: { ratingBonuses: { haste: 1, precision: 1 } },
+            perRank: { ratingBonuses: { haste: 1 } },
         },
+        sellValueBase: 18,
+        sellValuePerTier: 8,
+        sellValuePerRank: 5,
     },
     {
         id: "ember-charm",
         slot: "charm",
         name: "Ember Charm",
         description: "A charm for heroes who want extra elemental pressure.",
-        effects: {
-            ratingBonuses: { potency: 4, spellPower: 2 },
+        affinityTags: ["cleric", "potency", "universal"],
+        scaling: {
+            base: { ratingBonuses: { potency: 4, spellPower: 2 } },
+            perTier: { ratingBonuses: { potency: 1, spellPower: 1 } },
+            perRank: { ratingBonuses: { potency: 1 } },
         },
+        sellValueBase: 16,
+        sellValuePerTier: 7,
+        sellValuePerRank: 4,
     },
     {
         id: "whetstone-token",
         slot: "charm",
         name: "Whetstone Token",
         description: "A simple token that rewards direct damage builds.",
-        effects: {
-            ratingBonuses: { power: 3, crit: 2 },
+        affinityTags: ["warrior", "offense", "universal"],
+        scaling: {
+            base: { ratingBonuses: { power: 3, crit: 2 } },
+            perTier: { ratingBonuses: { power: 1 } },
+            perRank: { ratingBonuses: { power: 1, crit: 1 } },
         },
+        sellValueBase: 16,
+        sellValuePerTier: 7,
+        sellValuePerRank: 4,
     },
     {
         id: "ward-icon",
         slot: "charm",
         name: "Ward Icon",
         description: "An icon that balances physical and magical staying power.",
-        effects: {
-            ratingBonuses: { guard: 2, resolve: 3 },
+        affinityTags: ["defense", "support", "universal"],
+        scaling: {
+            base: { ratingBonuses: { guard: 2, resolve: 3 } },
+            perTier: { ratingBonuses: { guard: 1, resolve: 1 } },
+            perRank: { ratingBonuses: { resolve: 1 } },
         },
+        sellValueBase: 16,
+        sellValuePerTier: 7,
+        sellValuePerRank: 4,
     },
     {
         id: "duelist-loop",
         slot: "trinket",
         name: "Duelist Loop",
         description: "A nimble ring that turns clean hits into sharper bursts.",
-        effects: {
-            ratingBonuses: { crit: 4, precision: 1 },
+        affinityTags: ["archer", "crit", "universal"],
+        scaling: {
+            base: { ratingBonuses: { crit: 4, precision: 1 } },
+            perTier: { ratingBonuses: { crit: 1, precision: 1 } },
+            perRank: { ratingBonuses: { crit: 1 } },
         },
+        sellValueBase: 14,
+        sellValuePerTier: 6,
+        sellValuePerRank: 4,
     },
     {
         id: "timeworn-hourglass",
         slot: "trinket",
         name: "Timeworn Hourglass",
         description: "A relic that keeps action tempo high.",
-        effects: {
-            ratingBonuses: { haste: 4 },
+        affinityTags: ["tempo", "universal"],
+        scaling: {
+            base: { ratingBonuses: { haste: 4 } },
+            perTier: { ratingBonuses: { haste: 1 } },
+            perRank: { ratingBonuses: { haste: 1 } },
         },
+        sellValueBase: 14,
+        sellValuePerTier: 6,
+        sellValuePerRank: 4,
     },
     {
         id: "iron-prayer-bead",
         slot: "trinket",
         name: "Iron Prayer Bead",
         description: "A sturdy bead that reinforces resolve and status pressure.",
-        effects: {
-            ratingBonuses: { resolve: 2, potency: 2 },
-            maxResourceFlatBonus: 10,
+        affinityTags: ["cleric", "resolve", "universal"],
+        scaling: {
+            base: {
+                ratingBonuses: { resolve: 2, potency: 2 },
+                maxResourceFlatBonus: 10,
+            },
+            perTier: {
+                ratingBonuses: { resolve: 1, potency: 1 },
+                maxResourceFlatBonus: 2,
+            },
+            perRank: {
+                ratingBonuses: { resolve: 1 },
+                maxResourceFlatBonus: 1,
+            },
         },
+        sellValueBase: 14,
+        sellValuePerTier: 6,
+        sellValuePerRank: 4,
     },
 ];
 
 const TALENT_LOOKUP = new Map(TALENT_DEFINITIONS.map((talent) => [talent.id, talent]));
-const EQUIPMENT_LOOKUP = new Map(EQUIPMENT_ITEMS.map((item) => [item.id, item]));
+const EQUIPMENT_LOOKUP = new Map(EQUIPMENT_DEFINITIONS.map((item) => [item.id, item]));
 const isPlayableHeroClass = (heroClass: Entity["class"]): heroClass is HeroClass => heroClass !== "Monster";
 
-export const getDefaultEquipmentInventoryItemIds = () => EQUIPMENT_ITEMS.map((item) => item.id);
+export const getDefaultEquipmentInventoryItemIds = () => EQUIPMENT_DEFINITIONS.map((item) => item.id);
 
 const createEmptyEffects = (): HeroBuildProfile["effects"] => ({
     ratingBonuses: {},
@@ -301,14 +409,38 @@ const mergeEffects = (accumulator: HeroBuildProfile["effects"], effects: HeroBui
         });
     }
 
-    accumulator.specialAttackCostDelta += effects.specialAttackCostDelta ?? 0;
-    accumulator.specialAttackDamageMultiplierBonus += effects.specialAttackDamageMultiplierBonus ?? 0;
-    accumulator.specialAttackCritChanceBonus += effects.specialAttackCritChanceBonus ?? 0;
-    accumulator.healMultiplierBonus += effects.healMultiplierBonus ?? 0;
-    accumulator.blessRegenMultiplierBonus += effects.blessRegenMultiplierBonus ?? 0;
-    accumulator.resourceOnResolvedAttackBonus += effects.resourceOnResolvedAttackBonus ?? 0;
-    accumulator.resourceOnTakeDamageBonus += effects.resourceOnTakeDamageBonus ?? 0;
-    accumulator.maxResourceFlatBonus += effects.maxResourceFlatBonus ?? 0;
+    BUILD_EFFECT_KEYS.forEach((effectKey) => {
+        accumulator[effectKey] += effects[effectKey] ?? 0;
+    });
+};
+
+const scaleBuildEffects = (effects: HeroBuildEffects | undefined, multiplier: number): HeroBuildEffects => {
+    if (!effects || multiplier <= 0) {
+        return {};
+    }
+
+    const scaled: HeroBuildEffects = {};
+
+    if (effects.ratingBonuses) {
+        scaled.ratingBonuses = Object.fromEntries(
+            Object.entries(effects.ratingBonuses).map(([rating, value]) => [rating, (value ?? 0) * multiplier]),
+        ) as HeroBuildEffects["ratingBonuses"];
+    }
+
+    BUILD_EFFECT_KEYS.forEach((effectKey) => {
+        const value = effects[effectKey];
+        if (value) {
+            scaled[effectKey] = value * multiplier;
+        }
+    });
+
+    return scaled;
+};
+
+const getMergedEffects = (...effectsList: HeroBuildEffects[]): HeroBuildEffects => {
+    const merged = createEmptyEffects();
+    effectsList.forEach((effects) => mergeEffects(merged, effects));
+    return merged;
 };
 
 export const getClassPassive = (heroClass: HeroClass) => CLASS_PASSIVES[heroClass];
@@ -318,17 +450,105 @@ export const getTalentDefinition = (talentId: string) => TALENT_LOOKUP.get(talen
 export const getTalentDefinitionsForClass = (heroClass: HeroClass) =>
     TALENT_DEFINITIONS.filter((talent) => talent.heroClass === heroClass);
 
-export const getEquipmentItem = (itemId: string) => EQUIPMENT_LOOKUP.get(itemId) ?? null;
+export const getEquipmentDefinition = (definitionId: string) => EQUIPMENT_LOOKUP.get(definitionId) ?? null;
 
-export const canHeroEquipItem = (heroClass: HeroClass, item: EquipmentItemDefinition) =>
-    !item.heroClasses || item.heroClasses.includes(heroClass);
+export const getEquipmentItem = getEquipmentDefinition;
+
+export const getEquipmentSellValue = (definition: EquipmentItemDefinition, tier: number, rank: number) =>
+    definition.sellValueBase + ((tier - 1) * definition.sellValuePerTier) + ((rank - 1) * definition.sellValuePerRank);
+
+export const resolveEquipmentItemEffects = (definition: EquipmentItemDefinition, tier: number, rank: number) =>
+    getMergedEffects(
+        definition.scaling.base,
+        scaleBuildEffects(definition.scaling.perTier, tier - 1),
+        scaleBuildEffects(definition.scaling.perRank, rank - 1),
+    );
+
+export const createEquipmentItemInstance = (
+    definitionId: string,
+    options?: {
+        tier?: number;
+        rank?: number;
+        instanceId?: string;
+        sequence?: number;
+    },
+): EquipmentItemInstance | null => {
+    const definition = getEquipmentDefinition(definitionId);
+    if (!definition) {
+        return null;
+    }
+
+    const tier = Math.max(1, options?.tier ?? 1);
+    const rank = Math.max(1, options?.rank ?? 1);
+    const sequence = Math.max(1, options?.sequence ?? 1);
+
+    return {
+        instanceId: options?.instanceId ?? `equipment_${sequence}`,
+        definitionId,
+        slot: definition.slot,
+        tier,
+        rank,
+        sellValue: getEquipmentSellValue(definition, tier, rank),
+        affinityTags: [...definition.affinityTags],
+    };
+};
+
+export const createEquipmentInstancesFromDefinitionIds = (definitionIds: string[], prefix: string) =>
+    definitionIds
+        .map((definitionId, index) =>
+            createEquipmentItemInstance(definitionId, {
+                instanceId: `${prefix}-${index + 1}`,
+                sequence: index + 1,
+            }),
+        )
+        .filter((item): item is EquipmentItemInstance => Boolean(item));
+
+export const resolveEquipmentItem = (item: EquipmentItemInstance): ResolvedEquipmentItem | null => {
+    const definition = getEquipmentDefinition(item.definitionId);
+    if (!definition) {
+        return null;
+    }
+
+    return {
+        ...item,
+        id: item.instanceId,
+        name: definition.name,
+        description: definition.description,
+        heroClasses: definition.heroClasses,
+        effects: resolveEquipmentItemEffects(definition, item.tier, item.rank),
+    };
+};
+
+export const canHeroEquipItem = (
+    heroClass: HeroClass,
+    item: Pick<EquipmentItemDefinition, "heroClasses"> | Pick<ResolvedEquipmentItem, "heroClasses">,
+) => !item.heroClasses || item.heroClasses.includes(heroClass);
+
+export const getEquipmentInstance = (itemId: string, equipmentProgression: EquipmentProgressionState) =>
+    equipmentProgression.inventoryItems.find((item) => item.instanceId === itemId) ?? null;
+
+export const findEquipableInventoryItem = (
+    itemIdentifier: string,
+    heroClass: HeroClass,
+    equipmentProgression: EquipmentProgressionState,
+) => {
+    const byInstanceId = getEquipmentInstance(itemIdentifier, equipmentProgression);
+    if (byInstanceId) {
+        const resolvedByInstance = resolveEquipmentItem(byInstanceId);
+        return resolvedByInstance && canHeroEquipItem(heroClass, resolvedByInstance) ? resolvedByInstance : null;
+    }
+
+    return getInventoryItems(equipmentProgression).find(
+        (item) => item.definitionId === itemIdentifier && canHeroEquipItem(heroClass, item),
+    ) ?? null;
+};
 
 export const getEquipmentOwnerId = (itemId: string, equipmentProgression: EquipmentProgressionState) => {
-    return Object.entries(equipmentProgression.equippedItemIdsByHeroId).find(([, itemIds]) => itemIds.includes(itemId))?.[0] ?? null;
+    return Object.entries(equipmentProgression.equippedItemInstanceIdsByHeroId).find(([, itemIds]) => itemIds.includes(itemId))?.[0] ?? null;
 };
 
 export const getHeroEquippedItemIds = (heroId: string, equipmentProgression: EquipmentProgressionState) =>
-    equipmentProgression.equippedItemIdsByHeroId[heroId] ?? [];
+    equipmentProgression.equippedItemInstanceIdsByHeroId[heroId] ?? [];
 
 export const getHeroEquippedItems = (
     hero: Pick<Entity, "id" | "class" | "isEnemy">,
@@ -340,8 +560,10 @@ export const getHeroEquippedItems = (
     const heroClass = hero.class;
 
     return getHeroEquippedItemIds(hero.id, equipmentProgression)
-        .map((itemId) => getEquipmentItem(itemId))
-        .filter((item): item is EquipmentItemDefinition => Boolean(item && canHeroEquipItem(heroClass, item)));
+        .map((itemId) => getEquipmentInstance(itemId, equipmentProgression))
+        .filter((item): item is EquipmentItemInstance => Boolean(item))
+        .map((item) => resolveEquipmentItem(item))
+        .filter((item): item is ResolvedEquipmentItem => Boolean(item && canHeroEquipItem(heroClass, item)));
 };
 
 export const getEquippedItemForSlot = (
@@ -353,9 +575,22 @@ export const getEquippedItemForSlot = (
 };
 
 export const getInventoryItems = (equipmentProgression: EquipmentProgressionState) =>
-    equipmentProgression.inventoryItemIds
-        .map((itemId) => getEquipmentItem(itemId))
-        .filter((item): item is EquipmentItemDefinition => Boolean(item));
+    equipmentProgression.inventoryItems
+        .map((item) => resolveEquipmentItem(item))
+        .filter((item): item is ResolvedEquipmentItem => Boolean(item));
+
+export const getUnequippedInventoryItems = (
+    equipmentProgression: EquipmentProgressionState,
+    hero?: Pick<Entity, "class" | "isEnemy">,
+) => {
+    const items = getInventoryItems(equipmentProgression).filter((item) => !getEquipmentOwnerId(item.id, equipmentProgression));
+    if (!hero || hero.isEnemy || !isPlayableHeroClass(hero.class)) {
+        return items;
+    }
+
+    const heroClass = hero.class;
+    return items.filter((item) => canHeroEquipItem(heroClass, item));
+};
 
 export const getAvailableInventoryItemsForHero = (
     hero: Pick<Entity, "id" | "class" | "isEnemy">,
@@ -428,6 +663,18 @@ export const getHeroBuildProfile = (
 
 const dedupeStrings = (values: string[]) => [...new Set(values)];
 
+const dedupeInventoryItems = (items: EquipmentItemInstance[]) => {
+    const seen = new Set<string>();
+    return items.filter((item) => {
+        if (seen.has(item.instanceId) || !getEquipmentDefinition(item.definitionId)) {
+            return false;
+        }
+
+        seen.add(item.instanceId);
+        return true;
+    });
+};
+
 export const synchronizeTalentProgression = (
     party: Array<Pick<Entity, "id" | "class" | "level" | "isEnemy">>,
     talentProgression: TalentProgressionState,
@@ -461,10 +708,8 @@ export const synchronizeEquipmentProgression = (
     party: Array<Pick<Entity, "id" | "class" | "isEnemy">>,
     equipmentProgression: EquipmentProgressionState,
 ): EquipmentProgressionState => {
-    const nextInventoryItemIds = dedupeStrings(equipmentProgression.inventoryItemIds)
-        .filter((itemId) => Boolean(getEquipmentItem(itemId)));
-    const inventoryItemIds = nextInventoryItemIds.length > 0 ? nextInventoryItemIds : getDefaultEquipmentInventoryItemIds();
-    const inventoryItemIdSet = new Set(inventoryItemIds);
+    const inventoryItems = dedupeInventoryItems(equipmentProgression.inventoryItems);
+    const inventoryItemIdSet = new Set(inventoryItems.map((item) => item.instanceId));
     const claimedItemIds = new Set<string>();
     const nextEquipped: Record<string, string[]> = {};
 
@@ -475,18 +720,19 @@ export const synchronizeEquipmentProgression = (
 
         const heroClass = hero.class;
         const usedSlots = new Set<EquipmentSlot>();
-        const rawItemIds = dedupeStrings(equipmentProgression.equippedItemIdsByHeroId[hero.id] ?? []);
+        const rawItemIds = dedupeStrings(equipmentProgression.equippedItemInstanceIdsByHeroId[hero.id] ?? []);
         const validItemIds = rawItemIds.filter((itemId) => {
             if (!inventoryItemIdSet.has(itemId) || claimedItemIds.has(itemId)) {
                 return false;
             }
 
-            const item = getEquipmentItem(itemId);
-            if (!item || !canHeroEquipItem(heroClass, item) || usedSlots.has(item.slot)) {
+            const instance = inventoryItems.find((item) => item.instanceId === itemId);
+            const resolved = instance ? resolveEquipmentItem(instance) : null;
+            if (!resolved || !canHeroEquipItem(heroClass, resolved) || usedSlots.has(resolved.slot)) {
                 return false;
             }
 
-            usedSlots.add(item.slot);
+            usedSlots.add(resolved.slot);
             claimedItemIds.add(itemId);
             return true;
         });
@@ -495,14 +741,18 @@ export const synchronizeEquipmentProgression = (
     });
 
     return {
-        inventoryItemIds,
-        equippedItemIdsByHeroId: nextEquipped,
+        inventoryItems,
+        equippedItemInstanceIdsByHeroId: nextEquipped,
+        highestUnlockedEquipmentTier: Math.max(1, equipmentProgression.highestUnlockedEquipmentTier ?? 1),
+        inventoryCapacityLevel: Math.max(0, equipmentProgression.inventoryCapacityLevel ?? 0),
+        inventoryCapacity: Math.max(1, equipmentProgression.inventoryCapacity ?? 12),
+        nextInstanceSequence: Math.max(1, equipmentProgression.nextInstanceSequence ?? (inventoryItems.length + 1)),
     };
 };
 
 export const getSlotLockedReason = (
     hero: Pick<Entity, "id" | "class" | "isEnemy">,
-    item: EquipmentItemDefinition,
+    item: ResolvedEquipmentItem,
     equipmentProgression: EquipmentProgressionState,
 ) => {
     if (hero.isEnemy || !isPlayableHeroClass(hero.class)) {

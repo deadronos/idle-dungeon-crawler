@@ -45,9 +45,23 @@ export interface TalentProgressionState {
     talentPointsByHeroId: Record<string, number>;
 }
 
+export interface EquipmentItemInstance {
+    instanceId: string;
+    definitionId: string;
+    slot: EquipmentSlot;
+    tier: number;
+    rank: number;
+    sellValue: number;
+    affinityTags: string[];
+}
+
 export interface EquipmentProgressionState {
-    inventoryItemIds: string[];
-    equippedItemIdsByHeroId: Record<string, string[]>;
+    inventoryItems: EquipmentItemInstance[];
+    equippedItemInstanceIdsByHeroId: Record<string, string[]>;
+    highestUnlockedEquipmentTier: number;
+    inventoryCapacityLevel: number;
+    inventoryCapacity: number;
+    nextInstanceSequence: number;
 }
 
 export const createEmptyTalentProgressionState = (): TalentProgressionState => ({
@@ -56,8 +70,12 @@ export const createEmptyTalentProgressionState = (): TalentProgressionState => (
 });
 
 export const createEmptyEquipmentProgressionState = (): EquipmentProgressionState => ({
-    inventoryItemIds: [],
-    equippedItemIdsByHeroId: {},
+    inventoryItems: [],
+    equippedItemInstanceIdsByHeroId: {},
+    highestUnlockedEquipmentTier: 1,
+    inventoryCapacityLevel: 0,
+    inventoryCapacity: 12,
+    nextInstanceSequence: 1,
 });
 
 export interface ProgressionSlice {
@@ -102,6 +120,9 @@ export interface ProgressionActions {
     unlockTalent: (heroId: string, talentId: string) => void;
     equipItem: (heroId: string, itemId: string) => void;
     unequipItem: (heroId: string, slot: EquipmentSlot) => void;
+    getInventoryCapacityUpgradeCost: () => number | null;
+    buyInventoryCapacityUpgrade: () => void;
+    sellInventoryItem: (itemInstanceId: string) => void;
     getPrestigeUpgradeCost: (upgradeId: keyof PrestigeUpgrades) => number;
     buyPrestigeUpgrade: (upgradeId: keyof PrestigeUpgrades) => void;
 }

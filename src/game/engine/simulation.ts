@@ -280,10 +280,10 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
     const syncedEquipmentProgression = synchronizeEquipmentProgression(rawParty, {
         ...createEmptyEquipmentProgressionState(),
         ...overrides?.equipmentProgression,
-        inventoryItemIds: [...(overrides?.equipmentProgression?.inventoryItemIds ?? [])],
-        equippedItemIdsByHeroId: {
-            ...createEmptyEquipmentProgressionState().equippedItemIdsByHeroId,
-            ...(overrides?.equipmentProgression?.equippedItemIdsByHeroId ?? {}),
+        inventoryItems: [...(overrides?.equipmentProgression?.inventoryItems ?? [])],
+        equippedItemInstanceIdsByHeroId: {
+            ...createEmptyEquipmentProgressionState().equippedItemInstanceIdsByHeroId,
+            ...(overrides?.equipmentProgression?.equippedItemInstanceIdsByHeroId ?? {}),
         },
     });
     const buildState: HeroBuildState = {
@@ -881,10 +881,14 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             talentPointsByHeroId: { ...state.talentProgression.talentPointsByHeroId },
         },
         equipmentProgression: {
-            inventoryItemIds: [...state.equipmentProgression.inventoryItemIds],
-            equippedItemIdsByHeroId: Object.fromEntries(
-                Object.entries(state.equipmentProgression.equippedItemIdsByHeroId).map(([heroId, itemIds]) => [heroId, [...itemIds]]),
+            inventoryItems: state.equipmentProgression.inventoryItems.map((item) => ({ ...item, affinityTags: [...item.affinityTags] })),
+            equippedItemInstanceIdsByHeroId: Object.fromEntries(
+                Object.entries(state.equipmentProgression.equippedItemInstanceIdsByHeroId).map(([heroId, itemIds]) => [heroId, [...itemIds]]),
             ),
+            highestUnlockedEquipmentTier: state.equipmentProgression.highestUnlockedEquipmentTier,
+            inventoryCapacityLevel: state.equipmentProgression.inventoryCapacityLevel,
+            inventoryCapacity: state.equipmentProgression.inventoryCapacity,
+            nextInstanceSequence: state.equipmentProgression.nextInstanceSequence,
         },
     };
     const buildState: HeroBuildState = {

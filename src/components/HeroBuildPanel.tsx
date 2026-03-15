@@ -54,7 +54,7 @@ export const HeroBuildPanel: React.FC = () => {
                     Hero Builds
                 </CardTitle>
                 <p className="text-center text-xs text-slate-400">
-                    Spend earned talent points and assign four-slot gear without turning the run into an inventory chore.
+                    Spend earned talent points and manage four-slot gear from a persistent stash without losing readability.
                 </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -172,7 +172,7 @@ export const HeroBuildPanel: React.FC = () => {
                                                                         {equippedItem?.name ?? "Empty Slot"}
                                                                     </p>
                                                                     <p className="mt-1 text-xs text-slate-400">
-                                                                        {equippedItem?.description ?? "Choose one of the stocked items below."}
+                                                                        {equippedItem?.description ?? "Choose one of the available items below."}
                                                                     </p>
                                                                 </div>
                                                                 {equippedItem ? (

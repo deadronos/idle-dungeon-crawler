@@ -12,7 +12,7 @@ import {
     getEnemyArchetypeLabel,
     recalculateEntity,
 } from "./entity";
-import { getDefaultEquipmentInventoryItemIds } from "./heroBuilds";
+import { createLegacyEquipmentProgression } from "./equipmentProgression";
 
 describe("entity model", () => {
     it("creates a single-hero starter party around the selected leader", () => {
@@ -104,12 +104,12 @@ describe("entity model", () => {
                     hero_1: 0,
                 },
             },
-            equipmentProgression: {
-                inventoryItemIds: getDefaultEquipmentInventoryItemIds(),
-                equippedItemIdsByHeroId: {
+            equipmentProgression: createLegacyEquipmentProgression(
+                ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+                {
                     hero_1: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
                 },
-            },
+            ),
         };
 
         const baselineRatings = getCombatRatings(baselineCleric);

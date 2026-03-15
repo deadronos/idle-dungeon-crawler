@@ -10,7 +10,8 @@ import {
     type Entity,
     type HeroClass,
 } from "../entity";
-import type { EquipmentProgressionState, TalentProgressionState } from "../store/types";
+import { createEquipmentInstancesFromDefinitionIds } from "../heroBuilds";
+import type { EquipmentItemInstance, EquipmentProgressionState, TalentProgressionState } from "../store/types";
 import {
     cloneEntity,
     createEncounter,
@@ -207,8 +208,9 @@ const createBuildProgression = (
 
     const unlockedTalentIdsByHeroId: Record<string, string[]> = {};
     const talentPointsByHeroId: Record<string, number> = {};
-    const equippedItemIdsByHeroId: Record<string, string[]> = {};
-    const inventoryItemIds = new Set<string>();
+    const equippedItemInstanceIdsByHeroId: Record<string, string[]> = {};
+    const inventoryItems: EquipmentItemInstance[] = [];
+    let nextInstanceSequence = 1;
 
     buildConfigs.forEach((buildConfig, index) => {
         const hero = party[index];
@@ -218,11 +220,13 @@ const createBuildProgression = (
 
         const talentIds = [...new Set(buildConfig.talentIds ?? [])];
         const equippedItemIds = [...new Set(buildConfig.equippedItemIds ?? [])];
+        const equippedItems = createEquipmentInstancesFromDefinitionIds(equippedItemIds, `${hero.id}-item`);
 
         unlockedTalentIdsByHeroId[hero.id] = talentIds;
         talentPointsByHeroId[hero.id] = 0;
-        equippedItemIdsByHeroId[hero.id] = equippedItemIds;
-        equippedItemIds.forEach((itemId) => inventoryItemIds.add(itemId));
+        equippedItemInstanceIdsByHeroId[hero.id] = equippedItems.map((item: EquipmentItemInstance) => item.instanceId);
+        inventoryItems.push(...equippedItems);
+        nextInstanceSequence += equippedItems.length;
     });
 
     return {
@@ -231,8 +235,12 @@ const createBuildProgression = (
             talentPointsByHeroId,
         },
         equipmentProgression: {
-            inventoryItemIds: [...inventoryItemIds],
-            equippedItemIdsByHeroId,
+            inventoryItems,
+            equippedItemInstanceIdsByHeroId,
+            highestUnlockedEquipmentTier: 1,
+            inventoryCapacityLevel: 0,
+            inventoryCapacity: Math.max(12, inventoryItems.length),
+            nextInstanceSequence,
         },
     };
 };
