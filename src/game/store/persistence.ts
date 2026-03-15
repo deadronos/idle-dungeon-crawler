@@ -1,4 +1,5 @@
 import { createInitialGameState } from "../engine/simulation";
+import { createLegacyEquipmentProgression, getInventoryCapacityForLevel } from "../equipmentProgression";
 import {
     createEmptyEquipmentProgressionState,
     createEmptyTalentProgressionState,
@@ -7,7 +8,7 @@ import type { GameState } from "./types";
 
 export const GAME_STATE_STORAGE_KEY = "idle-dungeon-crawler.game-state";
 export const GAME_STATE_AUTOSAVE_MS = 10_000;
-export const GAME_STATE_EXPORT_VERSION = 2;
+export const GAME_STATE_EXPORT_VERSION = 3;
 const LEGACY_UNVERSIONED_SAVE_VERSION = 0;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -52,6 +53,32 @@ const getNumberRecord = (value: unknown): Record<string, number> => {
     }, {});
 };
 
+const getInventoryItemArray = (value: unknown) => {
+    if (!Array.isArray(value)) {
+        return [];
+    }
+
+    return value.filter((entry): entry is NonNullable<ReturnType<typeof createEmptyEquipmentProgressionState>["inventoryItems"]>[number] => {
+        return isRecord(entry)
+            && typeof entry.instanceId === "string"
+            && typeof entry.definitionId === "string"
+            && typeof entry.slot === "string"
+            && typeof entry.tier === "number"
+            && typeof entry.rank === "number"
+            && typeof entry.sellValue === "number"
+            && Array.isArray(entry.affinityTags)
+            && entry.affinityTags.every((tag) => typeof tag === "string");
+    }).map((entry) => ({
+        instanceId: entry.instanceId,
+        definitionId: entry.definitionId,
+        slot: entry.slot,
+        tier: entry.tier,
+        rank: entry.rank,
+        sellValue: entry.sellValue,
+        affinityTags: [...entry.affinityTags],
+    }));
+};
+
 const sanitizeTalentProgression = (value: unknown) => {
     const defaults = createEmptyTalentProgressionState();
     if (!isRecord(value)) {
@@ -74,12 +101,34 @@ const sanitizeEquipmentProgression = (value: unknown) => {
         return defaults;
     }
 
-    return {
-        inventoryItemIds: hasOwn(value, "inventoryItemIds") ? getStringArray(value.inventoryItemIds) : defaults.inventoryItemIds,
-        equippedItemIdsByHeroId: hasOwn(value, "equippedItemIdsByHeroId")
-            ? getStringArrayRecord(value.equippedItemIdsByHeroId)
-            : defaults.equippedItemIdsByHeroId,
-    };
+    if (hasOwn(value, "inventoryItems") || hasOwn(value, "equippedItemInstanceIdsByHeroId")) {
+        const inventoryCapacityLevel = hasOwn(value, "inventoryCapacityLevel") && typeof value.inventoryCapacityLevel === "number"
+            ? value.inventoryCapacityLevel
+            : defaults.inventoryCapacityLevel;
+
+        return {
+            inventoryItems: hasOwn(value, "inventoryItems") ? getInventoryItemArray(value.inventoryItems) : defaults.inventoryItems,
+            equippedItemInstanceIdsByHeroId: hasOwn(value, "equippedItemInstanceIdsByHeroId")
+                ? getStringArrayRecord(value.equippedItemInstanceIdsByHeroId)
+                : defaults.equippedItemInstanceIdsByHeroId,
+            highestUnlockedEquipmentTier: hasOwn(value, "highestUnlockedEquipmentTier") && typeof value.highestUnlockedEquipmentTier === "number"
+                ? value.highestUnlockedEquipmentTier
+                : defaults.highestUnlockedEquipmentTier,
+            inventoryCapacityLevel,
+            inventoryCapacity: hasOwn(value, "inventoryCapacity") && typeof value.inventoryCapacity === "number"
+                ? value.inventoryCapacity
+                : getInventoryCapacityForLevel(inventoryCapacityLevel),
+            nextInstanceSequence: hasOwn(value, "nextInstanceSequence") && typeof value.nextInstanceSequence === "number"
+                ? value.nextInstanceSequence
+                : defaults.nextInstanceSequence,
+        };
+    }
+
+    const legacyValue = value as Record<string, unknown>;
+    return createLegacyEquipmentProgression(
+        hasOwn(legacyValue, "inventoryItemIds") ? getStringArray(legacyValue.inventoryItemIds) : [],
+        hasOwn(legacyValue, "equippedItemIdsByHeroId") ? getStringArrayRecord(legacyValue.equippedItemIdsByHeroId) : {},
+    );
 };
 
 const sanitizeMigratedEntity = (value: unknown): unknown => {
@@ -107,6 +156,10 @@ const SAVE_MIGRATIONS: Record<number, SaveMigration> = {
         enemies: sanitizeEntityArray(state.enemies),
         combatEvents: [],
         talentProgression: sanitizeTalentProgression(state.talentProgression),
+        equipmentProgression: sanitizeEquipmentProgression(state.equipmentProgression),
+    }),
+    2: (state) => ({
+        ...state,
         equipmentProgression: sanitizeEquipmentProgression(state.equipmentProgression),
     }),
 };

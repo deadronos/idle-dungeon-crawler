@@ -24,7 +24,7 @@ We ship a narrow differentiation MVP built around three connected rules:
 
 1. **Every hero class has an explicit always-on class passive**
 2. **Heroes gain a small number of talent picks instead of a large tree**
-3. **Heroes can equip up to four low-friction items from a stocked armory**
+3. **Heroes can equip up to four low-friction items from a persistent gear stash**
 
 These systems all feed the same shared hero-build layer before final combat stats are recalculated.
 
@@ -58,20 +58,31 @@ This is a build-pick MVP, not a branching tree, respec system, or long-form meta
 
 ### Equipment MVP
 
-Equipment also stays intentionally narrow:
+Issue `#90` extends the original fixed-catalog MVP into a still-readable loot model.
+
+The live equipment layer stays intentionally narrow:
 
 * every hero has **4** slots: `weapon`, `armor`, `charm`, `trinket`
-* the armory is stocked with a curated fixed inventory rather than random loot drops
+* equipment is stored as concrete item instances rather than shared definition ids
+* victories award a small number of dropped items instead of filling a large catalog up front
+* milestone floors unlock stronger equipment tiers, and tiers widen the available rank band
 * weapons may be class-restricted; other slots are generally flexible
+* duplicate drops are allowed, including named class relics
 * item effects primarily add targeted combat-rating bonuses, with a small number of action or resource nudges
 * one item can only be equipped by one hero at a time
 
-Equipment ownership is persisted in the existing `equipmentProgression` container:
+Equipment ownership is persisted in `equipmentProgression`:
 
-* `inventoryItemIds` stores which stocked item ids exist in the save
-* `equippedItemIdsByHeroId` stores each hero's equipped item ids
+* `inventoryItems` stores concrete dropped gear instances with `definitionId`, `tier`, `rank`, sell value, and affinity tags
+* `equippedItemInstanceIdsByHeroId` stores each hero's equipped item-instance ids
+* `highestUnlockedEquipmentTier` tracks the current armory drop ceiling
+* `inventoryCapacityLevel` / `inventoryCapacity` track bag growth and overflow rules
 
-For the MVP, inventory management is intentionally low-friction: players choose from a stable stocked catalog instead of farming, sorting, or selling drops.
+Inventory management remains intentionally low-friction:
+
+* bag overflow auto-sells instead of blocking progress
+* bag size grows through a small gold-purchased upgrade track
+* equipment is still managed inside the Party character sheet rather than through a separate inventory screen
 
 ### Shared Build Layer
 

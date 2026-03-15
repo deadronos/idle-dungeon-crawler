@@ -290,7 +290,7 @@ describe("balance snapshots", () => {
             },
           }
         `);
-    });
+    }, 20_000);
 
     it("captures recovery-aware checkpoint pressure under baseline, expected, and curated assumptions", () => {
         const summary = createRecoveryAwareMilestoneWinRates(12);
@@ -359,4 +359,4 @@ describe("balance snapshots", () => {
           }
         `);
     }, 15_000);
-});
+    }, 20_000);

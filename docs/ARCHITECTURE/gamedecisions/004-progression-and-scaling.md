@@ -57,7 +57,7 @@ The current shipped baseline is intentionally compact:
 * heroes gain talent points at **level 2** and **level 4**
 * each class has **2** fixed talent picks rather than a full tree
 * heroes equip up to **4** items (`weapon`, `armor`, `charm`, `trinket`)
-* equipment comes from a stocked fixed armory rather than random drops
+* equipment now comes from a persistent stash of dropped gear with milestone-gated tiers, simple ranks, and auto-sold overflow
 
 This keeps the first build-differentiation pass readable and easy to tune while still making the layered model playable.
 
