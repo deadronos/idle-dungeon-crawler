@@ -170,4 +170,4 @@ This baseline directly supports the current follow-up issues:
 * `#89` for slot-4 and slot-5 pacing
 * `#90` for staged equipment progression
 * `#91`, now implemented, for ranked talents and longer-lived talent progression grounded in this baseline
-* `#92` for Warrior/frontline checkpoint review against the stronger build-aware and recovery-aware baseline
+* `#92`, now reviewed in [014 - Warrior Frontline Checkpoint Review](014-warrior-frontline-checkpoint-review.md), for Warrior/frontline checkpoint validation against the stronger build-aware and recovery-aware baseline
