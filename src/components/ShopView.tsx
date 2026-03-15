@@ -5,6 +5,7 @@ import { useGameStore } from "../game/store/gameStore";
 import { formatNumber } from "../utils/format";
 import { UpgradesPanel } from "./UpgradesPanel";
 import { PrestigeUpgradesPanel } from "./PrestigeUpgradesPanel";
+import { HeroBuildPanel } from "./HeroBuildPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -60,13 +61,18 @@ export const ShopView: React.FC = () => {
                 </Card>
 
                 <Tabs defaultValue="training" className="w-full max-w-150 shrink-0">
-                    <TabsList className="grid w-full grid-cols-2 bg-slate-900 border border-slate-700/50 h-12">
+                    <TabsList className="grid w-full grid-cols-3 bg-slate-900 border border-slate-700/50 h-12">
                         <TabsTrigger value="training" className="data-[state=active]:bg-slate-700 font-bold uppercase tracking-wider text-xs">Sanctum Upgrades</TabsTrigger>
+                        <TabsTrigger value="builds" className="data-[state=active]:bg-violet-950 data-[state=active]:text-violet-200 font-bold uppercase tracking-wider text-xs text-slate-400">Hero Builds</TabsTrigger>
                         <TabsTrigger value="prestige" className="data-[state=active]:bg-fuchsia-950 data-[state=active]:text-fuchsia-300 font-bold uppercase tracking-wider text-xs text-slate-400">Altar of Souls</TabsTrigger>
                     </TabsList>
                     
                     <TabsContent value="training" className="m-0 border-none outline-none">
                         <UpgradesPanel />
+                    </TabsContent>
+
+                    <TabsContent value="builds" className="m-0 border-none outline-none">
+                        <HeroBuildPanel />
                     </TabsContent>
                     
                     <TabsContent value="prestige" className="m-0 border-none outline-none">
