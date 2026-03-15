@@ -39,6 +39,26 @@ export interface PrestigeUpgrades {
     xpMultiplier: number;
 }
 
+export interface TalentProgressionState {
+    unlockedTalentIdsByHeroId: Record<string, string[]>;
+    talentPointsByHeroId: Record<string, number>;
+}
+
+export interface EquipmentProgressionState {
+    inventoryItemIds: string[];
+    equippedItemIdsByHeroId: Record<string, string[]>;
+}
+
+export const createEmptyTalentProgressionState = (): TalentProgressionState => ({
+    unlockedTalentIdsByHeroId: {},
+    talentPointsByHeroId: {},
+});
+
+export const createEmptyEquipmentProgressionState = (): EquipmentProgressionState => ({
+    inventoryItemIds: [],
+    equippedItemIdsByHeroId: {},
+});
+
 export interface ProgressionSlice {
     metaUpgrades: MetaUpgrades;
     partyCapacity: number;
@@ -46,6 +66,8 @@ export interface ProgressionSlice {
     highestFloorCleared: number;
     heroSouls: Decimal;
     prestigeUpgrades: PrestigeUpgrades;
+    talentProgression: TalentProgressionState;
+    equipmentProgression: EquipmentProgressionState;
 }
 
 export interface UiSlice {

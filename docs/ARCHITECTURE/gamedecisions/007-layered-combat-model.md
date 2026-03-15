@@ -96,4 +96,5 @@ This decision intentionally sets boundaries for the rest of the foundation work:
 * **Easier:** Future classes gain a cleaner design space because class identity can live in templates and layered ratings instead of mostly in raw attribute emphasis.
 * **Easier:** Talents and equipment now have a clear destination for targeted build differentiation without forcing a new set of primary attributes.
 * **Easier:** The current runtime could transition incrementally because this record locked ownership and boundaries before coefficient-level refactors happened.
+* **Easier:** Versioned save migrations now give later combat/progression layers an explicit compatibility path instead of relying only on hydration tolerance.
 * **Difficult:** The system now has a stronger conceptual distinction between foundation stats and combat ratings, so docs and code must stay aligned as future tuning continues.

@@ -18,6 +18,8 @@ export const selectProgressionState = (state: GameState): ProgressionSlice => ({
     highestFloorCleared: state.highestFloorCleared,
     heroSouls: state.heroSouls,
     prestigeUpgrades: state.prestigeUpgrades,
+    talentProgression: state.talentProgression,
+    equipmentProgression: state.equipmentProgression,
 });
 
 export const createProgressionSlice = (

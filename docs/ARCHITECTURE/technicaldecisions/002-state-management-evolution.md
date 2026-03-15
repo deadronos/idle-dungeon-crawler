@@ -98,6 +98,7 @@ The migration landed with a compatibility path:
 * `useGame` is retained as a compatibility hook for legacy callers.
 * New and migrated UI components subscribe through `useGameStore(selector)` so unrelated panels do not rerender on every ATB tick.
 * Browser-only persistence now hangs off the provider lifecycle: when no explicit `initialState` is supplied, the provider restores the latest autosave from `localStorage` and writes a fresh JSON save every 10 seconds.
+* Save export/import now flows through an explicit versioned migration layer before runtime hydration. Older payloads are normalized into the current schema first, then handed to `reset(...)`, which keeps future additive progression systems from requiring one-off compatibility hacks in unrelated store code.
 
 The first concrete UI slice stores section navigation (`dungeon` vs `shop`) separately from combat state, which keeps presentational concerns out of the simulation loop.
 Save management stays outside the hot combat loop as well: export/import controls serialize the current playable `GameState` to a JSON file and feed imported saves back through `reset(...)`, so the store remains the single source of truth after deserialization.

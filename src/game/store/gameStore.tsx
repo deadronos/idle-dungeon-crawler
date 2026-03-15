@@ -100,6 +100,8 @@ export const useGame = () => {
         activeSection: useGameStore((store) => store.activeSection),
         heroSouls: useGameStore((store) => store.heroSouls),
         prestigeUpgrades: useGameStore((store) => store.prestigeUpgrades),
+        talentProgression: useGameStore((store) => store.talentProgression),
+        equipmentProgression: useGameStore((store) => store.equipmentProgression),
     };
 
     const actions: GameActions = {
