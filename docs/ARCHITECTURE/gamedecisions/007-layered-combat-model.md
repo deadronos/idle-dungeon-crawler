@@ -87,7 +87,7 @@ The current runtime still derives many combat outputs directly from `VIT`, `STR`
 This decision intentionally sets boundaries for the rest of the foundation work:
 
 * **`#68`** defines the accepted model, names, ownership, and bounded formula direction
-* **`#69`** defines class-template data modeling for base stats, growth, resources, and action packages
+* **`#69`** defines class-template data modeling for base stats, growth, resources, and action packages, implemented in [008 - Hero Class Templates, Growth Packages, and Resource Models](008-hero-class-templates.md)
 * **`#70`** refactors runtime derived stat sourcing and tunes coefficient-level formulas against the accepted model
 * **`#71`** adds explicit versioned save migrations so new progression/combat fields remain backward-compatible
 

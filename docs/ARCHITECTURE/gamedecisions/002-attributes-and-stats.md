@@ -94,7 +94,7 @@ Classes still use class-specific secondary resources:
 * **Cleric (Mana):** maximum `50 + (INT * 5)`; starts full; regenerates `WIS * 0.5` per action tick
 * **Archer (Cunning):** maximum `50 + (INT * 5)`; starts full; regenerates `0.75` per action tick
 
-These are still acceptable as attribute-facing baselines. The layered model does not require replacing them before the class-template work in `#69`.
+These are still acceptable as attribute-facing baselines. The layered model does not require replacing them before the template-driven class identity defined in [008 - Hero Class Templates, Growth Packages, and Resource Models](008-hero-class-templates.md).
 
 ### Current Hard Caps and Bounds
 
