@@ -52,6 +52,7 @@ describe("App integration", () => {
         await user.click(screen.getByRole("button", { name: /upgrade shop/i }));
 
         expect(screen.getByRole("tab", { name: /sanctum upgrades/i })).toBeInTheDocument();
+        expect(screen.queryByRole("tab", { name: /hero builds/i })).not.toBeInTheDocument();
         expect(screen.getByText(/adventure stats/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /unlock slot \(60 gold\)/i })).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /recruit warrior/i })).toBeDisabled();
@@ -79,6 +80,7 @@ describe("App integration", () => {
 
         expect(screen.getByText("77 Gold")).toBeInTheDocument();
         expect(screen.getByRole("tab", { name: /sanctum upgrades/i })).toBeInTheDocument();
+        expect(screen.queryByRole("tab", { name: /hero builds/i })).not.toBeInTheDocument();
         expect(screen.getByText(/adventure stats/i)).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: /start journey/i })).not.toBeInTheDocument();
     });

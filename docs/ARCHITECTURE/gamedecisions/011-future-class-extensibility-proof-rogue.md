@@ -182,7 +182,7 @@ No shipped gameplay change is required for this proof note, but a real Rogue imp
 3. **Build-layer composition**
    * passive + talent + equipment bonuses stack through `getHeroBuildProfile` and `getCombatRatings`
 4. **Roster/UI surfacing**
-   * Rogue passive, talents, and equipment display correctly in `Hero Builds` and roster details
+   * Rogue passive, talents, and equipment display correctly in Party character-sheet tabs and roster details
 5. **Balance harness snapshots**
    * add Rogue milestone snapshots only once the class is actually shipped
 

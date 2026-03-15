@@ -1,0 +1,620 @@
+import React, { useState } from "react";
+import {
+    BarChart2,
+    ChevronLeft,
+    ChevronRight,
+    Layers,
+    Package,
+    Shield,
+    Sparkles,
+    Star,
+    Sword,
+    WandSparkles,
+} from "lucide-react";
+
+import { getHeroClassTemplate } from "../game/classTemplates";
+import {
+    EQUIPMENT_SLOT_LABELS,
+    getAvailableInventoryItemsForHero,
+    getEquippedItemForSlot,
+    getEquipmentOwnerId,
+    getHeroBuildProfile,
+    getSlotLockedReason,
+    getTalentDefinitionsForClass,
+    getTalentPointsForHero,
+    type EquipmentSlot,
+} from "../game/heroBuilds";
+import type {
+    EquipmentProgressionState,
+    TalentProgressionState,
+} from "../game/store/types";
+import { getCombatRatings } from "../game/entity";
+import type { Entity, HeroClass } from "../game/entity";
+import { useGameStore } from "../game/store/gameStore";
+import { formatNumber } from "../utils/format";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+type CharacterSheetTab = "basic" | "secondary" | "talents" | "equipment";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const SLOT_ICON: Record<EquipmentSlot, React.ReactNode> = {
+    weapon: <Sword className="size-3.5 text-amber-300" />,
+    armor: <Shield className="size-3.5 text-sky-300" />,
+    charm: <Sparkles className="size-3.5 text-fuchsia-300" />,
+    trinket: <WandSparkles className="size-3.5 text-emerald-300" />,
+};
+
+const CLASS_BADGE: Record<HeroClass, string> = {
+    Warrior: "text-orange-300 border-orange-400/30 bg-orange-500/10",
+    Cleric: "text-sky-300 border-sky-400/30 bg-sky-500/10",
+    Archer: "text-emerald-300 border-emerald-400/30 bg-emerald-500/10",
+};
+
+const fmtStat = (v: number): string => {
+    if (Number.isNaN(v)) return "0";
+    if (Number.isInteger(v)) return String(v);
+    return v.toFixed(1).replace(/\.0$/, "");
+};
+
+// ─── StatRow ─────────────────────────────────────────────────────────────────
+
+const StatRow: React.FC<{ label: string; value: string; accent?: boolean }> = ({
+    label,
+    value,
+    accent,
+}) => (
+    <div
+        className={`flex items-center justify-between rounded-lg px-3 py-2 ${
+            accent
+                ? "border border-slate-600/50 bg-slate-800/70"
+                : "border border-slate-700/30 bg-slate-900/40"
+        }`}
+    >
+        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            {label}
+        </span>
+        <span className="text-sm font-black text-slate-100">{value}</span>
+    </div>
+);
+
+// ─── BasicStatsPanel ─────────────────────────────────────────────────────────
+
+const BasicStatsPanel: React.FC<{ hero: Entity; resourceLabel: string }> = ({
+    hero,
+    resourceLabel,
+}) => {
+    const { vit, str, dex, int: intel, wis } = hero.attributes;
+    return (
+        <div className="space-y-5">
+            <section className="space-y-2">
+                <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
+                    Combat
+                </h5>
+                <StatRow
+                    accent
+                    label="HP"
+                    value={`${formatNumber(hero.currentHp)} / ${formatNumber(hero.maxHp)}`}
+                />
+                <StatRow
+                    accent
+                    label={resourceLabel}
+                    value={`${formatNumber(hero.currentResource)} / ${formatNumber(hero.maxResource)}`}
+                />
+                <StatRow accent label="Phys Dmg" value={formatNumber(hero.physicalDamage)} />
+                <StatRow accent label="Magic Dmg" value={formatNumber(hero.magicDamage)} />
+                <StatRow accent label="Armor" value={formatNumber(hero.armor)} />
+            </section>
+
+            <section className="space-y-2">
+                <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
+                    Attributes
+                </h5>
+                <div className="grid grid-cols-5 gap-1.5">
+                    {(
+                        [
+                            ["VIT", vit],
+                            ["STR", str],
+                            ["DEX", dex],
+                            ["INT", intel],
+                            ["WIS", wis],
+                        ] as [string, number][]
+                    ).map(([label, val]) => (
+                        <div
+                            key={label}
+                            className="flex flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/80 py-2 px-1"
+                        >
+                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
+                                {label}
+                            </span>
+                            <span className="mt-0.5 text-sm font-black text-slate-100">{val}</span>
+                        </div>
+                    ))}
+                </div>
+            </section>
+        </div>
+    );
+};
+
+// ─── SecondaryStatsPanel ─────────────────────────────────────────────────────
+
+const SecondaryStatsPanel: React.FC<{
+    hero: Entity;
+    buildState: { talentProgression: TalentProgressionState; equipmentProgression: EquipmentProgressionState };
+}> = ({ hero, buildState }) => {
+    const ratings = getCombatRatings(hero, buildState);
+    const RATING_LABELS: Record<string, string> = {
+        power: "POW",
+        spellPower: "SP",
+        precision: "PRE",
+        haste: "HST",
+        guard: "GRD",
+        resolve: "RES",
+        potency: "POT",
+        crit: "CRT",
+    };
+
+    return (
+        <div className="space-y-5">
+            <section className="space-y-2">
+                <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
+                    Derived Stats
+                </h5>
+                <StatRow label="Accuracy" value={fmtStat(hero.accuracyRating)} />
+                <StatRow label="Evasion" value={fmtStat(hero.evasionRating)} />
+                <StatRow label="Parry" value={fmtStat(hero.parryRating)} />
+                <StatRow
+                    label="Crit Chance"
+                    value={`${(hero.critChance * 100).toFixed(1)}%`}
+                />
+                <StatRow
+                    label="Crit Damage"
+                    value={`${(hero.critDamage * 100).toFixed(0)}%`}
+                />
+                <StatRow label="Armor Pen" value={fmtStat(hero.armorPenetration)} />
+                <StatRow label="Elemental Pen" value={fmtStat(hero.elementalPenetration)} />
+                <StatRow label="Tenacity" value={fmtStat(hero.tenacity)} />
+            </section>
+
+            <section className="space-y-2">
+                <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
+                    Combat Ratings
+                </h5>
+                <div className="grid grid-cols-4 gap-1.5">
+                    {(Object.entries(ratings) as [string, number][]).map(([key, val]) => (
+                        <div
+                            key={key}
+                            className="flex flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/80 py-2 px-1"
+                        >
+                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
+                                {RATING_LABELS[key] ?? key.slice(0, 3).toUpperCase()}
+                            </span>
+                            <span className="mt-0.5 text-sm font-black text-slate-100">
+                                {Math.round(val)}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </section>
+
+            <section className="space-y-2">
+                <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
+                    Resistances
+                </h5>
+                <div className="grid grid-cols-3 gap-1.5">
+                    {(Object.entries(hero.resistances) as [string, number][]).map(
+                        ([element, value]) => (
+                            <div
+                                key={element}
+                                className="flex flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/80 py-2 px-1"
+                            >
+                                <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
+                                    {element.slice(0, 3)}
+                                </span>
+                                <span className="mt-0.5 text-sm font-black text-slate-100">
+                                    {Math.round(value * 100)}%
+                                </span>
+                            </div>
+                        ),
+                    )}
+                </div>
+            </section>
+        </div>
+    );
+};
+
+// ─── TalentsPanel ────────────────────────────────────────────────────────────
+
+const TalentsPanel: React.FC<{
+    hero: Entity;
+    talentProgression: TalentProgressionState;
+    equipmentProgression: EquipmentProgressionState;
+    unlockTalent: (heroId: string, talentId: string) => void;
+}> = ({ hero, talentProgression, equipmentProgression, unlockTalent }) => {
+    const heroClass = hero.class as HeroClass;
+    const availableTalents = getTalentDefinitionsForClass(heroClass);
+    const buildProfile = getHeroBuildProfile(hero, {
+        talentProgression,
+        equipmentProgression,
+    });
+    const talentPoints = getTalentPointsForHero(hero.id, talentProgression);
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
+                    {buildProfile.talents.length}/{availableTalents.length} learned
+                </span>
+                <span className="rounded-full border border-violet-400/30 bg-violet-950/30 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-violet-200">
+                    {talentPoints} pts
+                </span>
+            </div>
+
+            <div className="space-y-2">
+                {availableTalents.map((talent) => {
+                    const isUnlocked = buildProfile.talents.some((t) => t.id === talent.id);
+                    return (
+                        <div
+                            key={talent.id}
+                            className={`rounded-xl border p-3 ${
+                                isUnlocked
+                                    ? "border-emerald-400/40 bg-emerald-500/10"
+                                    : "border-slate-700/60 bg-slate-900/70"
+                            }`}
+                        >
+                            <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                    <p className="text-sm font-bold text-slate-100">{talent.name}</p>
+                                    <p className="mt-0.5 text-xs text-slate-400">
+                                        {talent.description}
+                                    </p>
+                                </div>
+                                <Button
+                                    size="sm"
+                                    variant={isUnlocked ? "secondary" : "upgrade"}
+                                    disabled={isUnlocked || talentPoints <= 0}
+                                    onClick={() => unlockTalent(hero.id, talent.id)}
+                                    className="shrink-0"
+                                >
+                                    {isUnlocked ? "✓" : "Learn"}
+                                </Button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {buildProfile.passive && (
+                <p className="pt-1 text-[10px] text-slate-500">
+                    <span className="font-bold text-slate-400">Passive:</span>{" "}
+                    {buildProfile.passive.name} — {buildProfile.passive.description}
+                </p>
+            )}
+        </div>
+    );
+};
+
+// ─── EquipmentPanel ──────────────────────────────────────────────────────────
+
+const EquipmentPanel: React.FC<{
+    hero: Entity;
+    equipmentProgression: EquipmentProgressionState;
+    equipItem: (heroId: string, itemId: string) => void;
+    unequipItem: (heroId: string, slot: EquipmentSlot) => void;
+}> = ({ hero, equipmentProgression, equipItem, unequipItem }) => (
+    <div className="space-y-3">
+        {(Object.keys(EQUIPMENT_SLOT_LABELS) as EquipmentSlot[]).map((slot) => {
+            const equippedItem = getEquippedItemForSlot(hero, equipmentProgression, slot);
+            const inventoryItems = getAvailableInventoryItemsForHero(
+                hero,
+                equipmentProgression,
+                slot,
+            );
+
+            return (
+                <div
+                    key={slot}
+                    className="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3 space-y-2"
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            {SLOT_ICON[slot]}
+                            <span className="text-xs font-black uppercase tracking-[0.2em] text-slate-300">
+                                {EQUIPMENT_SLOT_LABELS[slot]}
+                            </span>
+                        </div>
+                        {equippedItem && (
+                            <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => unequipItem(hero.id, slot)}
+                            >
+                                Remove
+                            </Button>
+                        )}
+                    </div>
+
+                    <p className="text-sm font-bold text-slate-100">
+                        {equippedItem?.name ?? "Empty Slot"}
+                    </p>
+                    {equippedItem && (
+                        <p className="text-xs text-slate-400">{equippedItem.description}</p>
+                    )}
+
+                    {inventoryItems.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                            {inventoryItems.map((item) => {
+                                const ownerId = getEquipmentOwnerId(item.id, equipmentProgression);
+                                const lockReason = getSlotLockedReason(
+                                    hero,
+                                    item,
+                                    equipmentProgression,
+                                );
+                                const isEquippedHere = equippedItem?.id === item.id;
+                                return (
+                                    <Button
+                                        key={item.id}
+                                        size="sm"
+                                        variant={isEquippedHere ? "secondary" : "outline"}
+                                        disabled={Boolean(lockReason) && !isEquippedHere}
+                                        title={lockReason ?? item.description}
+                                        onClick={() => equipItem(hero.id, item.id)}
+                                        className={
+                                            isEquippedHere
+                                                ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+                                                : ""
+                                        }
+                                    >
+                                        {item.name}
+                                        {ownerId && ownerId !== hero.id ? " (Busy)" : ""}
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        !equippedItem && (
+                            <p className="text-xs text-slate-500 italic">No items available</p>
+                        )
+                    )}
+                </div>
+            );
+        })}
+    </div>
+);
+
+// ─── CharacterSheet ───────────────────────────────────────────────────────────
+
+interface CharacterSheetProps {
+    hero: Entity;
+    index: number;
+    total: number;
+    onPrev: () => void;
+    onNext: () => void;
+}
+
+const CharacterSheet: React.FC<CharacterSheetProps> = ({
+    hero,
+    index,
+    total,
+    onPrev,
+    onNext,
+}) => {
+    const [activeTab, setActiveTab] = useState<CharacterSheetTab>("basic");
+
+    const talentProgression = useGameStore((s) => s.talentProgression);
+    const equipmentProgression = useGameStore((s) => s.equipmentProgression);
+    const unlockTalent = useGameStore((s) => s.unlockTalent);
+    const equipItem = useGameStore((s) => s.equipItem);
+    const unequipItem = useGameStore((s) => s.unequipItem);
+
+    const template = getHeroClassTemplate(hero.class);
+    const heroClass = hero.class as HeroClass;
+    const badgeClass = CLASS_BADGE[heroClass] ?? "text-slate-300 border-slate-600/30 bg-slate-700/20";
+
+    const hpRatio = hero.currentHp.dividedBy(hero.maxHp).toNumber();
+    const hpColor =
+        hpRatio <= 0.2 ? "bg-red-500" : hpRatio <= 0.5 ? "bg-amber-500" : "bg-emerald-500";
+
+    const expRatio = hero.expToNext.gt(0)
+        ? hero.exp.dividedBy(hero.expToNext).clamp(0, 1).toNumber()
+        : 0;
+
+    const tabs: Array<{ id: CharacterSheetTab; label: string; icon: React.ReactNode }> = [
+        { id: "basic", label: "Basic Stats", icon: <BarChart2 className="size-3.5" /> },
+        { id: "secondary", label: "Secondary", icon: <Layers className="size-3.5" /> },
+        { id: "talents", label: "Talents", icon: <Star className="size-3.5" /> },
+        { id: "equipment", label: "Equipment", icon: <Package className="size-3.5" /> },
+    ];
+
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 w-full max-w-5xl mx-auto">
+            {/* ── Column 1 ── */}
+            <div className="flex flex-col gap-4">
+                {/* Portrait card */}
+                <Card className="bg-slate-900/80 border-slate-700/50 shadow-xl">
+                    <CardContent className="p-4 space-y-4">
+                        {/* Pagination header */}
+                        <div className="flex items-center justify-between">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onPrev}
+                                disabled={total <= 1}
+                                aria-label="Previous hero"
+                            >
+                                <ChevronLeft className="size-4" />
+                            </Button>
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-400">
+                                {index + 1} / {total}
+                            </span>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={onNext}
+                                disabled={total <= 1}
+                                aria-label="Next hero"
+                            >
+                                <ChevronRight className="size-4" />
+                            </Button>
+                        </div>
+
+                        {/* Portrait */}
+                        <div className="relative mx-auto w-36 h-36 rounded-2xl overflow-hidden border-2 border-slate-600/60 bg-slate-800/60 shadow-lg">
+                            <img
+                                src={`${import.meta.env.BASE_URL}${template.imageAsset}`}
+                                alt={`${hero.name} portrait`}
+                                className="w-full h-full object-cover pointer-events-none select-none"
+                                draggable={false}
+                            />
+                        </div>
+
+                        {/* Name + badges */}
+                        <div className="text-center space-y-1.5">
+                            <h2 className="text-xl font-black uppercase tracking-wider text-slate-100">
+                                {hero.name}
+                            </h2>
+                            <div className="flex items-center justify-center gap-2 flex-wrap">
+                                <span
+                                    className={`rounded-full border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] ${badgeClass}`}
+                                >
+                                    {hero.class}
+                                </span>
+                                <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-[0.2em] text-amber-200">
+                                    Lv {hero.level}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* HP bar */}
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                <span>HP</span>
+                                <span>
+                                    {formatNumber(hero.currentHp)} / {formatNumber(hero.maxHp)}
+                                </span>
+                            </div>
+                            <div className="h-2 rounded-full bg-slate-700/60 overflow-hidden">
+                                <div
+                                    className={`h-full rounded-full transition-all ${hpColor}`}
+                                    style={{ width: `${Math.max(0, Math.min(100, hpRatio * 100))}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* EXP bar */}
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                                <span>EXP</span>
+                                <span>{Math.round(expRatio * 100)}%</span>
+                            </div>
+                            <div className="h-1.5 rounded-full bg-slate-700/60 overflow-hidden">
+                                <div
+                                    className="h-full rounded-full bg-violet-500 transition-all"
+                                    style={{ width: `${expRatio * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Class description */}
+                        <p className="text-center text-xs text-slate-500 italic leading-relaxed">
+                            {template.description}
+                        </p>
+                    </CardContent>
+                </Card>
+
+                {/* Tab nav card */}
+                <Card className="bg-slate-900/80 border-slate-700/50 shadow-xl">
+                    <CardContent className="p-3 space-y-1">
+                        {tabs.map((tab) => (
+                            <button
+                                key={tab.id}
+                                type="button"
+                                onClick={() => setActiveTab(tab.id)}
+                                aria-pressed={activeTab === tab.id}
+                                className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold uppercase tracking-wider transition-colors ${
+                                    activeTab === tab.id
+                                        ? "bg-slate-700 text-slate-100"
+                                        : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
+                                }`}
+                            >
+                                {tab.icon}
+                                {tab.label}
+                            </button>
+                        ))}
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* ── Column 2 ── */}
+            <Card className="bg-slate-900/80 border-slate-700/50 shadow-xl">
+                <CardContent className="p-5 overflow-y-auto max-h-[calc(100vh-220px)]">
+                    {activeTab === "basic" && (
+                        <BasicStatsPanel
+                            hero={hero}
+                            resourceLabel={template.resourceModel.displayName}
+                        />
+                    )}
+                    {activeTab === "secondary" && (
+                        <SecondaryStatsPanel
+                            hero={hero}
+                            buildState={{ talentProgression, equipmentProgression }}
+                        />
+                    )}
+                    {activeTab === "talents" && (
+                        <TalentsPanel
+                            hero={hero}
+                            talentProgression={talentProgression}
+                            equipmentProgression={equipmentProgression}
+                            unlockTalent={unlockTalent}
+                        />
+                    )}
+                    {activeTab === "equipment" && (
+                        <EquipmentPanel
+                            hero={hero}
+                            equipmentProgression={equipmentProgression}
+                            equipItem={equipItem}
+                            unequipItem={unequipItem}
+                        />
+                    )}
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+// ─── PartyView ────────────────────────────────────────────────────────────────
+
+export const PartyView: React.FC = () => {
+    const allParty = useGameStore((s) => s.party);
+    const party = allParty.filter((e) => !e.isEnemy);
+    const [heroIndex, setHeroIndex] = useState(0);
+
+    const clampedIndex = Math.min(heroIndex, Math.max(0, party.length - 1));
+    const currentHero = party[clampedIndex];
+
+    const handlePrev = () =>
+        setHeroIndex((i) => (i - 1 + party.length) % party.length);
+    const handleNext = () =>
+        setHeroIndex((i) => (i + 1) % party.length);
+
+    return (
+        <div className="flex flex-1 w-full h-full bg-[url('/assets/dungeon_bg.png')] bg-cover bg-center shadow-[inset_0_0_150px_rgba(0,0,0,0.92)] overflow-y-auto p-4 lg:p-8">
+            {party.length === 0 ? (
+                <div className="flex flex-1 items-center justify-center">
+                    <p className="text-slate-400 text-sm">No heroes in your party yet.</p>
+                </div>
+            ) : (
+                <CharacterSheet
+                    hero={currentHero}
+                    index={clampedIndex}
+                    total={party.length}
+                    onPrev={handlePrev}
+                    onNext={handleNext}
+                />
+            )}
+        </div>
+    );
+};

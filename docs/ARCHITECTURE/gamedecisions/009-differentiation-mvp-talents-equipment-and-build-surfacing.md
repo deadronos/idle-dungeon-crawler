@@ -90,7 +90,7 @@ This keeps build differentiation aligned with the layered-combat direction inste
 
 The MVP uses two complementary surfaces:
 
-* **Shop -> `Hero Builds` tab:** the interaction surface for learning talents and equipping gear
+* **Party -> character sheet tabs (`Talents` and `Equipment`):** the interaction surface for learning talents and equipping gear
 * **Dungeon roster tooltip and card metadata:** the read surface for combat ratings, passive identity, learned talents, and equipped items
 
 The roster tooltip now exposes:
@@ -102,7 +102,7 @@ The roster tooltip now exposes:
 * equipped items
 * resistances and statuses
 
-This keeps the build-management UI deliberate while preserving in-combat readability.
+This keeps the build-management UI deliberate in the dedicated Party section while preserving in-combat readability.
 
 ## Consequences
 
