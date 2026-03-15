@@ -5,7 +5,7 @@ import type { Entity, HeroClass, MetaUpgrades, StatusEffectKey } from "../entity
 import type { EquipmentSlot } from "../heroBuilds";
 import type { PartySlotUnlock } from "../partyProgression";
 
-export type AppSection = "dungeon" | "shop";
+export type AppSection = "dungeon" | "shop" | "party";
 export type CombatEventKind = "damage" | "heal" | "dodge" | "parry" | "crit" | "defeat" | "skill" | "status";
 export type CombatEventStatusPhase = "apply" | "tick" | "expire" | "cleanse";
 

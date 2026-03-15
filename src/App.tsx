@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Menu, Shield, Swords, X } from 'lucide-react';
+import { Menu, Shield, Swords, Users, X } from 'lucide-react';
 import { GameProvider } from './game/gameState';
 import { useGameStore } from './game/store/gameStore';
 import { MainGameView } from './components/MainGameView';
 import { CharacterCreation } from './components/CharacterCreation';
 import { SaveControls } from './components/SaveControls';
 import { ShopView } from './components/ShopView';
+import { PartyView } from './components/PartyView';
 import { Button } from './components/ui/button';
 import { formatNumber } from './utils/format';
 
@@ -124,9 +125,19 @@ const AppContent: React.FC = () => {
           <Shield className="size-4" />
           Upgrade Shop
         </Button>
+        <Button
+          variant="nav"
+          onClick={() => setActiveSection('party')}
+          aria-pressed={activeSection === 'party'}
+        >
+          <Users className="size-4" />
+          Party
+        </Button>
       </div>
       <div className="flex flex-1 overflow-hidden">
-        {activeSection === 'dungeon' ? <MainGameView /> : <ShopView />}
+        {activeSection === 'dungeon' && <MainGameView />}
+        {activeSection === 'shop' && <ShopView />}
+        {activeSection === 'party' && <PartyView />}
       </div>
     </div>
   );
