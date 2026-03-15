@@ -139,7 +139,7 @@ describe("GameProvider integration", () => {
 
         expect(screen.getByTestId("floor").textContent).toBe("4");
         expect(screen.getByTestId("enemy-count").textContent).toBe("1");
-        expect(screen.getByText(/repeating floor 4/i)).toBeInTheDocument();
+        expect(screen.getByText(/recovers 25% hp/i)).toBeInTheDocument();
     });
 
     it("autosaves the current run to local storage", () => {

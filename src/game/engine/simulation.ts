@@ -65,6 +65,7 @@ export const BLIND_BASE_CHANCE = 0.35;
 export const BLIND_DURATION_TICKS = GAME_TICK_RATE * 3;
 export const BLIND_ACCURACY_REDUCTION = 15;
 export const CLERIC_BLESS_COST = getHeroClassTemplate("Cleric").actionPackage.bless?.cost ?? 25;
+export const POST_VICTORY_HP_RECOVERY_RATIO = 0.25;
 
 const SKILL_BANNER_TICKS = GAME_TICK_RATE;
 const COMBAT_EVENT_TICKS = Math.round(GAME_TICK_RATE * 1.4);
@@ -202,6 +203,18 @@ const clearEncounterState = (entity: Entity): Entity => ({
     statusEffects: [],
 });
 
+const recoverHpAfterVictory = (entity: Entity): Entity => {
+    const cleared = clearEncounterState(entity);
+
+    if (cleared.currentHp.lte(0)) {
+        return cleared;
+    }
+
+    const recoveredHp = cleared.maxHp.times(POST_VICTORY_HP_RECOVERY_RATIO);
+    cleared.currentHp = Decimal.min(cleared.maxHp, cleared.currentHp.plus(recoveredHp));
+    return cleared;
+};
+
 export const recalculateParty = (
     party: Entity[],
     upgrades: MetaUpgrades,
@@ -327,6 +340,29 @@ export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
     party: state.party.map(clearEncounterState),
     enemies: createEncounter(state.floor),
     combatLog: prependCombatMessages(state.combatLog, `Repeating floor ${state.floor}...`),
+    combatEvents: [],
+});
+
+export const getPostVictoryFloorTransitionState = (state: GameState, floor: number): Partial<GameState> => ({
+    floor,
+    party: state.party.map(recoverHpAfterVictory),
+    enemies: createEncounter(floor),
+    combatLog: prependCombatMessages(
+        state.combatLog,
+        `The party recovers ${Math.round(POST_VICTORY_HP_RECOVERY_RATIO * 100)}% HP before the next encounter.`,
+        `Moved to floor ${floor}...`,
+    ),
+    combatEvents: [],
+});
+
+export const getPostVictoryFloorReplayState = (state: GameState): Partial<GameState> => ({
+    party: state.party.map(recoverHpAfterVictory),
+    enemies: createEncounter(state.floor),
+    combatLog: prependCombatMessages(
+        state.combatLog,
+        `The party recovers ${Math.round(POST_VICTORY_HP_RECOVERY_RATIO * 100)}% HP before the next encounter.`,
+        `Repeating floor ${state.floor}...`,
+    ),
     combatEvents: [],
 });
 
