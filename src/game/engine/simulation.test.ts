@@ -1130,6 +1130,113 @@ describe("simulation engine", () => {
         expect(hexEffect!.remainingTicks).toBe(HEX_DURATION_TICKS);
     });
 
+    it("applies blind from light hits and logs the affliction", () => {
+        const cleric = createHero("hero_1", "Ione", "Cleric");
+        cleric.actionProgress = 99;
+        cleric.critChance = 0;
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+        enemy.tenacity = 0;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [cleric],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0),
+        );
+
+        expect(result.state.enemies[0].statusEffects.some((se) => se.key === "blind" && se.polarity === "debuff")).toBe(true);
+        expect(result.state.combatLog.some((entry) => /blind/i.test(entry))).toBe(true);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "apply" && event.statusKey === "blind")).toBe(true);
+    });
+
+    it("reduces hit chance while blinded and expires cleanly", () => {
+        const baselineWarrior = createHero("hero_1", "Brom", "Warrior");
+        const blindedWarrior = createHero("hero_2", "Tarin", "Warrior");
+        blindedWarrior.actionProgress = -999;
+        blindedWarrior.statusEffects = [
+            {
+                key: "blind",
+                polarity: "debuff",
+                sourceId: "hero_1",
+                remainingTicks: 2,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 15,
+            },
+        ];
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        expect(getPhysicalHitChance(blindedWarrior, enemy)).toBeLessThan(getPhysicalHitChance(baselineWarrior, enemy));
+
+        const result = advanceTicks(
+            createInitialGameState({
+                party: [blindedWarrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+            2,
+        );
+
+        expect(result.state.party[0].statusEffects.filter((se) => se.key === "blind")).toHaveLength(0);
+        expect(result.state.combatLog.some((entry) => /blind fades/i.test(entry))).toBe(true);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "expire" && event.statusKey === "blind")).toBe(true);
+        expect(getPhysicalHitChance(result.state.party[0], enemy)).toBe(getPhysicalHitChance(baselineWarrior, enemy));
+    });
+
+    it("Bless cleanses hex while refreshing regen and logs the cleanse", () => {
+        const cleric = createHero("hero_1", "Ione", "Cleric");
+        cleric.actionProgress = 99;
+
+        const warrior = createHero("hero_2", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+        warrior.statusEffects = [
+            {
+                key: "hex",
+                polarity: "debuff",
+                sourceId: "enemy_1",
+                remainingTicks: 30,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.3,
+            },
+            {
+                key: "regen",
+                polarity: "buff",
+                sourceId: "hero_3",
+                remainingTicks: 2,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 4,
+            },
+        ];
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [cleric, warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        const refreshedWarrior = result.state.party[1];
+        expect(refreshedWarrior.statusEffects.some((se) => se.key === "hex")).toBe(false);
+        expect(refreshedWarrior.statusEffects.find((se) => se.key === "regen")?.remainingTicks).toBe(REGEN_DURATION_TICKS);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "cleanse" && event.statusKey === "hex")).toBe(true);
+        expect(result.state.combatLog.some((entry) => /casts Bless on Brom/i.test(entry))).toBe(true);
+        expect(result.state.combatLog.some((entry) => /Hex is cleansed/i.test(entry))).toBe(true);
+    });
+
     it("spends mana up to CLERIC_BLESS_COST when casting Bless and falls back to Smite if mana is low", () => {
         const cleric = createHero("hero_1", "Ione", "Cleric");
         cleric.actionProgress = 99;

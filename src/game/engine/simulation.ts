@@ -47,6 +47,9 @@ export const REGEN_TICK_HEAL_MULTIPLIER = 0.15;
 export const HEX_BASE_CHANCE = 0.35;
 export const HEX_DURATION_TICKS = GAME_TICK_RATE * 3;
 export const HEX_HEALING_REDUCTION = 0.3;
+export const BLIND_BASE_CHANCE = 0.35;
+export const BLIND_DURATION_TICKS = GAME_TICK_RATE * 3;
+export const BLIND_ACCURACY_REDUCTION = 15;
 export const CLERIC_BLESS_COST = 25;
 
 const SKILL_BANNER_TICKS = GAME_TICK_RATE;
@@ -292,11 +295,15 @@ export const getPartyWipeState = (state: GameState): Partial<GameState> => {
 
 const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
 
+const getEffectiveAccuracyRating = (entity: Entity) => {
+    return Math.max(0, entity.accuracyRating - getStatusPotency(entity, "blind"));
+};
+
 export const getPhysicalHitChance = (attacker: Entity, defender: Entity) =>
     clampChance(
         MIN_PHYSICAL_HIT_CHANCE,
         MAX_PHYSICAL_HIT_CHANCE,
-        0.82 + ((attacker.accuracyRating - defender.evasionRating) * 0.002),
+        0.82 + ((getEffectiveAccuracyRating(attacker) - defender.evasionRating) * 0.002),
     );
 
 export const getSpellHitChance = (attacker: Entity, defender: Entity) =>
@@ -304,7 +311,7 @@ export const getSpellHitChance = (attacker: Entity, defender: Entity) =>
         MIN_SPELL_HIT_CHANCE,
         MAX_SPELL_HIT_CHANCE,
         0.82
-            + ((attacker.accuracyRating - defender.evasionRating) * 0.0016)
+            + ((getEffectiveAccuracyRating(attacker) - defender.evasionRating) * 0.0016)
             + ((attacker.attributes.int - defender.attributes.wis) * 0.0008),
     );
 
@@ -427,6 +434,15 @@ const getStatusConfig = (key: StatusEffectKey): Omit<StatusEffect, "sourceId"> =
                 maxStacks: 1,
                 potency: HEX_HEALING_REDUCTION,
             };
+        case "blind":
+            return {
+                key,
+                polarity: "debuff",
+                remainingTicks: BLIND_DURATION_TICKS,
+                stacks: 1,
+                maxStacks: 1,
+                potency: BLIND_ACCURACY_REDUCTION,
+            };
         default:
             return {
                 key,
@@ -449,6 +465,8 @@ const getStatusKeyForElement = (damageElement: DamageElement): StatusEffectKey |
             return "weaken";
         case "shadow":
             return "hex";
+        case "light":
+            return "blind";
         default:
             return null;
     }
@@ -464,6 +482,8 @@ const getStatusBaseChance = (statusKey: StatusEffectKey) => {
             return WEAKEN_BASE_CHANCE;
         case "hex":
             return HEX_BASE_CHANCE;
+        case "blind":
+            return BLIND_BASE_CHANCE;
         default:
             return SLOW_BASE_CHANCE;
     }
@@ -729,7 +749,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
     const queueStatusEvent = (
         target: Entity,
         statusKey: StatusEffectKey,
-        statusPhase: "apply" | "tick" | "expire",
+        statusPhase: "apply" | "tick" | "expire" | "cleanse",
         text: string,
         amount?: string,
     ) => {
@@ -742,6 +762,17 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             statusPhase,
             ttlTicks: COMBAT_EVENT_TICKS,
         });
+    };
+
+    const getCleanseableStatusEffect = (target: Entity) => {
+        return target.statusEffects.find((statusEffect) => statusEffect.key === "hex")
+            ?? target.statusEffects.find((statusEffect) => statusEffect.polarity === "debuff");
+    };
+
+    const cleanseStatusEffect = (target: Entity, statusEffect: StatusEffect) => {
+        target.statusEffects = target.statusEffects.filter((activeStatus) => activeStatus !== statusEffect);
+        queueStatusEvent(target, statusEffect.key, "cleanse", `${getStatusEffectName(statusEffect.key)} cleansed`);
+        logMessages.push(`${target.name}'s ${getStatusEffectName(statusEffect.key)} is cleansed.`);
     };
 
     const applyStatusEffect = (source: Entity, target: Entity, statusKey: StatusEffectKey) => {
@@ -997,7 +1028,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
             const blessCost = new Decimal(CLERIC_BLESS_COST);
             // Bless targets other party members only; solo Clerics fall through to Smite
-            const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((se) => se.key === "regen"));
+            const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && getCleanseableStatusEffect(ally))
+                ?? livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((se) => se.key === "regen"));
             if (blessTarget && entity.currentResource.gte(blessCost)) {
                 const regenPotency = entity.magicDamage.times(REGEN_TICK_HEAL_MULTIPLIER).toNumber();
                 const regenEffect: StatusEffect = {
@@ -1017,6 +1049,10 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 entity.currentResource = entity.currentResource.minus(blessCost);
                 queueStatusEvent(blessTarget, "regen", "apply", getStatusEffectName("regen"));
                 logMessages.push(`${entity.name} casts Bless on ${blessTarget.name}!`);
+                const cleansedStatus = getCleanseableStatusEffect(blessTarget);
+                if (cleansedStatus) {
+                    cleanseStatusEffect(blessTarget, cleansedStatus);
+                }
                 return;
             }
         }

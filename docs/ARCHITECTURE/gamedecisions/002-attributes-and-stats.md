@@ -69,7 +69,7 @@ The new derived ratings reinforce class roles without adding bespoke per-class r
 * **Cleric:** gains steadier spell reliability from INT while WIS continues to scale elemental resistance and magical defense.
 * **Archer:** still receives the strongest `Accuracy` and `Evasion` growth through DEX, but the lighter DEX weighting reduces all-in-one stat stacking and keeps the class focused on agility rather than passive durability.
 * **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic. Archetype bias changes which attributes are emphasized, but not how those attributes convert into combat stats.
-* **Tenacity:** now does two jobs: it still dampens incoming crit spikes, and it also resists elemental status pressure such as `Burn`, `Slow`, and `Weaken`. It remains bounded, so it softens those systems without shutting them off entirely.
+* **Tenacity:** now does two jobs: it still dampens incoming crit spikes, and it also resists elemental status pressure such as `Burn`, `Slow`, `Weaken`, `Hex`, and `Blind`. It remains bounded, so it softens those systems without shutting them off entirely.
 
 ### Elemental Status Hooks
 The first shipped reusable status-effect framework still derives its pressure from the same five attributes rather than introducing a new ailment stat:
@@ -77,8 +77,10 @@ The first shipped reusable status-effect framework still derives its pressure fr
 * **Fire -> Burn:** a timed damage-over-time effect. Burn potency is snapshot from the applier's spell power when the effect lands.
 * **Water -> Slow:** temporarily reduces ATB gain by a bounded percentage.
 * **Earth -> Weaken:** temporarily reduces outgoing damage by a bounded percentage.
+* **Shadow -> Hex:** temporarily reduces all incoming healing on the target, giving Shadow a sustain-pressure identity instead of raw damage-over-time.
+* **Light -> Blind:** temporarily reduces `Accuracy Rating` by `15`, letting Light pressure both physical and spell reliability through the existing hit formulas.
 
-These status effects deliberately reuse `Elemental Penetration` on the attacker side and `Tenacity` on the defender side. That keeps status pressure aligned with the existing magical combat stats instead of adding a sixth defensive axis.
+Light also introduces the first cleanse-style interaction through Cleric `Bless`, which removes one debuff from the target ally (prioritizing `Hex`) while applying or refreshing `Regen`. These status effects deliberately reuse `Elemental Penetration` on the attacker side and `Tenacity` on the defender side. That keeps status pressure aligned with the existing magical combat stats instead of adding a sixth defensive axis.
 
 ## Consequences
 *   **Easier:** Designing items or buffs that grant `+X STR`, `+X DEX`, or `+X WIS` is clearer because those attributes now affect both raw throughput and hit-resolution outcomes.

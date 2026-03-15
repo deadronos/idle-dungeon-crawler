@@ -6,7 +6,7 @@ export type HeroClass = Exclude<EntityClass, "Monster">;
 export type DamageElement = "physical" | keyof Elements;
 export type EnemyElement = Exclude<DamageElement, "physical">;
 export type EnemyArchetype = "Bruiser" | "Skirmisher" | "Caster" | "Support" | "Boss";
-export type StatusEffectKey = "burn" | "slow" | "weaken" | "regen" | "hex";
+export type StatusEffectKey = "burn" | "slow" | "weaken" | "regen" | "hex" | "blind";
 export type StatusEffectPolarity = "buff" | "debuff";
 
 export interface MetaUpgrades {
@@ -134,6 +134,8 @@ export const getStatusEffectName = (statusKey: StatusEffectKey) => {
             return "Regen";
         case "hex":
             return "Hex";
+        case "blind":
+            return "Blind";
         default:
             return capitalizeLabel(statusKey);
     }
@@ -151,6 +153,8 @@ export const getStatusEffectBadge = (statusEffect: Pick<StatusEffect, "key" | "s
             return "RGN";
         case "hex":
             return "HEX";
+        case "blind":
+            return "BLD";
         default:
             return capitalizeLabel(statusEffect.key).slice(0, 3).toUpperCase();
     }

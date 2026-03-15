@@ -54,12 +54,12 @@ Currently, action resolution uses a lightweight class-aware ruleset:
    * Archers have a `2.0x` Crit Multiplier.
    * All other classes have a `1.5x` Crit Multiplier.
 8. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, the attacker's `Armor Penetration` first converts through `min(60%, penetration / (penetration + 60))` and reduces the target's effective armor by that proportion, then damage is reduced with the existing diminishing-return armor curve: `rawDamage * (100 / (100 + effectiveArmor * 2))`. If the element is magical (e.g. `light`, `fire`), the attacker's `Elemental Penetration` uses the same bounded conversion to reduce the target's effective elemental resistance before the percentage-based resistance reduction is applied. Minimum damage remains `1`.
-9. **Status Application:** After a damaging elemental hit lands and deals damage, the engine may apply a timed status rider. The current element-to-status mappings are `fire -> Burn`, `water -> Slow`, `earth -> Weaken`, and `shadow -> Hex`. Application uses `clamp(15%, 75%, baseChance + (attacker.ElementalPenetration - defender.Tenacity) * 0.3%)`, so elemental pressure stays bounded and shares the same offensive/defensive stats as spell damage.
+9. **Status Application:** After a damaging elemental hit lands and deals damage, the engine may apply a timed status rider. The current element-to-status mappings are `fire -> Burn`, `water -> Slow`, `earth -> Weaken`, `shadow -> Hex`, and `light -> Blind`. Application uses `clamp(15%, 75%, baseChance + (attacker.ElementalPenetration - defender.Tenacity) * 0.3%)`, so elemental pressure stays bounded and shares the same offensive/defensive stats as spell damage.
 10. **Protection Effects:** `Ward Ally` remains a lightweight support-only protection effect. It reduces the next damaging hit against the warded target by `35%`, then expires immediately. It still lives outside the timed-status framework because it is a single-hit shield, not a duration-based condition.
 11. **Resource Triggers:** Warrior Rage generation now happens after any resolved Warrior attack action, including dodges or parries, plus whenever a Warrior takes damage. This keeps Rage tied to combat participation without requiring every melee swing to connect.
 12. **Tenacity:** If the action crits, the defender's `Tenacity` dampens only the bonus portion of the crit multiplier through `min(60%, tenacity / (tenacity + 80))`. The same stat also resists elemental status application through the bounded status formula above. Tenacity still does not change crit chance and cannot hard-immunize units against statuses.
 
-Cleric `Smite` is the first shipped non-physical attack in this system and is tagged as `light`, so it already respects Light resistance. Additional elemental attacks can reuse the same mitigation path in future expansions.
+Cleric `Smite` is the first shipped non-physical attack in this system and is tagged as `light`, so it now matters through both Light resistance and the `Blind` rider. Additional elemental attacks can reuse the same mitigation path in future expansions.
 
 ### Timed Status Effects
 
@@ -73,14 +73,20 @@ The current set of shipped effects covers both debuffs (negative pressure) and b
 * **Slow (`water`):** `35%` base application chance, `3s` duration, and reduces ATB gain by `20%`. It does not stack; stronger reapplications refresh duration.
 * **Weaken (`earth`):** `35%` base application chance, `4s` duration, and reduces outgoing physical and magic damage by `15%`. It does not stack; stronger reapplications refresh duration.
 * **Hex (`shadow`):** `35%` base application chance, `3s` duration, and reduces all incoming healing to the target by `30%`. It does not stack; reapplication refreshes duration and takes the higher potency. Applied as a status rider on any shadow-element damaging hit (including enemy Support's `Suppressing Hex`).
+* **Blind (`light`):** `35%` base application chance, `3s` duration, and reduces the target's `Accuracy Rating` by `15`, softening both physical and spell hit chance without creating hard lockouts. It does not stack; stronger reapplications refresh duration.
 
 **Buffs:**
 
 * **Regen:** `4s` duration, ticks once per second, and restores a flat HP amount derived from the casting Cleric's magic damage (`magicDamage × 15%`). Does not stack; a second Bless from the same or stronger caster refreshes duration and adopts the higher potency. Applied by Cleric `Bless` (see below).
 
+**Light-side cleanse interaction:**
+
+* Cleric `Bless` now doubles as the first cleanse-style support action. When choosing a target, it prioritizes an ally carrying a removable debuff and removes **one** debuff on cast while still applying or refreshing `Regen`.
+* Cleanse currently prioritizes `Hex` when present, preserving a clear Light-versus-Shadow counterplay hook without invalidating all status play.
+
 **Stacking and overwrite rules:**
 
-* Effects with `maxStacks = 1` (Slow, Weaken, Hex, Regen) never stack. Reapplication always refreshes the remaining duration and adopts the higher potency.
+* Effects with `maxStacks = 1` (Slow, Weaken, Hex, Blind, Regen) never stack. Reapplication always refreshes the remaining duration and adopts the higher potency.
 * Burn (maxStacks = 2) increments stacks up to the cap on reapplication and always refreshes duration. The highest-potency source is adopted when multiple stacks are active.
 * Buffs (`polarity: "buff"`) and debuffs (`polarity: "debuff"`) can coexist on the same entity simultaneously.
 
@@ -112,7 +118,7 @@ The first deeper-combat pass uses bounded formulas to stay stable under long-ter
 
 Whenever an entity resolves an action, the UI displays a short-lived skill banner near that unit's portrait (for example, `Casting Mend` or `Casting Rage Strike`) so the player can read combat intent at a glance without relying only on the combat log.
 
-The dungeon UI now also renders transient floating combat events near unit portraits for key outcomes such as damage, healing, `Dodge`, `Parry`, `CRIT`, defeat, plus status application/tick/expiry. This keeps the fast ATB loop readable without bloating the permanent card layout.
+The dungeon UI now also renders transient floating combat events near unit portraits for key outcomes such as damage, healing, `Dodge`, `Parry`, `CRIT`, defeat, plus status application, tick, cleanse, and expiry. This keeps the fast ATB loop readable without bloating the permanent card layout.
 
 ### UI Readability Conventions
 
@@ -120,7 +126,7 @@ To support higher-entity encounters (up to five party members and five enemies),
 
 * **Living-first ordering:** living entities are listed before defeated ones so the actionable combat state is always near the top of each roster.
 * **Compact bars with preserved scanability:** HP, resource, and action-readiness bars remain visible at reduced card density to avoid panel collapse at larger party sizes.
-* **Persistent status chips:** active timed effects render as short uppercase chips such as `BRN x2`, `SLW`, `WKN`, `RGN`, or `HEX` so the player can read ongoing pressure and support at a glance without waiting for the combat log. Buff chips (`RGN`) render in emerald green; debuff chips (`BRN`, `SLW`, `WKN`, `HEX`) render in red so polarity is immediately readable even when buffs and debuffs coexist on the same entity.
+* **Persistent status chips:** active timed effects render as short uppercase chips such as `BRN x2`, `SLW`, `WKN`, `RGN`, `HEX`, or `BLD` so the player can read ongoing pressure and support at a glance without waiting for the combat log. Buff chips (`RGN`) render in emerald green; debuff chips (`BRN`, `SLW`, `WKN`, `HEX`, `BLD`) render in red so polarity is immediately readable even when buffs and debuffs coexist on the same entity.
 * **Subtle role labels:** enemy roster cards and the encounter stage surface the current archetype in small uppercase labels so the player can read combat roles without adding a new panel or badge-heavy layout.
 * **On-demand derived detail:** secondary stat details (VIT/STR/DEX/INT/WIS) plus combat-facing ratings (`ACC`, `EVA`, `PAR`, `APEN`, `EPEN`, `TEN`), elemental resistances, and active statuses are available via portrait hover/focus tooltip rather than being permanently rendered in every card.
 * **Scrollable roster columns:** party and enemy panels remain independently scrollable when total unit count exceeds available viewport height.
