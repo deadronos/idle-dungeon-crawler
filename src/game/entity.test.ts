@@ -5,10 +5,12 @@ import {
     BOSS_STRENGTH_MULTIPLIER,
     BOSS_VITALITY_MULTIPLIER,
     createEnemy,
+    getCombatRatings,
     createHero,
     createRecruitHero,
     createStarterParty,
     getEnemyArchetypeLabel,
+    recalculateEntity,
 } from "./entity";
 
 describe("entity model", () => {
@@ -42,16 +44,51 @@ describe("entity model", () => {
         expect(upgraded.armor.gt(baseline.armor)).toBe(true);
     });
 
-    it("derives combat ratings, penetration, and tenacity from existing attributes", () => {
+    it("derives layered combat ratings and final combat stats from attributes plus class packages", () => {
         const warrior = createHero("hero_1", "Brom", "Warrior");
+        const warriorRatings = getCombatRatings(warrior);
 
-        expect(warrior.accuracyRating).toBeCloseTo(60.5);
-        expect(warrior.evasionRating).toBeCloseTo(43);
-        expect(warrior.parryRating).toBeCloseTo(18.75);
-        expect(warrior.armorPenetration).toBeCloseTo(12.5);
-        expect(warrior.elementalPenetration).toBeCloseTo(4.5);
-        expect(warrior.tenacity).toBeCloseTo(10.5);
+        expect(warriorRatings.power).toBeCloseTo(22);
+        expect(warriorRatings.precision).toBeCloseTo(4.5);
+        expect(warriorRatings.haste).toBeCloseTo(5.05);
+        expect(warriorRatings.guard).toBeCloseTo(22);
+        expect(warriorRatings.resolve).toBeCloseTo(6.6);
+        expect(warriorRatings.potency).toBeCloseTo(3.15);
+        expect(warriorRatings.crit).toBeCloseTo(2.5);
+        expect(warrior.armor.toNumber()).toBeCloseTo(15.8);
+        expect(warrior.physicalDamage.toNumber()).toBeCloseTo(27.98, 2);
+        expect(warrior.magicDamage.toNumber()).toBeCloseTo(9.52, 2);
+        expect(warrior.accuracyRating).toBeCloseTo(55.65);
+        expect(warrior.evasionRating).toBeCloseTo(40.69);
+        expect(warrior.parryRating).toBeCloseTo(18.5);
+        expect(warrior.armorPenetration).toBeCloseTo(13.64);
+        expect(warrior.elementalPenetration).toBeCloseTo(2.81);
+        expect(warrior.tenacity).toBeCloseTo(8.69);
+        expect(warrior.resistances.light).toBeCloseTo(0.0728);
         expect(warrior.statusEffects).toEqual([]);
+    });
+
+    it("preserves warrior, cleric, and archer combat identity even with matched attributes", () => {
+        const sharedAttributes = { vit: 8, str: 6, dex: 9, int: 6, wis: 6 };
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        const cleric = createHero("hero_2", "Ayla", "Cleric");
+        const archer = createHero("hero_3", "Vera", "Archer");
+
+        warrior.attributes = { ...sharedAttributes };
+        cleric.attributes = { ...sharedAttributes };
+        archer.attributes = { ...sharedAttributes };
+
+        recalculateEntity(warrior);
+        recalculateEntity(cleric);
+        recalculateEntity(archer);
+
+        expect(warrior.armor.gt(archer.armor)).toBe(true);
+        expect(archer.accuracyRating).toBeGreaterThan(warrior.accuracyRating);
+        expect(archer.critChance).toBeGreaterThan(warrior.critChance);
+        expect(archer.physicalDamage.gt(warrior.physicalDamage)).toBe(true);
+        expect(cleric.magicDamage.gt(archer.magicDamage)).toBe(true);
+        expect(cleric.tenacity).toBeGreaterThan(warrior.tenacity);
+        expect(cleric.resistances.shadow).toBeGreaterThan(archer.resistances.shadow);
     });
 
     it("creates tougher boss enemies on every tenth floor with the softened boss multipliers", () => {

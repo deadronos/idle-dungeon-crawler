@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import { describe, expect, it } from "vitest";
 
-import { createEnemy, createHero } from "../entity";
+import { createEnemy, createHero, recalculateEntity } from "../entity";
 
 import {
     applyElementalMitigation,
@@ -11,6 +11,7 @@ import {
     createSequenceRandomSource,
     getEffectiveCritMultiplier,
     getEncounterSize,
+    getActionProgressPerTick,
     getPhysicalHitChance,
     getPenetrationReduction,
     getSpellHitChance,
@@ -516,6 +517,28 @@ describe("simulation engine", () => {
         expect(getEffectiveCritMultiplier(2, 0)).toBeCloseTo(2);
         expect(getEffectiveCritMultiplier(2, 10_000)).toBeCloseTo(1.4);
         expect(getEffectiveCritMultiplier(1.5, 10_000)).toBeGreaterThan(1);
+    });
+
+    it("uses template-backed ratings for speed, hit pressure, and status pressure even with matched attributes", () => {
+        const sharedAttributes = { vit: 8, str: 6, dex: 9, int: 6, wis: 6 };
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        const cleric = createHero("hero_2", "Ayla", "Cleric");
+        const archer = createHero("hero_3", "Vera", "Archer");
+        const enemy = createEnemy(8, "enemy_1");
+
+        warrior.attributes = { ...sharedAttributes };
+        cleric.attributes = { ...sharedAttributes };
+        archer.attributes = { ...sharedAttributes };
+
+        recalculateEntity(warrior);
+        recalculateEntity(cleric);
+        recalculateEntity(archer);
+
+        expect(getActionProgressPerTick(archer)).toBeGreaterThan(getActionProgressPerTick(warrior));
+        expect(getActionProgressPerTick(warrior)).toBeGreaterThan(getActionProgressPerTick(cleric));
+        expect(getPhysicalHitChance(archer, enemy)).toBeGreaterThan(getPhysicalHitChance(warrior, enemy));
+        expect(getSpellHitChance(cleric, enemy)).toBeGreaterThan(getSpellHitChance(warrior, enemy));
+        expect(getStatusApplicationChance(cleric, enemy, 0.45)).toBeGreaterThan(getStatusApplicationChance(warrior, enemy, 0.45));
     });
 
     it("keeps spell hit only modestly above physical hit for the same matchup", () => {

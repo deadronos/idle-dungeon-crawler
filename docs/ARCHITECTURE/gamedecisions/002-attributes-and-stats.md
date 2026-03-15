@@ -52,7 +52,7 @@ These are the places where direct primary-stat influence remains desirable becau
 
 ### What Moves to Layered Combat Ratings
 
-The following outputs are accepted as layered-rating-facing in the long-term model, even where the current runtime still derives them mostly from attributes:
+The following outputs are accepted as layered-rating-facing in the long-term model and are now routed through those ratings in the current runtime:
 
 * raw damage packages
 * hit reliability
@@ -66,25 +66,37 @@ The following outputs are accepted as layered-rating-facing in the long-term mod
 
 The MVP layered ratings for that transition are defined in [007 - Layered Combat Model](007-layered-combat-model.md): `power`, `spellPower`, `precision`, `haste`, `guard`, `resolve`, `potency`, and `crit`.
 
-## Transitional Runtime Baseline
+## Current Runtime Baseline
 
-The live game still calculates most combat-facing outputs directly from the five primary attributes. Those formulas remain the canonical current runtime until implementation issue `#70` moves the code to layered stat sourcing.
+The live game now derives most combat-facing outputs through a small layered-rating pass instead of treating the five primary attributes as the direct owner of every final combat number.
+
+At runtime, each entity first computes the accepted MVP secondary ratings from attributes plus a lightweight template or archetype bias package:
+
+* **`power`:** `(sourceAttribute * sourceMultiplier * 0.8) + (STR * 0.25) + (VIT * 0.15) + powerBias`
+* **`spellPower`:** `(INT * 1.25) + (WIS * 0.55) + spellPowerBias`
+* **`precision`:** `(DEX * 0.6) + (INT * 0.35) + (WIS * 0.15) + precisionBias`
+* **`haste`:** `(DEX * 0.45) + (VIT * 0.15) + (WIS * 0.1) + hasteBias`
+* **`guard`:** `(VIT * 0.8) + (STR * 0.55) + (DEX * 0.1) + guardBias`
+* **`resolve`:** `(WIS * 0.85) + (VIT * 0.3) + (INT * 0.35) + resolveBias`
+* **`potency`:** `(INT * 0.45) + (WIS * 0.35) + (DEX * 0.15) + potencyBias`
+* **`crit`:** `(DEX * 0.35) + (WIS * 0.15) + (INT * 0.1) + critBias`
+
+For heroes, the bias package comes from the class template. For enemies, it comes from the current archetype package.
 
 ### Current Derived Stat Formulas
 
-When a unit is created or levels up, the current runtime derives the following baseline stats:
+When a unit is created or levels up, the current runtime derives the following final combat stats from those ratings:
 
 * **Max Health (HP):** `50 + (VIT * 10)`
-* **Armor:** `(STR * 1) + (VIT * 0.5)`
-* **Physical Damage (melee):** `10 + (STR * 1.5)`
-* **Physical Damage (archer basics):** `10 + (DEX * 1.5)`
-* **Magic Damage:** `5 + (INT * 2.0)`
-* **Accuracy Rating:** `50 + (DEX * 1.5) + (INT * 1.0)`
-* **Evasion Rating:** `35 + (DEX * 1.0) + (WIS * 1.0)`
-* **Parry Rating:** `(STR * 1.75) + (DEX * 0.25)`
-* **Armor Penetration:** `(STR * 1.0) + (DEX * 0.5)`
-* **Elemental Penetration:** `(INT * 1.0) + (WIS * 0.5)`
-* **Tenacity:** `(VIT * 0.75) + (WIS * 1.0)`
+* **Armor:** `(STR * 0.45) + (VIT * 0.25) + (guard * 0.4)`
+* **Physical Damage:** `10 + (power * 0.8) + (crit * 0.15)`
+* **Magic Damage:** `5 + (spellPower * 0.75) + (potency * 0.15)`
+* **Accuracy Rating:** `50 + (precision * 1.2) + (crit * 0.1)`
+* **Evasion Rating:** `35 + (haste * 0.8) + (resolve * 0.25)`
+* **Parry Rating:** `(guard * 0.8) + (precision * 0.2)`
+* **Armor Penetration:** `(power * 0.5) + (guard * 0.12)`
+* **Elemental Penetration:** `(spellPower * 0.22) + (potency * 0.4) + (precision * 0.08)`
+* **Tenacity:** `(resolve * 0.65) + (guard * 0.2)`
 
 ### Current Class Resource Baselines
 
@@ -100,8 +112,9 @@ These are still acceptable as attribute-facing baselines. The layered model does
 
 To keep the live game stable under idle scaling, the runtime currently applies the following caps and bounded formulas:
 
-* **Critical Hit Chance:** base `5%`, gains `+0.5%` per DEX, hard capped at `100%`
-* **Elemental Resistances:** `+1%` per WIS, hard capped at `75%`
+* **Critical Hit Chance:** base `5%`, gains `+0.55%` per `crit`, hard capped at `100%`
+* **Critical Hit Damage:** class crit multiplier plus `min(0.2, crit * 0.01)`
+* **Elemental Resistances:** `2% + (resolve * 0.8%)`, hard capped at `75%`
 * **Physical / Ranged Hit Chance:** `clamp(72%, 97%, 82% + (attacker.Accuracy - defender.Evasion) * 0.2%)`
 * **Spell Hit Chance:** `clamp(74%, 96%, 82% + (attacker.Accuracy - defender.Evasion) * 0.16% + (attacker.INT - defender.WIS) * 0.08%)`
 * **Parry Chance:** melee-physical only, `clamp(0%, 25%, 4% + (defender.Parry - attacker.Accuracy * 0.3) * 0.25%)`
@@ -113,7 +126,7 @@ These numbers intentionally match the current runtime, including the spell-hit c
 
 ## Combat Role Implications
 
-While the runtime still routes many results directly through attributes, the accepted design intent is now:
+The current runtime now routes those results through layered ratings while keeping the broad class intent intact:
 
 * **Warrior:** keeps the strongest baseline `guard` tendency through VIT/STR-heavy starts and growth
 * **Cleric:** keeps the strongest baseline `spellPower` and `resolve` tendency through INT/WIS-heavy starts and growth
@@ -126,4 +139,4 @@ This keeps broad class readability while opening space for later template, talen
 
 * **Easier:** The five primary attributes stay readable for players and designers because they remain broad identity stats instead of expanding into a giant new primary-stat roster.
 * **Easier:** Follow-up issues can move overloaded outputs into layered ratings without first redefining how heroes are created or how enemies are scaled.
-* **Difficult:** During the transition period, the docs must distinguish between the accepted long-term ownership model and the current live runtime formulas so we do not accidentally treat temporary math as permanent design.
+* **Difficult:** Docs and code now need to stay aligned at the coefficient level because class-template biases and rating formulas both materially shape combat identity.

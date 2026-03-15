@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 
 import { getHeroClassTemplate } from "./classTemplates";
+import type { HeroCombatRating } from "./classTemplates";
 export { HERO_CLASSES } from "./classTemplates";
 
 // Basic Types
@@ -104,6 +105,8 @@ export interface CreateEnemyOptions {
     boss?: boolean;
     element?: EnemyElement;
 }
+
+export type CombatRatings = Record<HeroCombatRating, number>;
 
 export const BASE_META_UPGRADES: MetaUpgrades = {
     training: 0,
@@ -269,34 +272,65 @@ export const inferEnemyArchetype = (entity: Pick<Entity, "isEnemy" | "enemyArche
     return "Bruiser";
 };
 
+const getEnemyCombatRatingBiases = (entity: Pick<Entity, "isEnemy" | "enemyArchetype" | "name">): Partial<CombatRatings> => {
+    switch (inferEnemyArchetype(entity)) {
+        case "Bruiser":
+            return { power: 3, guard: 5 };
+        case "Skirmisher":
+            return { precision: 5, haste: 5, crit: 4 };
+        case "Caster":
+            return { spellPower: 5, resolve: 2, potency: 4 };
+        case "Support":
+            return { spellPower: 3, resolve: 5, potency: 3 };
+        case "Boss":
+            return { power: 4, spellPower: 4, precision: 3, haste: 3, guard: 4, resolve: 4, potency: 4, crit: 3 };
+        default:
+            return {};
+    }
+};
+
 // Global Stat Multipliers
 export const STAT_MULTS = {
     HP_PER_VIT: 10,
-    ARMOR_PER_STR: 1,
-    ARMOR_PER_VIT: 0.5,
-    PHYS_DMG_PER_STR: 1.5, // For melee
-    RANGED_DMG_PER_DEX: 1.5, // For archers
-    MAGIC_DMG_PER_INT: 2,
+    ARMOR_PER_STR: 0.45,
+    ARMOR_PER_VIT: 0.25,
+    ARMOR_PER_GUARD: 0.4,
+    PHYS_DMG_PER_POWER: 0.8,
+    PHYS_DMG_PER_CRIT: 0.15,
+    MAGIC_DMG_PER_SPELL_POWER: 0.75,
+    MAGIC_DMG_PER_POTENCY: 0.15,
     RESOURCE_PER_INT: 5,
-    CRIT_CHANCE_PER_DEX: 0.005, // 0.5% per Dex
-    RESIST_PER_WIS: 0.01, // 1% per Wis
-    ACCURACY_PER_DEX: 1.5,
-    ACCURACY_PER_INT: 1,
-    EVASION_PER_DEX: 1,
-    EVASION_PER_WIS: 1,
-    PARRY_PER_STR: 1.75,
-    PARRY_PER_DEX: 0.25,
-    ARMOR_PEN_PER_STR: 1,
-    ARMOR_PEN_PER_DEX: 0.5,
-    ELEMENTAL_PEN_PER_INT: 1,
-    ELEMENTAL_PEN_PER_WIS: 0.5,
-    TENACITY_PER_VIT: 0.75,
-    TENACITY_PER_WIS: 1,
+    CRIT_CHANCE_PER_RATING: 0.0055,
+    RESIST_BASE: 0.02,
+    RESIST_PER_RESOLVE: 0.008,
+    ACCURACY_PER_PRECISION: 1.2,
+    ACCURACY_PER_CRIT: 0.1,
+    EVASION_PER_HASTE: 0.8,
+    EVASION_PER_RESOLVE: 0.25,
+    PARRY_PER_GUARD: 0.8,
+    PARRY_PER_PRECISION: 0.2,
+    ARMOR_PEN_PER_POWER: 0.5,
+    ARMOR_PEN_PER_GUARD: 0.12,
+    ELEMENTAL_PEN_PER_SPELL_POWER: 0.22,
+    ELEMENTAL_PEN_PER_POTENCY: 0.4,
+    ELEMENTAL_PEN_PER_PRECISION: 0.08,
+    TENACITY_PER_RESOLVE: 0.65,
+    TENACITY_PER_GUARD: 0.2,
 };
 
 export const isHeroClass = (entityClass: EntityClass): entityClass is HeroClass => entityClass !== "Monster";
 
 const cloneAttributes = (attributes: Attributes): Attributes => ({ ...attributes });
+const createEmptyCombatRatings = (): CombatRatings => ({
+    power: 0,
+    spellPower: 0,
+    precision: 0,
+    haste: 0,
+    guard: 0,
+    resolve: 0,
+    potency: 0,
+    crit: 0,
+});
 
 // Start Stats Helpers
 export const getBaseAttributes = (entityClass: EntityClass): Attributes => {
@@ -312,9 +346,41 @@ export const getExpRequirement = (level: number): Decimal => {
     return new Decimal(100).times(Decimal.pow(1.5, level - 1)).floor();
 };
 
+export const getCombatRatings = (entity: Pick<Entity, "class" | "isEnemy" | "attributes" | "enemyArchetype" | "name">): CombatRatings => {
+    const attrs = entity.attributes;
+    const template = isHeroClass(entity.class) ? getHeroClassTemplate(entity.class) : null;
+    const physicalSourceAttribute = template?.combatProfile.physicalDamageSourceAttribute ?? "str";
+    const physicalSourceMultiplier = template?.combatProfile.physicalDamageSourceMultiplier ?? 1.5;
+
+    const ratings: CombatRatings = {
+        power: (attrs[physicalSourceAttribute] * physicalSourceMultiplier * 0.8) + (attrs.str * 0.25) + (attrs.vit * 0.15),
+        spellPower: (attrs.int * 1.25) + (attrs.wis * 0.55),
+        precision: (attrs.dex * 0.6) + (attrs.int * 0.35) + (attrs.wis * 0.15),
+        haste: (attrs.dex * 0.45) + (attrs.vit * 0.15) + (attrs.wis * 0.1),
+        guard: (attrs.vit * 0.8) + (attrs.str * 0.55) + (attrs.dex * 0.1),
+        resolve: (attrs.wis * 0.85) + (attrs.vit * 0.3) + (attrs.int * 0.35),
+        potency: (attrs.int * 0.45) + (attrs.wis * 0.35) + (attrs.dex * 0.15),
+        crit: (attrs.dex * 0.35) + (attrs.wis * 0.15) + (attrs.int * 0.1),
+    };
+
+    const biasSources: Array<Partial<CombatRatings>> = [
+        template?.combatProfile.ratingBiases ?? createEmptyCombatRatings(),
+        entity.isEnemy ? getEnemyCombatRatingBiases(entity) : createEmptyCombatRatings(),
+    ];
+
+    biasSources.forEach((biases) => {
+        (Object.keys(ratings) as HeroCombatRating[]).forEach((ratingKey) => {
+            ratings[ratingKey] += biases[ratingKey] ?? 0;
+        });
+    });
+
+    return ratings;
+};
+
 export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: PrestigeUpgrades): Entity => {
     const attrs = entity.attributes;
     const template = isHeroClass(entity.class) ? getHeroClassTemplate(entity.class) : null;
+    const ratings = getCombatRatings(entity);
 
     // Base logic for HP
     // Vitality Prestige adds +1 HP per VIT point per level
@@ -322,14 +388,15 @@ export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: Prestig
     entity.maxHp = new Decimal(50).plus(attrs.vit * hpPerVit);
     if (entity.currentHp.gt(entity.maxHp)) entity.currentHp = entity.maxHp;
 
-    // Armor
-    entity.armor = new Decimal(attrs.str * STAT_MULTS.ARMOR_PER_STR).plus(attrs.vit * STAT_MULTS.ARMOR_PER_VIT);
-
-    // Damage
-    const physicalDamageSourceAttribute = template?.combatProfile.physicalDamageSourceAttribute ?? "str";
-    const physicalDamageSourceMultiplier = template?.combatProfile.physicalDamageSourceMultiplier ?? STAT_MULTS.PHYS_DMG_PER_STR;
-    entity.physicalDamage = new Decimal(10).plus(attrs[physicalDamageSourceAttribute] * physicalDamageSourceMultiplier);
-    entity.magicDamage = new Decimal(5).plus(attrs.int * STAT_MULTS.MAGIC_DMG_PER_INT);
+    entity.armor = new Decimal(attrs.str * STAT_MULTS.ARMOR_PER_STR)
+        .plus(attrs.vit * STAT_MULTS.ARMOR_PER_VIT)
+        .plus(ratings.guard * STAT_MULTS.ARMOR_PER_GUARD);
+    entity.physicalDamage = new Decimal(10)
+        .plus(ratings.power * STAT_MULTS.PHYS_DMG_PER_POWER)
+        .plus(ratings.crit * STAT_MULTS.PHYS_DMG_PER_CRIT);
+    entity.magicDamage = new Decimal(5)
+        .plus(ratings.spellPower * STAT_MULTS.MAGIC_DMG_PER_SPELL_POWER)
+        .plus(ratings.potency * STAT_MULTS.MAGIC_DMG_PER_POTENCY);
 
     // Resource (Mana/Cunning/Rage)
     const maxResourceBase = template?.resourceModel.maxBase ?? 100;
@@ -337,20 +404,23 @@ export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: Prestig
     entity.maxResource = new Decimal(maxResourceBase).plus(attrs.int * maxResourcePerInt);
     if (entity.currentResource.gt(entity.maxResource)) entity.currentResource = entity.maxResource;
 
-    // Crit
-    entity.critChance = Math.min(0.05 + (attrs.dex * STAT_MULTS.CRIT_CHANCE_PER_DEX), 1.0); // Cap at 100%
-    entity.critDamage = template?.combatProfile.critMultiplier ?? 1.5;
+    entity.critChance = Math.min(0.05 + (ratings.crit * STAT_MULTS.CRIT_CHANCE_PER_RATING), 1.0);
+    entity.critDamage = (template?.combatProfile.critMultiplier ?? 1.5) + Math.min(0.2, ratings.crit * 0.01);
 
-    // Combat ratings
-    entity.accuracyRating = 50 + (attrs.dex * STAT_MULTS.ACCURACY_PER_DEX) + (attrs.int * STAT_MULTS.ACCURACY_PER_INT);
-    entity.evasionRating = 35 + (attrs.dex * STAT_MULTS.EVASION_PER_DEX) + (attrs.wis * STAT_MULTS.EVASION_PER_WIS);
-    entity.parryRating = (attrs.str * STAT_MULTS.PARRY_PER_STR) + (attrs.dex * STAT_MULTS.PARRY_PER_DEX);
-    entity.armorPenetration = (attrs.str * STAT_MULTS.ARMOR_PEN_PER_STR) + (attrs.dex * STAT_MULTS.ARMOR_PEN_PER_DEX);
-    entity.elementalPenetration = (attrs.int * STAT_MULTS.ELEMENTAL_PEN_PER_INT) + (attrs.wis * STAT_MULTS.ELEMENTAL_PEN_PER_WIS);
-    entity.tenacity = (attrs.vit * STAT_MULTS.TENACITY_PER_VIT) + (attrs.wis * STAT_MULTS.TENACITY_PER_WIS);
+    entity.accuracyRating = 50
+        + (ratings.precision * STAT_MULTS.ACCURACY_PER_PRECISION)
+        + (ratings.crit * STAT_MULTS.ACCURACY_PER_CRIT);
+    entity.evasionRating = 35
+        + (ratings.haste * STAT_MULTS.EVASION_PER_HASTE)
+        + (ratings.resolve * STAT_MULTS.EVASION_PER_RESOLVE);
+    entity.parryRating = (ratings.guard * STAT_MULTS.PARRY_PER_GUARD) + (ratings.precision * STAT_MULTS.PARRY_PER_PRECISION);
+    entity.armorPenetration = (ratings.power * STAT_MULTS.ARMOR_PEN_PER_POWER) + (ratings.guard * STAT_MULTS.ARMOR_PEN_PER_GUARD);
+    entity.elementalPenetration = (ratings.spellPower * STAT_MULTS.ELEMENTAL_PEN_PER_SPELL_POWER)
+        + (ratings.potency * STAT_MULTS.ELEMENTAL_PEN_PER_POTENCY)
+        + (ratings.precision * STAT_MULTS.ELEMENTAL_PEN_PER_PRECISION);
+    entity.tenacity = (ratings.resolve * STAT_MULTS.TENACITY_PER_RESOLVE) + (ratings.guard * STAT_MULTS.TENACITY_PER_GUARD);
 
-    // Resists
-    const resistVal = Math.min(attrs.wis * STAT_MULTS.RESIST_PER_WIS, 0.75); // Cap at 75%
+    const resistVal = Math.min(STAT_MULTS.RESIST_BASE + (ratings.resolve * STAT_MULTS.RESIST_PER_RESOLVE), 0.75);
     entity.resistances = {
         fire: resistVal, water: resistVal, earth: resistVal,
         air: resistVal, light: resistVal, shadow: resistVal
