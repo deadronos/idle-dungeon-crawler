@@ -23,6 +23,7 @@ import {
     REGEN_DURATION_TICKS,
     simulateTick,
 } from "./simulation";
+import { getInsightXpMultiplier } from "../progressionMath";
 
 const advanceUntilLogs = (state = createInitialGameState(), randomSource = createSequenceRandomSource(0), logCount = 1) => {
     let nextState = state;
@@ -152,6 +153,39 @@ describe("simulation engine", () => {
             wis: 4,
         });
         expect(result.state.combatLog.some((entry) => /reached level 2/i.test(entry))).toBe(true);
+    });
+
+    it("applies the stronger Insight bonus to combat experience rewards", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.actionProgress = 99;
+        warrior.critChance = 0;
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.currentHp = new Decimal(1);
+
+        const result = simulateTick(
+            createInitialGameState({
+                floor: 1,
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+                prestigeUpgrades: {
+                    costReducer: 0,
+                    hpMultiplier: 0,
+                    gameSpeed: 0,
+                    xpMultiplier: 1,
+                },
+            }),
+            createSequenceRandomSource(0, 0, 0.9),
+        );
+
+        const expectedReward = new Decimal(1)
+            .times(10)
+            .plus(enemy.attributes.vit)
+            .times(getInsightXpMultiplier(1))
+            .floor();
+
+        expect(result.state.party[0].exp.eq(expectedReward)).toBe(true);
     });
 
     it("applies light resistance to cleric smite damage", () => {

@@ -26,7 +26,9 @@ When an enemy is defeated, Experience Points (EXP) and Gold are granted to all l
 
 **Level Requirement Formula:**
 The EXP required to reach the next level grows exponentially:
-`Required EXP = floor( 100 * (1.5 ^ (Current Level - 1)) )`
+`Required EXP = floor( 100 * (1.26 ^ (Current Level - 1)) )`
+
+Issue `#89` now treats this as the **first-region XP curve** rather than as a forever-global expectation. The steeper `1.5` curve proved too hostile for the current `1-50` target band even after build depth and partial between-floor recovery improvements. Flattening the curve to `1.26` keeps late first-region levels reachable while still leaving Floors `30+` as endgame that may involve some farming.
 
 When an EXP threshold is reached, the hero levels up, deducting the required amount, and receiving fixed stat allocations automatically.
 
@@ -61,6 +63,29 @@ The current shipped baseline is intentionally compact:
 * equipment now comes from a persistent stash of dropped gear with milestone-gated tiers, simple ranks, and auto-sold overflow
 
 This keeps the first build-differentiation pass readable and easy to tune while still making the layered model playable deeper into the midgame.
+
+### Current Region Scope
+
+The current live balance target should be read as a **first-region** progression band rather than as a forever-global floor ladder.
+
+* the current region target is Floors `1-50`
+* Floors `30+` are treated as **endgame** for that region
+* repeating safer floors to farm XP and equipment before breaching deeper late-region checkpoints is acceptable
+
+This keeps first-region tuning honest without forcing the current hero-level curve, enemy formulas, and Hero Souls layer to satisfy every future tower or region forever.
+
+### Future Regions and Higher-Order Progression
+
+Future content can introduce new regions or towers with their own local floor ranges (for example, a new region that again spans Floors `1-50`) while using the region itself, rather than an endlessly increasing floor number, as the primary macro-difficulty step.
+
+Those future regions may safely introduce:
+
+* materially stronger enemy stat bands
+* new enemy rosters or archetypes
+* new bosses and milestone structures
+* new progression layers that scale heroes beyond the current first-region endgame
+
+The currently proposed long-horizon answer for that higher-order scaling is a future **Ascension** layer above Hero Souls. See [013 - Regional Progression and Ascension Direction](013-regional-progression-and-ascension-direction.md).
 
 ### Persistent Gold Upgrades
 
@@ -129,6 +154,7 @@ Issue `#71` implements the current persistence rule:
 * older payloads are migrated forward step-by-step before runtime hydration
 * additive progression layers default through named migration steps instead of ad hoc tolerant parsing
 * placeholder progression state for talents and equipment is now part of the canonical save shape, even before those systems have full gameplay behavior
+* progression retunes that change level requirements must also migrate saved hero level progress onto the live curve, so older saves do not keep stale `expToNext` thresholds after a rebalance
 
 ## Consequences
 

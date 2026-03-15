@@ -1,5 +1,8 @@
+import Decimal from "decimal.js";
+
 import { createInitialGameState } from "../engine/simulation";
 import { createLegacyEquipmentProgression, getInventoryCapacityForLevel } from "../equipmentProgression";
+import { getExpRequirement } from "../entity";
 import {
     createEmptyEquipmentProgressionState,
     createEmptyTalentProgressionState,
@@ -8,7 +11,7 @@ import type { GameState } from "./types";
 
 export const GAME_STATE_STORAGE_KEY = "idle-dungeon-crawler.game-state";
 export const GAME_STATE_AUTOSAVE_MS = 10_000;
-export const GAME_STATE_EXPORT_VERSION = 4;
+export const GAME_STATE_EXPORT_VERSION = 5;
 const LEGACY_UNVERSIONED_SAVE_VERSION = 0;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -167,6 +170,52 @@ const sanitizeMigratedEntity = (value: unknown): unknown => {
     };
 };
 
+const getDecimalValue = (value: unknown) => {
+    if (value instanceof Decimal) {
+        return value;
+    }
+
+    if (typeof value !== "string" && typeof value !== "number") {
+        return null;
+    }
+
+    try {
+        return new Decimal(value);
+    } catch {
+        return null;
+    }
+};
+
+const normalizeHeroProgressionToCurrentCurve = (value: unknown): unknown => {
+    if (!isRecord(value) || value.isEnemy === true || typeof value.level !== "number" || !Number.isFinite(value.level) || value.level < 1) {
+        return value;
+    }
+
+    const normalizedExpToNext = getExpRequirement(value.level);
+    const savedExp = getDecimalValue(value.exp);
+    const savedExpToNext = getDecimalValue(value.expToNext);
+
+    if (!savedExp || !savedExpToNext || savedExpToNext.lte(0)) {
+        return {
+            ...value,
+            expToNext: normalizedExpToNext.toString(),
+        };
+    }
+
+    const progressRatio = Decimal.max(0, Decimal.min(1, savedExp.div(savedExpToNext)));
+    let normalizedExp = normalizedExpToNext.times(progressRatio).floor();
+
+    if (normalizedExp.gte(normalizedExpToNext)) {
+        normalizedExp = Decimal.max(0, normalizedExpToNext.minus(1));
+    }
+
+    return {
+        ...value,
+        exp: normalizedExp.toString(),
+        expToNext: normalizedExpToNext.toString(),
+    };
+};
+
 const sanitizeEntityArray = (value: unknown) => Array.isArray(value) ? value.map(sanitizeMigratedEntity) : value;
 
 const SAVE_MIGRATIONS: Record<number, SaveMigration> = {
@@ -186,6 +235,10 @@ const SAVE_MIGRATIONS: Record<number, SaveMigration> = {
     3: (state) => ({
         ...state,
         talentProgression: sanitizeTalentProgression(state.talentProgression),
+    }),
+    4: (state) => ({
+        ...state,
+        party: Array.isArray(state.party) ? state.party.map(normalizeHeroProgressionToCurrentCurve) : state.party,
     }),
 };
 
@@ -325,7 +378,10 @@ const toPartialGameState = (value: unknown): Partial<GameState> => {
 };
 
 export const getGameStateSnapshot = (state: GameState): GameState => ({
-    ...createInitialGameState(state),
+    ...createInitialGameState({
+        ...state,
+        party: state.party.map((hero) => normalizeHeroProgressionToCurrentCurve(hero) as GameState["party"][number]),
+    }),
     combatEvents: [],
 });
 

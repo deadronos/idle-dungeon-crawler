@@ -10,6 +10,7 @@ import {
     createRecruitHero,
     createStarterParty,
     getEnemyArchetypeLabel,
+    getExpRequirement,
     recalculateEntity,
 } from "./entity";
 import { createLegacyEquipmentProgression } from "./equipmentProgression";
@@ -34,6 +35,14 @@ describe("entity model", () => {
         expect(firstRecruit.class).toBe("Warrior");
         expect(secondRecruit.class).toBe("Warrior");
         expect(firstRecruit.name).not.toBe(secondRecruit.name);
+    });
+
+    it("uses the flatter first-region hero XP curve", () => {
+        expect(getExpRequirement(1).toNumber()).toBe(100);
+        expect(getExpRequirement(2).toNumber()).toBe(126);
+        expect(getExpRequirement(5).toNumber()).toBe(252);
+        expect(getExpRequirement(10).toNumber()).toBe(800);
+        expect(getExpRequirement(20).toNumber()).toBe(8073);
     });
 
     it("applies meta upgrades to hero damage and armor", () => {
