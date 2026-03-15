@@ -73,8 +73,13 @@ describe("createGameStore", () => {
     });
 
     it("restarts the current floor when autoadvance is disabled", () => {
+        const party = createStarterParty("Ayla", "Warrior");
+        const warrior = party[0];
+        const startingHp = warrior.currentHp.div(2);
+        warrior.currentHp = startingHp;
+
         const store = createGameStore({
-            party: createStarterParty("Ayla", "Warrior"),
+            party,
             enemies: [],
             floor: 4,
             autoFight: true,
@@ -90,7 +95,36 @@ describe("createGameStore", () => {
         expect(state.floor).toBe(4);
         expect(state.enemies).toHaveLength(1);
         expect(state.highestFloorCleared).toBe(4);
-        expect(state.combatLog[0]).toMatch(/repeating floor 4/i);
+        expect(state.party[0]?.currentHp.gt(startingHp)).toBe(true);
+        expect(state.party[0]?.currentHp.lt(state.party[0].maxHp)).toBe(true);
+        expect(state.combatLog.some((entry) => /repeating floor 4/i.test(entry))).toBe(true);
+        expect(state.combatLog.some((entry) => /recovers 25% hp/i.test(entry))).toBe(true);
+    });
+
+    it("partially recovers HP after a victory when autoadvance moves to the next floor", () => {
+        const party = createStarterParty("Ayla", "Warrior");
+        const warrior = party[0];
+        const startingHp = warrior.currentHp.div(2);
+        warrior.currentHp = startingHp;
+
+        const store = createGameStore({
+            party,
+            enemies: [],
+            floor: 4,
+            autoFight: true,
+            autoAdvance: true,
+            highestFloorCleared: 2,
+            combatLog: [],
+        });
+
+        store.getState().stepSimulation();
+
+        const state = store.getState();
+
+        expect(state.floor).toBe(5);
+        expect(state.party[0]?.currentHp.gt(startingHp)).toBe(true);
+        expect(state.party[0]?.currentHp.lt(state.party[0].maxHp)).toBe(true);
+        expect(state.combatLog.some((entry) => /moved to floor 5/i.test(entry))).toBe(true);
     });
 
     it("unlocks party slots and recruits duplicate classes after the retuned milestone clears", () => {
@@ -150,6 +184,7 @@ describe("createGameStore", () => {
         party.push(createRecruitHero("Cleric", party));
         party.push(createRecruitHero("Archer", party));
         party.push(createRecruitHero("Warrior", party));
+        party[0].currentHp = party[0].maxHp.div(2);
         party[0].statusEffects = [
             {
                 key: "slow",
@@ -175,6 +210,7 @@ describe("createGameStore", () => {
 
         expect(state.floor).toBe(20);
         expect(state.party).toHaveLength(4);
+        expect(state.party[0]?.currentHp.eq(party[0].maxHp.div(2))).toBe(true);
         expect(state.party[0]?.statusEffects).toEqual([]);
         expect(state.enemies).toHaveLength(1);
         expect(state.enemies[0]?.name.startsWith("Boss:")).toBe(true);

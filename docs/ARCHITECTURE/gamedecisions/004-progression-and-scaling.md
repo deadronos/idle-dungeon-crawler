@@ -108,6 +108,12 @@ Archetypes bias both stats and behavior:
 **Boss Encounters:**
 Every 10th floor is flagged as a Boss floor. Boss floors spawn exactly **one** enemy regardless of player party size, and that generated boss uses a dedicated `Boss` archetype layered on top of floor scaling. Bosses still receive the softened durability / strength multipliers (`VIT * 2`, `STR * 1.3`), but they also gain broader DEX / INT / WIS reinforcement and a deterministic elemental theme for their phase-two spell pressure. This keeps bosses meaningfully tougher than adjacent floors without recreating the old solo/duo progression wall at Floor `10` or pushing the same pacing problem forward to the later slot milestones.
 
+### Between-Floor Recovery
+
+After a victorious encounter, each **surviving** hero now recovers **25% of max HP** before the next encounter begins. This applies both when advancing and when repeating the current floor with `Autoadvance` disabled.
+
+This keeps attrition relevant while avoiding a hard Cleric-only sustain requirement. It also creates a deliberate low-risk strategy: players can farm or repeat a safer floor to stabilize the party before attempting a harder checkpoint.
+
 ### Party Wipe & Hard Reset
 
 If all party members reach 0 HP, a wipe is triggered. The party is fully healed, but they are forcibly returned to Floor 1, and the collected Gold is reset to `0`. Levels, purchased persistent upgrades, the highest cleared floor, unlocked party slots, and recruited heroes are retained, forming the core "Idle Loop" where the low floors become exponentially faster to clear due to accumulated power.

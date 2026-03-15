@@ -12,12 +12,14 @@ import {
     getEffectiveCritMultiplier,
     getEncounterSize,
     getActionProgressPerTick,
+    getPostVictoryFloorTransitionState,
     getPhysicalHitChance,
     getPenetrationReduction,
     getSpellHitChance,
     getStatusApplicationChance,
     HEX_DURATION_TICKS,
     isBossFloor,
+    POST_VICTORY_HP_RECOVERY_RATIO,
     REGEN_DURATION_TICKS,
     simulateTick,
 } from "./simulation";
@@ -80,6 +82,45 @@ describe("simulation engine", () => {
         expect(earlyEncounter.map((enemy) => enemy.enemyArchetype)).toEqual(["Skirmisher"]);
         expect(midEncounter.map((enemy) => enemy.enemyArchetype)).toEqual(["Skirmisher", "Caster"]);
         expect(lateEncounter.map((enemy) => enemy.enemyArchetype)).toEqual(["Caster", "Bruiser", "Support"]);
+    });
+
+    it("partially restores surviving heroes after a post-victory floor transition", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.currentHp = warrior.maxHp.div(2);
+        warrior.statusEffects = [
+            {
+                key: "slow",
+                polarity: "debuff",
+                sourceId: "enemy_1",
+                remainingTicks: 5,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.2,
+            },
+        ];
+
+        const archer = createHero("hero_2", "Vera", "Archer");
+        archer.currentHp = new Decimal(0);
+
+        const state = createInitialGameState({
+            floor: 4,
+            party: [warrior, archer],
+            enemies: [],
+            combatLog: [],
+        });
+
+        const nextState = getPostVictoryFloorTransitionState(state, 5);
+        const healedWarrior = nextState.party?.[0];
+        const fallenArcher = nextState.party?.[1];
+        const expectedWarriorHp = Decimal.min(
+            warrior.maxHp,
+            warrior.currentHp.plus(warrior.maxHp.times(POST_VICTORY_HP_RECOVERY_RATIO)),
+        );
+
+        expect(nextState.floor).toBe(5);
+        expect(healedWarrior?.currentHp.eq(expectedWarriorHp)).toBe(true);
+        expect(healedWarrior?.statusEffects).toEqual([]);
+        expect(fallenArcher?.currentHp.eq(0)).toBe(true);
     });
 
     it("applies class-template growth packages when heroes level up from combat rewards", () => {

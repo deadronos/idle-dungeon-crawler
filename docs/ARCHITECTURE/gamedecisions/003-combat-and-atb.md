@@ -26,6 +26,8 @@ If `Autofight` is disabled, the simulation pauses in place: ATB does not fill, a
 
 `Autoadvance` is a separate control. When enabled, the party moves to the next floor after winning an encounter. When disabled, the party immediately starts a fresh encounter on the same floor, allowing the player to continuously farm a target floor without climbing past it.
 
+After a victory, surviving heroes now recover **25% of max HP** before the next encounter begins, whether the player advances or repeats the current floor. This softens long-run attrition without fully resetting encounter pressure. It also makes disabling `Autoadvance` a valid recovery strategy: the player can intentionally repeat a safer floor to regain HP more safely than pushing upward immediately.
+
 * **Base ATB Rate:** `2.0` per tick.
 * **Speed Bonus:** layered `haste` provides a speed bonus calculation: `+ (haste * 0.08)` per tick.
 * **Status Timing:** reusable timed effects decrement once per game tick, while periodic effects such as Burn resolve once per second (`20` ticks).
