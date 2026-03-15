@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { HERO_CLASSES, getHeroClassTemplate } from '../game/classTemplates';
 import type { HeroClass } from '../game/entity';
 import { createStarterParty } from '../game/entity';
 import { useGameStore } from '../game/store/gameStore';
@@ -36,42 +37,25 @@ export const CharacterCreation: React.FC = () => {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <Button
-                            variant="hero-card"
-                            className="h-auto flex-col items-center gap-3 p-4"
-                            aria-pressed={selectedClass === 'Warrior'}
-                            onClick={() => setSelectedClass('Warrior')}
-                        >
-                            <img src={`${import.meta.env.BASE_URL}assets/hero_warrior.png`} alt="Warrior" className="w-20 h-20 object-contain drop-shadow-md" />
-                            <div className="text-center">
-                                <h3 className="font-bold text-slate-50 text-lg mb-1">Warrior</h3>
-                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">High HP, builds Rage into crushing weapon skills.</p>
-                            </div>
-                        </Button>
-                        <Button
-                            variant="hero-card"
-                            className="h-auto flex-col items-center gap-3 p-4"
-                            aria-pressed={selectedClass === 'Cleric'}
-                            onClick={() => setSelectedClass('Cleric')}
-                        >
-                            <img src={`${import.meta.env.BASE_URL}assets/hero_cleric.png`} alt="Cleric" className="w-20 h-20 object-contain drop-shadow-md" />
-                            <div className="text-center">
-                                <h3 className="font-bold text-slate-50 text-lg mb-1">Cleric</h3>
-                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">Uses Mana to smite enemies and heal injured allies.</p>
-                            </div>
-                        </Button>
-                        <Button
-                            variant="hero-card"
-                            className="h-auto flex-col items-center gap-3 p-4"
-                            aria-pressed={selectedClass === 'Archer'}
-                            onClick={() => setSelectedClass('Archer')}
-                        >
-                            <img src={`${import.meta.env.BASE_URL}assets/hero_archer.png`} alt="Archer" className="w-20 h-20 object-contain drop-shadow-md" />
-                            <div className="text-center">
-                                <h3 className="font-bold text-slate-50 text-lg mb-1">Archer</h3>
-                                <p className="text-slate-400 text-xs whitespace-normal lead-tight">Uses Cunning for precision shots and lethal crits.</p>
-                            </div>
-                        </Button>
+                        {HERO_CLASSES.map((heroClass) => {
+                            const template = getHeroClassTemplate(heroClass);
+
+                            return (
+                                <Button
+                                    key={heroClass}
+                                    variant="hero-card"
+                                    className="h-auto flex-col items-center gap-3 p-4"
+                                    aria-pressed={selectedClass === heroClass}
+                                    onClick={() => setSelectedClass(heroClass)}
+                                >
+                                    <img src={`${import.meta.env.BASE_URL}${template.imageAsset}`} alt={template.displayName} className="w-20 h-20 object-contain drop-shadow-md" />
+                                    <div className="text-center">
+                                        <h3 className="font-bold text-slate-50 text-lg mb-1">{template.displayName}</h3>
+                                        <p className="text-slate-400 text-xs whitespace-normal lead-tight">{template.description}</p>
+                                    </div>
+                                </Button>
+                            );
+                        })}
                     </div>
 
                     <p className="text-center text-xs text-slate-400">

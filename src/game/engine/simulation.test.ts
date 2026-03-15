@@ -81,6 +81,37 @@ describe("simulation engine", () => {
         expect(lateEncounter.map((enemy) => enemy.enemyArchetype)).toEqual(["Caster", "Bruiser", "Support"]);
     });
 
+    it("applies class-template growth packages when heroes level up from combat rewards", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.exp = warrior.expToNext.minus(1);
+        warrior.actionProgress = 100;
+        warrior.critChance = 0;
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.currentHp = new Decimal(1);
+        enemy.actionProgress = -999;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0.99, 0.99),
+        );
+
+        const leveledWarrior = result.state.party[0];
+        expect(leveledWarrior.level).toBe(2);
+        expect(leveledWarrior.attributes).toMatchObject({
+            vit: 12,
+            str: 12,
+            dex: 6,
+            int: 4,
+            wis: 4,
+        });
+        expect(result.state.combatLog.some((entry) => /reached level 2/i.test(entry))).toBe(true);
+    });
+
     it("applies light resistance to cleric smite damage", () => {
         const cleric = createHero("hero_1", "Ayla", "Cleric");
         cleric.actionProgress = 99;

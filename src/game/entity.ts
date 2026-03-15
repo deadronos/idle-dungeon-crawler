@@ -1,5 +1,8 @@
 import Decimal from "decimal.js";
 
+import { getHeroClassTemplate } from "./classTemplates";
+export { HERO_CLASSES } from "./classTemplates";
+
 // Basic Types
 export type EntityClass = "Warrior" | "Cleric" | "Archer" | "Monster";
 export type HeroClass = Exclude<EntityClass, "Monster">;
@@ -106,17 +109,9 @@ export const BASE_META_UPGRADES: MetaUpgrades = {
     training: 0,
     fortification: 0,
 };
-
-export const HERO_CLASSES: HeroClass[] = ["Warrior", "Cleric", "Archer"];
 export const BOSS_VITALITY_MULTIPLIER = 2;
 export const BOSS_STRENGTH_MULTIPLIER = 1.3;
 export const ENEMY_ELEMENTS: EnemyElement[] = ["fire", "water", "earth", "air", "light", "shadow"];
-
-const HERO_NAME_POOLS: Record<HeroClass, string[]> = {
-    Warrior: ["Brom", "Tarin", "Mira", "Hale", "Sable"],
-    Cleric: ["Lyra", "Seren", "Ione", "Thess", "Aster"],
-    Archer: ["Kestrel", "Nyx", "Corin", "Vera", "Pike"],
-};
 
 const OFFENSIVE_ENEMY_ARCHETYPES: Array<Exclude<EnemyArchetype, "Support" | "Boss">> = ["Bruiser", "Skirmisher", "Caster"];
 
@@ -299,15 +294,17 @@ export const STAT_MULTS = {
     TENACITY_PER_WIS: 1,
 };
 
+export const isHeroClass = (entityClass: EntityClass): entityClass is HeroClass => entityClass !== "Monster";
+
+const cloneAttributes = (attributes: Attributes): Attributes => ({ ...attributes });
+
 // Start Stats Helpers
 export const getBaseAttributes = (entityClass: EntityClass): Attributes => {
-    switch (entityClass) {
-        case "Warrior": return { vit: 10, str: 10, dex: 5, int: 3, wis: 3 };
-        case "Cleric": return { vit: 7, str: 4, dex: 4, int: 8, wis: 10 };
-        case "Archer": return { vit: 6, str: 5, dex: 12, int: 4, wis: 4 };
-        case "Monster": return { vit: 5, str: 5, dex: 5, int: 5, wis: 5 }; // Base, scaled later
-        default: return { vit: 5, str: 5, dex: 5, int: 5, wis: 5 };
+    if (isHeroClass(entityClass)) {
+        return cloneAttributes(getHeroClassTemplate(entityClass).baseAttributes);
     }
+
+    return { vit: 5, str: 5, dex: 5, int: 5, wis: 5 };
 };
 
 export const getExpRequirement = (level: number): Decimal => {
@@ -317,6 +314,7 @@ export const getExpRequirement = (level: number): Decimal => {
 
 export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: PrestigeUpgrades): Entity => {
     const attrs = entity.attributes;
+    const template = isHeroClass(entity.class) ? getHeroClassTemplate(entity.class) : null;
 
     // Base logic for HP
     // Vitality Prestige adds +1 HP per VIT point per level
@@ -328,22 +326,20 @@ export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: Prestig
     entity.armor = new Decimal(attrs.str * STAT_MULTS.ARMOR_PER_STR).plus(attrs.vit * STAT_MULTS.ARMOR_PER_VIT);
 
     // Damage
-    entity.physicalDamage = new Decimal(10).plus(
-        entity.class === "Archer" ? attrs.dex * STAT_MULTS.RANGED_DMG_PER_DEX : attrs.str * STAT_MULTS.PHYS_DMG_PER_STR
-    );
+    const physicalDamageSourceAttribute = template?.combatProfile.physicalDamageSourceAttribute ?? "str";
+    const physicalDamageSourceMultiplier = template?.combatProfile.physicalDamageSourceMultiplier ?? STAT_MULTS.PHYS_DMG_PER_STR;
+    entity.physicalDamage = new Decimal(10).plus(attrs[physicalDamageSourceAttribute] * physicalDamageSourceMultiplier);
     entity.magicDamage = new Decimal(5).plus(attrs.int * STAT_MULTS.MAGIC_DMG_PER_INT);
 
     // Resource (Mana/Cunning/Rage)
-    if (entity.class === "Warrior") {
-        entity.maxResource = new Decimal(100); // Fixed rage
-    } else {
-        entity.maxResource = new Decimal(50).plus(attrs.int * STAT_MULTS.RESOURCE_PER_INT);
-    }
+    const maxResourceBase = template?.resourceModel.maxBase ?? 100;
+    const maxResourcePerInt = template?.resourceModel.maxPerInt ?? 0;
+    entity.maxResource = new Decimal(maxResourceBase).plus(attrs.int * maxResourcePerInt);
     if (entity.currentResource.gt(entity.maxResource)) entity.currentResource = entity.maxResource;
 
     // Crit
     entity.critChance = Math.min(0.05 + (attrs.dex * STAT_MULTS.CRIT_CHANCE_PER_DEX), 1.0); // Cap at 100%
-    entity.critDamage = entity.class === "Archer" ? 2.0 : 1.5;
+    entity.critDamage = template?.combatProfile.critMultiplier ?? 1.5;
 
     // Combat ratings
     entity.accuracyRating = 50 + (attrs.dex * STAT_MULTS.ACCURACY_PER_DEX) + (attrs.int * STAT_MULTS.ACCURACY_PER_INT);
@@ -400,14 +396,15 @@ export const createHero = (
     upgrades: MetaUpgrades = BASE_META_UPGRADES,
     prestigeUpgrades?: PrestigeUpgrades,
 ): Entity => {
+    const template = getHeroClassTemplate(entityClass);
     let hero: Entity = {
         id, name, class: entityClass,
         isEnemy: false,
-        image: `${import.meta.env.BASE_URL}assets/hero_${entityClass.toLowerCase()}.png`, // placeholder
+        image: `${import.meta.env.BASE_URL}${template.imageAsset}`,
         level: 1,
         exp: new Decimal(0),
         expToNext: getExpRequirement(1),
-        attributes: getBaseAttributes(entityClass),
+        attributes: cloneAttributes(template.baseAttributes),
         maxHp: new Decimal(1), currentHp: new Decimal(1),
         maxResource: new Decimal(1), currentResource: new Decimal(0), // Rage starts at 0, others start full
         armor: new Decimal(0), physicalDamage: new Decimal(0), magicDamage: new Decimal(0),
@@ -423,8 +420,7 @@ export const createHero = (
     };
 
     hero = recalculateEntity(hero, upgrades, prestigeUpgrades);
-    // Fill resources (except warrior rage)
-    if (entityClass === "Cleric" || entityClass === "Archer") {
+    if (template.resourceModel.startsFull) {
         hero.currentResource = hero.maxResource;
     }
     hero.currentHp = hero.maxHp;
@@ -456,7 +452,7 @@ const getNextHeroId = (heroes: Entity[]): string => {
 
 const getGeneratedHeroName = (entityClass: HeroClass, heroes: Entity[]): string => {
     const existingNames = new Set(heroes.map((hero) => hero.name));
-    const namePool = HERO_NAME_POOLS[entityClass];
+    const namePool = getHeroClassTemplate(entityClass).namePool;
 
     for (const candidate of namePool) {
         if (!existingNames.has(candidate)) {

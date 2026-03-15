@@ -1,6 +1,7 @@
 import React from 'react';
 import { Skull } from 'lucide-react';
 
+import { getHeroClassTemplate } from '../game/classTemplates';
 import { getEnemyArchetypeLabel, getStatusEffectBadge, getStatusEffectName } from '../game/entity';
 import type { Entity, StatusEffect } from '../game/entity';
 import type { CombatEvent } from '../game/store/types';
@@ -39,9 +40,7 @@ const hpColorFor = (entity: Entity) => {
 };
 
 const resourceColorFor = (entity: Entity) => {
-  if (entity.class === 'Warrior') return 'bg-red-500';
-  if (entity.class === 'Cleric') return 'bg-blue-500';
-  if (entity.class === 'Archer') return 'bg-yellow-500';
+  if (!entity.isEnemy) return getHeroClassTemplate(entity.class).resourceModel.barColorClass;
   return 'bg-purple-500';
 };
 

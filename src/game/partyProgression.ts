@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 
+import { HERO_CLASSES } from "./entity";
 import type { HeroClass } from "./entity";
 
 export interface PartySlotUnlock {
@@ -10,7 +11,7 @@ export interface PartySlotUnlock {
 
 export const MAX_PARTY_SIZE = 5;
 
-export const RECRUITABLE_CLASSES: HeroClass[] = ["Warrior", "Cleric", "Archer"];
+export const RECRUITABLE_CLASSES: HeroClass[] = HERO_CLASSES;
 
 export const PARTY_SLOT_UNLOCKS: PartySlotUnlock[] = [
     { capacity: 2, milestoneFloor: 3, cost: 60 },

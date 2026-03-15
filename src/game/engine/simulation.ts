@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 
+import { getHeroClassTemplate } from "../classTemplates";
 import {
     BASE_META_UPGRADES,
     createEnemy,
@@ -7,6 +8,7 @@ import {
     getEnemyElementForEncounter,
     getExpRequirement,
     getStatusEffectName,
+    isHeroClass,
     inferEnemyArchetype,
     recalculateEntity,
 } from "../entity";
@@ -18,12 +20,12 @@ export const GAME_TICK_RATE = 20;
 export const GAME_TICK_MS = 1000 / GAME_TICK_RATE;
 export const ATB_RATE = 2;
 export const DEX_ATB_RATE = 0.06;
-export const WARRIOR_RAGE_STRIKE_COST = 40;
-export const WARRIOR_RAGE_PER_ATTACK = 8;
-export const WARRIOR_RAGE_WHEN_HIT = 5;
-export const ARCHER_PIERCING_SHOT_COST = 35;
-export const ARCHER_PIERCING_SHOT_CRIT_BONUS = 0.15;
-export const ARCHER_CUNNING_REGEN_PER_TICK = 0.75;
+export const WARRIOR_RAGE_STRIKE_COST = getHeroClassTemplate("Warrior").actionPackage.specialAttack?.cost ?? 40;
+export const WARRIOR_RAGE_PER_ATTACK = getHeroClassTemplate("Warrior").resourceModel.gainOnResolvedAttack;
+export const WARRIOR_RAGE_WHEN_HIT = getHeroClassTemplate("Warrior").resourceModel.gainOnTakeDamage;
+export const ARCHER_PIERCING_SHOT_COST = getHeroClassTemplate("Archer").actionPackage.specialAttack?.cost ?? 35;
+export const ARCHER_PIERCING_SHOT_CRIT_BONUS = getHeroClassTemplate("Archer").actionPackage.specialAttack?.critChanceBonus ?? 0.15;
+export const ARCHER_CUNNING_REGEN_PER_TICK = getHeroClassTemplate("Archer").resourceModel.regenFlat;
 export const ARMOR_MITIGATION_SCALE = 2;
 export const MAX_PENETRATION_REDUCTION = 0.6;
 export const PENETRATION_SOFTCAP = 60;
@@ -50,7 +52,7 @@ export const HEX_HEALING_REDUCTION = 0.3;
 export const BLIND_BASE_CHANCE = 0.35;
 export const BLIND_DURATION_TICKS = GAME_TICK_RATE * 3;
 export const BLIND_ACCURACY_REDUCTION = 15;
-export const CLERIC_BLESS_COST = 25;
+export const CLERIC_BLESS_COST = getHeroClassTemplate("Cleric").actionPackage.bless?.cost ?? 25;
 
 const SKILL_BANNER_TICKS = GAME_TICK_RATE;
 const COMBAT_EVENT_TICKS = Math.round(GAME_TICK_RATE * 1.4);
@@ -273,8 +275,9 @@ export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
 export const getPartyWipeState = (state: GameState): Partial<GameState> => {
     const healedParty = state.party.map((hero) => {
         const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades, state.prestigeUpgrades);
+        const heroTemplate = getHeroClassTemplate(hero.class);
         refreshed.currentHp = refreshed.maxHp;
-        refreshed.currentResource = hero.class === "Warrior" ? new Decimal(0) : refreshed.maxResource;
+        refreshed.currentResource = heroTemplate.resourceModel.startsFull ? refreshed.maxResource : new Decimal(0);
         refreshed.guardStacks = 0;
         refreshed.statusEffects = [];
         refreshed.activeSkill = null;
@@ -291,6 +294,14 @@ export const getPartyWipeState = (state: GameState): Partial<GameState> => {
         combatLog: prependCombatMessages(state.combatLog, "The party was wiped out! Resetting to Floor 1..."),
         combatEvents: [],
     };
+};
+
+const getHeroTemplateForEntity = (entity: Entity) => {
+    if (entity.isEnemy || !isHeroClass(entity.class)) {
+        return null;
+    }
+
+    return getHeroClassTemplate(entity.class);
 };
 
 const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
@@ -661,49 +672,48 @@ const getDamageAction = (entity: Entity): DamageAction => {
         return getEnemyDamageAction(entity, inferEnemyArchetype(entity) ?? "Bruiser");
     }
 
+    const heroTemplate = getHeroClassTemplate(entity.class);
+    const basicAction = heroTemplate.combatProfile.basicAction;
     let action: DamageAction = {
-        name: "Attack",
-        damage: entity.physicalDamage,
-        damageElement: "physical",
-        deliveryType: entity.class === "Archer" ? "ranged" : "melee",
+        name: basicAction.name,
+        damage: basicAction.damageStat === "magicDamage" ? entity.magicDamage : entity.physicalDamage,
+        damageElement: basicAction.damageElement,
+        deliveryType: basicAction.deliveryType,
         critChance: entity.critChance,
         canDodge: true,
-        canParry: entity.class !== "Archer",
+        canParry: basicAction.canParry,
     };
 
-    if (entity.class === "Cleric") {
-        action = {
-            name: "Smite",
-            damage: entity.magicDamage,
-            damageElement: "light",
-            deliveryType: "spell",
-            critChance: entity.critChance,
-            canDodge: true,
-            canParry: false,
-        };
-    }
-
-    if (!entity.isEnemy && entity.class === "Warrior" && entity.currentResource.gte(WARRIOR_RAGE_STRIKE_COST)) {
-        entity.currentResource = entity.currentResource.minus(WARRIOR_RAGE_STRIKE_COST);
-        action = {
-            ...action,
-            name: "Rage Strike",
-            damage: entity.physicalDamage.times(2),
-            damageElement: "physical",
-            deliveryType: "melee",
-            canParry: false,
-        };
-    } else if (!entity.isEnemy && entity.class === "Archer" && entity.currentResource.gte(ARCHER_PIERCING_SHOT_COST)) {
-        entity.currentResource = entity.currentResource.minus(ARCHER_PIERCING_SHOT_COST);
-        action = {
-            ...action,
-            name: "Piercing Shot",
-            damage: entity.physicalDamage.times(1.6),
-            damageElement: "physical",
-            deliveryType: "ranged",
-            critChance: Math.min(1, entity.critChance + ARCHER_PIERCING_SHOT_CRIT_BONUS),
-            canParry: false,
-        };
+    switch (heroTemplate.actionPackage.id) {
+        case "warrior": {
+            const specialAttack = heroTemplate.actionPackage.specialAttack;
+            if (specialAttack && entity.currentResource.gte(specialAttack.cost)) {
+                entity.currentResource = entity.currentResource.minus(specialAttack.cost);
+                action = {
+                    ...action,
+                    name: specialAttack.name,
+                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier),
+                    canParry: specialAttack.canParry,
+                };
+            }
+            break;
+        }
+        case "archer": {
+            const specialAttack = heroTemplate.actionPackage.specialAttack;
+            if (specialAttack && entity.currentResource.gte(specialAttack.cost)) {
+                entity.currentResource = entity.currentResource.minus(specialAttack.cost);
+                action = {
+                    ...action,
+                    name: specialAttack.name,
+                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier),
+                    critChance: Math.min(1, entity.critChance + (specialAttack.critChanceBonus ?? 0)),
+                    canParry: specialAttack.canParry,
+                };
+            }
+            break;
+        }
+        default:
+            break;
     }
 
     if (action.deliveryType === "ranged" && action.damageElement === "physical") {
@@ -713,12 +723,22 @@ const getDamageAction = (entity: Entity): DamageAction => {
     return action;
 };
 
-const grantWarriorAttackRage = (entity: Entity) => {
-    if (entity.class !== "Warrior") {
+const grantResolvedAttackResource = (entity: Entity) => {
+    const heroTemplate = getHeroTemplateForEntity(entity);
+    if (!heroTemplate || heroTemplate.resourceModel.gainOnResolvedAttack <= 0) {
         return;
     }
 
-    entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(WARRIOR_RAGE_PER_ATTACK));
+    entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(heroTemplate.resourceModel.gainOnResolvedAttack));
+};
+
+const grantTakeDamageResource = (entity: Entity) => {
+    const heroTemplate = getHeroTemplateForEntity(entity);
+    if (!heroTemplate || heroTemplate.resourceModel.gainOnTakeDamage <= 0) {
+        return;
+    }
+
+    entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(heroTemplate.resourceModel.gainOnTakeDamage));
 };
 
 export const simulateTick = (state: GameState, randomSource: SimulationRandomSource = defaultRandomSource): SimulationResult => {
@@ -887,26 +907,12 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 nextHero.exp = nextHero.exp.minus(nextHero.expToNext);
                 nextHero.level += 1;
                 nextHero.expToNext = getExpRequirement(nextHero.level);
-
-                if (nextHero.class === "Warrior") {
-                    nextHero.attributes.str += 2;
-                    nextHero.attributes.vit += 2;
-                    nextHero.attributes.dex += 1;
-                    nextHero.attributes.int += 1;
-                    nextHero.attributes.wis += 1;
-                } else if (nextHero.class === "Cleric") {
-                    nextHero.attributes.int += 2;
-                    nextHero.attributes.wis += 2;
-                    nextHero.attributes.str += 1;
-                    nextHero.attributes.vit += 1;
-                    nextHero.attributes.dex += 1;
-                } else if (nextHero.class === "Archer") {
-                    nextHero.attributes.dex += 2;
-                    nextHero.attributes.str += 1;
-                    nextHero.attributes.vit += 1;
-                    nextHero.attributes.int += 1;
-                    nextHero.attributes.wis += 1;
-                }
+                const heroTemplate = getHeroClassTemplate(nextHero.class);
+                nextHero.attributes.str += heroTemplate.growth.str;
+                nextHero.attributes.vit += heroTemplate.growth.vit;
+                nextHero.attributes.dex += heroTemplate.growth.dex;
+                nextHero.attributes.int += heroTemplate.growth.int;
+                nextHero.attributes.wis += heroTemplate.growth.wis;
 
                 nextHero = recalculateEntity(nextHero, draft.metaUpgrades, draft.prestigeUpgrades);
                 logMessages.push(`${nextHero.name} reached level ${nextHero.level}!`);
@@ -986,12 +992,21 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
         const hasteBonus = draft.prestigeUpgrades.gameSpeed * 0.1; // +10% speed up per level
         entity.actionProgress += (ATB_RATE + (entity.attributes.dex * DEX_ATB_RATE)) * (1 + hasteBonus) * getAtbMultiplier(entity);
+        const heroTemplate = getHeroTemplateForEntity(entity);
 
-        if (entity.class === "Cleric" || entity.class === "Archer") {
-            const regen = entity.class === "Cleric" ? entity.attributes.wis * 0.5 : ARCHER_CUNNING_REGEN_PER_TICK;
-            entity.currentResource = entity.currentResource.plus(regen);
-            if (entity.currentResource.gt(entity.maxResource)) {
-                entity.currentResource = entity.maxResource;
+        if (heroTemplate) {
+            let regen = 0;
+            if (heroTemplate.resourceModel.regenKind === "flat") {
+                regen = heroTemplate.resourceModel.regenFlat;
+            } else if (heroTemplate.resourceModel.regenKind === "attribute" && heroTemplate.resourceModel.regenAttribute) {
+                regen = entity.attributes[heroTemplate.resourceModel.regenAttribute] * (heroTemplate.resourceModel.regenAttributeMultiplier ?? 0);
+            }
+
+            if (regen > 0) {
+                entity.currentResource = entity.currentResource.plus(regen);
+                if (entity.currentResource.gt(entity.maxResource)) {
+                    entity.currentResource = entity.maxResource;
+                }
             }
         }
 
@@ -1004,15 +1019,15 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
         const livingAllies = allies.filter((ally) => ally.currentHp.gt(0));
 
-        if (!entity.isEnemy && entity.class === "Cleric") {
-            const healCost = new Decimal(35);
+        if (!entity.isEnemy && heroTemplate?.actionPackage.id === "cleric") {
+            const healDefinition = heroTemplate.actionPackage.heal;
             const healTarget = getLowestHpRatioTarget(livingAllies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
 
-            if (healTarget && entity.currentResource.gte(healCost) && getHpRatio(healTarget) < 0.65) {
-                const rawHealAmount = entity.magicDamage.times(1.75);
+            if (healDefinition && healTarget && entity.currentResource.gte(healDefinition.cost) && getHpRatio(healTarget) < healDefinition.hpThreshold) {
+                const rawHealAmount = entity.magicDamage.times(healDefinition.healMultiplier);
                 const healAmount = rawHealAmount.times(getHealingMultiplier(healTarget));
-                setActiveSkill(entity, "Mend");
-                entity.currentResource = entity.currentResource.minus(healCost);
+                setActiveSkill(entity, healDefinition.name);
+                entity.currentResource = entity.currentResource.minus(healDefinition.cost);
                 healTarget.currentHp = Decimal.min(healTarget.maxHp, healTarget.currentHp.plus(healAmount));
                 queueCombatEvent({
                     sourceId: entity.id,
@@ -1026,12 +1041,12 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 return;
             }
 
-            const blessCost = new Decimal(CLERIC_BLESS_COST);
+            const blessDefinition = heroTemplate.actionPackage.bless;
             // Bless targets other party members only; solo Clerics fall through to Smite
             const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && getCleanseableStatusEffect(ally))
                 ?? livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((se) => se.key === "regen"));
-            if (blessTarget && entity.currentResource.gte(blessCost)) {
-                const regenPotency = entity.magicDamage.times(REGEN_TICK_HEAL_MULTIPLIER).toNumber();
+            if (blessDefinition && blessTarget && entity.currentResource.gte(blessDefinition.cost)) {
+                const regenPotency = entity.magicDamage.times(blessDefinition.regenMultiplier).toNumber();
                 const regenEffect: StatusEffect = {
                     ...getStatusConfig("regen"),
                     sourceId: entity.id,
@@ -1045,8 +1060,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 } else {
                     blessTarget.statusEffects.push(regenEffect);
                 }
-                setActiveSkill(entity, "Bless");
-                entity.currentResource = entity.currentResource.minus(blessCost);
+                setActiveSkill(entity, blessDefinition.name);
+                entity.currentResource = entity.currentResource.minus(blessDefinition.cost);
                 queueStatusEvent(blessTarget, "regen", "apply", getStatusEffectName("regen"));
                 logMessages.push(`${entity.name} casts Bless on ${blessTarget.name}!`);
                 const cleansedStatus = getCleanseableStatusEffect(blessTarget);
@@ -1114,7 +1129,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             : getPhysicalHitChance(entity, target);
 
         if (action.canDodge && randomSource.next() >= hitChance) {
-            grantWarriorAttackRage(entity);
+            grantResolvedAttackResource(entity);
             queueCombatEvent({
                 sourceId: entity.id,
                 targetId: target.id,
@@ -1127,7 +1142,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         }
 
         if (action.canParry && action.deliveryType === "melee" && action.damageElement === "physical" && randomSource.next() < getParryChance(entity, target)) {
-            grantWarriorAttackRage(entity);
+            grantResolvedAttackResource(entity);
             queueCombatEvent({
                 sourceId: entity.id,
                 targetId: target.id,
@@ -1184,11 +1199,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             ttlTicks: COMBAT_EVENT_TICKS,
         });
 
-        grantWarriorAttackRage(entity);
-
-        if (target.class === "Warrior") {
-            target.currentResource = Decimal.min(target.maxResource, target.currentResource.plus(WARRIOR_RAGE_WHEN_HIT));
-        }
+        grantResolvedAttackResource(entity);
+        grantTakeDamageResource(target);
 
         const critSuffix = isCrit ? " (CRIT)" : "";
         logMessages.push(`${entity.name} uses ${action.name} on ${target.name} for ${finalDamage.floor().toString()}!${critSuffix}${damageSuffix}`);

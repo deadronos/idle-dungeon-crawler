@@ -34,7 +34,7 @@ When an EXP threshold is reached, the hero levels up, deducting the required amo
 * **Cleric:** +2 INT, +2 WIS, +1 STR, +1 VIT, +1 DEX
 * **Archer:** +2 DEX, +1 STR, +1 VIT, +1 INT, +1 WIS
 
-These growth packages remain the live runtime baseline. Follow-up issue `#69` will define the explicit class-template source of truth that owns these growth patterns more cleanly.
+These growth packages remain the live runtime baseline, but the source of truth for them now lives in [008 - Hero Class Templates, Growth Packages, and Resource Models](008-hero-class-templates.md).
 
 ### Layered Progression Sources
 
@@ -107,4 +107,4 @@ Because future differentiation layers will introduce new progression fields, add
 
 * **Easier:** Auto-allocation of attributes still prevents idle-flow interruption, while the new layered rule creates a cleaner place for later build differentiation systems to live.
 * **Easier:** The wipe loop, slot unlocks, and prestige systems can keep functioning while later issues add template, talent, and equipment layers on top.
-* **Difficult:** Because the runtime still uses attribute-heavy derived stat math today, the mathematical wall remains sensitive until `#69` and `#70` redistribute more identity into templates and layered ratings.
+* **Difficult:** Because the runtime still uses attribute-heavy derived stat math today, the mathematical wall remains sensitive until `#70` redistributes more identity into layered ratings on top of the now-centralized class templates.
