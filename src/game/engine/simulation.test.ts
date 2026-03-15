@@ -15,7 +15,9 @@ import {
     getPenetrationReduction,
     getSpellHitChance,
     getStatusApplicationChance,
+    HEX_DURATION_TICKS,
     isBossFloor,
+    REGEN_DURATION_TICKS,
     simulateTick,
 } from "./simulation";
 
@@ -846,5 +848,310 @@ describe("simulation engine", () => {
         expect(result.state.enemies[0].currentHp.eq(0)).toBe(true);
         expect(result.state.gold.eq(new Decimal(13))).toBe(true);
         expect(result.state.combatLog).toContain("Sewer Rat Lv4 was defeated!");
+    });
+
+    it("lets clerics cast Bless to apply regen buff to party members without regen", () => {
+        const cleric = createHero("hero_1", "Ione", "Cleric");
+        cleric.actionProgress = 99;
+
+        const warrior = createHero("hero_2", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [cleric, warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        const regenEffect = result.state.party[1].statusEffects.find((se) => se.key === "regen");
+        expect(regenEffect).toBeDefined();
+        expect(regenEffect?.polarity).toBe("buff");
+        expect(regenEffect?.remainingTicks).toBe(REGEN_DURATION_TICKS);
+        expect(result.state.combatLog[0]).toMatch(/bless/i);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "apply" && event.statusKey === "regen")).toBe(true);
+    });
+
+    it("deducts mana when cleric casts Bless and skips allies who already have regen", () => {
+        const cleric = createHero("hero_1", "Ione", "Cleric");
+        cleric.actionProgress = 99;
+        const startMana = cleric.currentResource;
+
+        const warrior = createHero("hero_2", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+
+        const archer = createHero("hero_3", "Vera", "Archer");
+        archer.actionProgress = -999;
+        archer.statusEffects = [
+            {
+                key: "regen",
+                polarity: "buff",
+                sourceId: "hero_1",
+                remainingTicks: REGEN_DURATION_TICKS,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 5,
+            },
+        ];
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [cleric, warrior, archer],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        expect(result.state.party[0].currentResource.lt(startMana)).toBe(true);
+        expect(result.state.party[1].statusEffects.some((se) => se.key === "regen")).toBe(true);
+        // The archer's existing regen should tick down by 1 (processStatusEffects runs each tick)
+        expect(result.state.party[2].statusEffects[0]?.remainingTicks).toBe(REGEN_DURATION_TICKS - 1);
+    });
+
+    it("ticks regen once per second and restores HP", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+        warrior.currentHp = new Decimal(50);
+        warrior.statusEffects = [
+            {
+                key: "regen",
+                polarity: "buff",
+                sourceId: "hero_cleric",
+                remainingTicks: 40,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 10,
+            },
+        ];
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = advanceTicks(
+            createInitialGameState({
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+            20,
+        );
+
+        expect(result.state.party[0].currentHp.gt(new Decimal(50))).toBe(true);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "tick" && event.statusKey === "regen")).toBe(true);
+        expect(result.state.combatLog.some((entry) => /regenerates/i.test(entry))).toBe(true);
+    });
+
+    it("expires regen after its duration and removes the status", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+        warrior.statusEffects = [
+            {
+                key: "regen",
+                polarity: "buff",
+                sourceId: "hero_cleric",
+                remainingTicks: 2,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 5,
+            },
+        ];
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = advanceTicks(
+            createInitialGameState({
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+            2,
+        );
+
+        expect(result.state.party[0].statusEffects.filter((se) => se.key === "regen")).toHaveLength(0);
+        expect(result.state.combatLog.some((entry) => /regen fades/i.test(entry))).toBe(true);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "expire" && event.statusKey === "regen")).toBe(true);
+    });
+
+    it("applies hex from shadow hits and logs the affliction", () => {
+        const hero = createHero("hero_1", "Brom", "Warrior");
+        hero.actionProgress = -999;
+        hero.tenacity = 0;
+
+        const shadowCaster = createEnemy(5, "enemy_shadow", { archetype: "Caster", element: "shadow" });
+        shadowCaster.actionProgress = 99;
+        shadowCaster.critChance = 0;
+
+        // Rolls: 0=hit, 0=no-crit, 0=hex apply succeeds
+        const result = simulateTick(
+            createInitialGameState({
+                party: [hero],
+                enemies: [shadowCaster],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0),
+        );
+
+        expect(result.state.party[0].statusEffects.some((se) => se.key === "hex" && se.polarity === "debuff")).toBe(true);
+        expect(result.state.combatLog.some((entry) => /hex/i.test(entry))).toBe(true);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "apply" && event.statusKey === "hex")).toBe(true);
+    });
+
+    it("expires hex after its duration and removes the status", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+        warrior.statusEffects = [
+            {
+                key: "hex",
+                polarity: "debuff",
+                sourceId: "enemy_shadow",
+                remainingTicks: 2,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.3,
+            },
+        ];
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = advanceTicks(
+            createInitialGameState({
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+            2,
+        );
+
+        expect(result.state.party[0].statusEffects.filter((se) => se.key === "hex")).toHaveLength(0);
+        expect(result.state.combatLog.some((entry) => /hex fades/i.test(entry))).toBe(true);
+        expect(result.state.combatEvents.some((event) => event.kind === "status" && event.statusPhase === "expire" && event.statusKey === "hex")).toBe(true);
+    });
+
+    it("reduces incoming healing from cleric mend when target carries hex", () => {
+        const buildParty = (withHex: boolean) => {
+            const cleric = createHero("hero_1", "Ione", "Cleric");
+            cleric.actionProgress = 99;
+
+            const warrior = createHero("hero_2", "Brom", "Warrior");
+            warrior.actionProgress = -999;
+            warrior.currentHp = new Decimal(10);
+            if (withHex) {
+                warrior.statusEffects = [
+                    {
+                        key: "hex",
+                        polarity: "debuff",
+                        sourceId: "enemy_shadow",
+                        remainingTicks: 60,
+                        stacks: 1,
+                        maxStacks: 1,
+                        potency: 0.3,
+                    },
+                ];
+            }
+
+            return [cleric, warrior];
+        };
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const withoutHex = simulateTick(
+            createInitialGameState({
+                party: buildParty(false),
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        const withHex = simulateTick(
+            createInitialGameState({
+                party: buildParty(true),
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0),
+        );
+
+        const healedHpWithout = withoutHex.state.party[1].currentHp.minus(10);
+        const healedHpWith = withHex.state.party[1].currentHp.minus(10);
+
+        expect(healedHpWith.lt(healedHpWithout)).toBe(true);
+        expect(withHex.state.combatLog[0]).toMatch(/mend/i);
+    });
+
+    it("refreshes hex duration on reapplication and keeps the effect active", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+        warrior.tenacity = 0;
+        warrior.statusEffects = [
+            {
+                key: "hex",
+                polarity: "debuff",
+                sourceId: "enemy_shadow_old",
+                remainingTicks: 5,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.3,
+            },
+        ];
+
+        const shadowCaster = createEnemy(5, "enemy_shadow", { archetype: "Caster", element: "shadow" });
+        shadowCaster.actionProgress = 99;
+        shadowCaster.critChance = 0;
+
+        // Rolls: 0=hit, 0=no-crit, 0=hex apply succeeds (refreshes existing hex)
+        const result = simulateTick(
+            createInitialGameState({
+                party: [warrior],
+                enemies: [shadowCaster],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0),
+        );
+
+        const hexEffect = result.state.party[0].statusEffects.find((se) => se.key === "hex");
+        expect(hexEffect).toBeDefined();
+        expect(hexEffect!.remainingTicks).toBeGreaterThan(5);
+        expect(hexEffect!.remainingTicks).toBe(HEX_DURATION_TICKS);
+    });
+
+    it("spends mana up to CLERIC_BLESS_COST when casting Bless and falls back to Smite if mana is low", () => {
+        const cleric = createHero("hero_1", "Ione", "Cleric");
+        cleric.actionProgress = 99;
+        // Set mana low enough that even after per-tick wis regen it can't reach CLERIC_BLESS_COST
+        cleric.currentResource = new Decimal(0);
+
+        const warrior = createHero("hero_2", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [cleric, warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            createSequenceRandomSource(0, 0, 0.9),
+        );
+
+        expect(result.state.party[1].statusEffects.some((se) => se.key === "regen")).toBe(false);
+        expect(result.state.combatLog[0]).toMatch(/smite/i);
     });
 });

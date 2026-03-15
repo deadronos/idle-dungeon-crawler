@@ -2,7 +2,7 @@ import React from 'react';
 import { Skull } from 'lucide-react';
 
 import { getEnemyArchetypeLabel, getStatusEffectBadge, getStatusEffectName } from '../game/entity';
-import type { Entity } from '../game/entity';
+import type { Entity, StatusEffect } from '../game/entity';
 import type { CombatEvent } from '../game/store/types';
 import { useGame, useGameStore } from '../game/store/gameStore';
 import { formatNumber } from '../utils/format';
@@ -80,10 +80,10 @@ const resistanceStatsFor = (entity: Entity): TooltipStat[] => [
   { label: "Shadow", value: `${Math.round(entity.resistances.shadow * 100)}%` },
 ];
 
-const statusChipClassName = (entity: Entity) => {
-  return entity.isEnemy
-    ? 'border-red-400/30 bg-red-500/10 text-red-100'
-    : 'border-cyan-300/30 bg-cyan-500/10 text-cyan-100';
+const statusChipClassName = (statusEffect: Pick<StatusEffect, 'polarity'>) => {
+  return statusEffect.polarity === 'buff'
+    ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
+    : 'border-red-400/30 bg-red-500/10 text-red-100';
 };
 
 const combatEventClassName = (event: CombatEvent) => {
@@ -145,7 +145,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                       {entity.statusEffects.map((statusEffect) => (
                         <span
                           key={`${entity.id}-${statusEffect.key}`}
-                          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] ${statusChipClassName(entity)}`}
+                          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] ${statusChipClassName(statusEffect)}`}
                         >
                           {getStatusEffectBadge(statusEffect)}
                         </span>
@@ -241,14 +241,14 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                     </div>
                     {entity.statusEffects.length > 0 && (
                       <div className="border-t border-slate-800/80 pt-2">
-                        <p className="text-[9px] font-black uppercase tracking-[0.28em] text-rose-200/80">Statuses</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.28em] text-slate-300/70">Statuses</p>
                         <dl className="mt-2 grid grid-cols-1 gap-y-1">
                           {entity.statusEffects.map((statusEffect) => (
                             <div key={`${entity.id}-${statusEffect.key}-tooltip`} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
-                              <dt className="text-slate-400">
+                              <dt className={statusEffect.polarity === 'buff' ? 'text-emerald-300' : 'text-rose-300'}>
                                 {getStatusEffectName(statusEffect.key)}
                               </dt>
-                              <dd className="font-mono font-bold text-slate-50">
+                              <dd className={`font-mono font-bold ${statusEffect.polarity === 'buff' ? 'text-emerald-100' : 'text-slate-50'}`}>
                                 {statusEffect.stacks > 1 ? `x${statusEffect.stacks}` : `${Math.ceil(statusEffect.remainingTicks / 20)}s`}
                               </dd>
                             </div>

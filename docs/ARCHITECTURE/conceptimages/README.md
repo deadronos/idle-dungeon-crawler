@@ -20,7 +20,7 @@ These images were captured from the running app at a desktop viewport of `1600×
 - `004-shop-altar-of-souls.png` — upgrade shop, `Altar of Souls` tab
 - `005-dungeon-events-view.png` — main dungeon gameplay view with the bottom-anchored `Events` panel visible, combat outcomes like `Dodge` surfaced inline, and the enemy archetype label still readable in the stage view
 - `006-dungeon-hover-tooltip.png` — dungeon gameplay view with the entity hover tooltip expanded, showing grouped attributes and elemental resistances without truncation
-- `007-status-effects-view.png` — dungeon gameplay view with reusable status chips visible on roster cards, status-focused log entries, and tooltip status details expanded alongside existing combat stats
+- `007-status-effects-view.png` — dungeon gameplay view with reusable status chips visible on roster cards, status-focused log entries, and tooltip status details expanded alongside existing combat stats.
 
 ## Naming convention
 
