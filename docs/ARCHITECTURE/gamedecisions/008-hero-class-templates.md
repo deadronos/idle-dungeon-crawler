@@ -66,6 +66,7 @@ This decision is the implementation follow-through for issue `#69`.
 
 * `#69` centralizes current class identity into explicit templates
 * `#70` now uses those templates as one of the layered stat sources when combat ratings are recomputed
+* [009 - Differentiation MVP: Class Passives, Talents, Equipment, and Build Surfacing](009-differentiation-mvp-talents-equipment-and-build-surfacing.md) now layers explicit build-facing passives, talents, and equipment on top of these templates rather than replacing them
 
 ## Consequences
 

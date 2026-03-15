@@ -99,7 +99,9 @@ describe("EntityRoster", () => {
         expect(screen.getAllByText(/burn/i).length).toBeGreaterThan(0);
         expect(screen.getByText(/brn x2/i)).toBeInTheDocument();
         const tooltip = screen.getByRole("tooltip");
-        expect(tooltip).toHaveTextContent(/attributes/i);
+        expect(tooltip).toHaveTextContent(/combat ratings/i);
+        expect(tooltip).toHaveTextContent(/derived detail/i);
+        expect(tooltip).toHaveTextContent(/build/i);
         expect(tooltip).toHaveTextContent(/resistances/i);
         expect(tooltip).toHaveTextContent(/statuses/i);
         expect(tooltip).toHaveTextContent(/acc\s*66/i);
@@ -108,6 +110,7 @@ describe("EntityRoster", () => {
         expect(tooltip).toHaveTextContent(/apen\s*9/i);
         expect(tooltip).toHaveTextContent(/epen\s*13/i);
         expect(tooltip).toHaveTextContent(/ten\s*15\.3/i);
+        expect(tooltip).toHaveTextContent(/sanctified reserves/i);
         expect(tooltip).toHaveTextContent(/fire\s*20%/i);
         expect(tooltip).toHaveTextContent(/shadow\s*20%/i);
     });

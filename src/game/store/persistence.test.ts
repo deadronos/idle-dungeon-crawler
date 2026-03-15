@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createEnemy, createStarterParty } from "@/game/entity";
 import { createInitialGameState } from "@/game/engine/simulation";
+import { getDefaultEquipmentInventoryItemIds } from "@/game/heroBuilds";
 
 import { deserializeGameState, GAME_STATE_EXPORT_VERSION, serializeGameState } from "./persistence";
 
@@ -147,12 +148,18 @@ describe("game-state persistence", () => {
         expect(restoredState.enemies[0]?.guardStacks).toBe(0);
         expect(restoredState.enemies[0]?.statusEffects).toEqual([]);
         expect(restoredState.talentProgression).toEqual({
-            unlockedTalentIdsByHeroId: {},
-            talentPointsByHeroId: {},
+            unlockedTalentIdsByHeroId: {
+                hero_1: [],
+            },
+            talentPointsByHeroId: {
+                hero_1: 0,
+            },
         });
         expect(restoredState.equipmentProgression).toEqual({
-            inventoryItemIds: [],
-            equippedItemIdsByHeroId: {},
+            inventoryItemIds: getDefaultEquipmentInventoryItemIds(),
+            equippedItemIdsByHeroId: {
+                hero_1: [],
+            },
         });
     });
 

@@ -2,6 +2,13 @@ import Decimal from "decimal.js";
 
 import { getHeroClassTemplate } from "../classTemplates";
 import {
+    getEarnedTalentPointTotal,
+    getHeroBuildProfile,
+    synchronizeEquipmentProgression,
+    synchronizeTalentProgression,
+    type HeroBuildState,
+} from "../heroBuilds";
+import {
     BASE_META_UPGRADES,
     createEnemy,
     getCombatRatings,
@@ -195,8 +202,13 @@ const clearEncounterState = (entity: Entity): Entity => ({
     statusEffects: [],
 });
 
-export const recalculateParty = (party: Entity[], upgrades: MetaUpgrades, prestigeUpgrades?: PrestigeUpgrades): Entity[] => {
-    return party.map((hero) => recalculateEntity(cloneEntity(hero), upgrades, prestigeUpgrades));
+export const recalculateParty = (
+    party: Entity[],
+    upgrades: MetaUpgrades,
+    prestigeUpgrades?: PrestigeUpgrades,
+    buildState?: HeroBuildState,
+): Entity[] => {
+    return party.map((hero) => recalculateEntity(cloneEntity(hero), upgrades, prestigeUpgrades, buildState));
 };
 
 export const prependCombatMessages = (combatLog: string[], ...messages: string[]) => {
@@ -216,14 +228,19 @@ const hasValidCombatRatings = (entity: Partial<Entity>) => {
     );
 };
 
-const hydrateEntity = (entity: Entity, upgrades: MetaUpgrades, prestigeUpgrades?: PrestigeUpgrades) => {
+const hydrateEntity = (
+    entity: Entity,
+    upgrades: MetaUpgrades,
+    prestigeUpgrades?: PrestigeUpgrades,
+    buildState?: HeroBuildState,
+) => {
     const cloned = cloneEntity(entity);
 
     if (hasValidCombatRatings(entity)) {
-        return cloned;
+        return entity.isEnemy ? cloned : recalculateEntity(cloned, upgrades, prestigeUpgrades, buildState);
     }
 
-    return recalculateEntity(cloned, upgrades, prestigeUpgrades);
+    return recalculateEntity(cloned, upgrades, prestigeUpgrades, buildState);
 };
 
 export const createInitialGameState = (overrides?: Partial<GameState>): GameState => {
@@ -234,7 +251,8 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
         gameSpeed: overrides?.prestigeUpgrades?.gameSpeed ?? 0,
         xpMultiplier: overrides?.prestigeUpgrades?.xpMultiplier ?? 0,
     };
-    const talentProgression = {
+    const rawParty = overrides?.party ?? [];
+    const syncedTalentProgression = synchronizeTalentProgression(rawParty, {
         ...createEmptyTalentProgressionState(),
         ...overrides?.talentProgression,
         unlockedTalentIdsByHeroId: {
@@ -245,8 +263,8 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
             ...createEmptyTalentProgressionState().talentPointsByHeroId,
             ...(overrides?.talentProgression?.talentPointsByHeroId ?? {}),
         },
-    };
-    const equipmentProgression = {
+    });
+    const syncedEquipmentProgression = synchronizeEquipmentProgression(rawParty, {
         ...createEmptyEquipmentProgressionState(),
         ...overrides?.equipmentProgression,
         inventoryItemIds: [...(overrides?.equipmentProgression?.inventoryItemIds ?? [])],
@@ -254,10 +272,14 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
             ...createEmptyEquipmentProgressionState().equippedItemIdsByHeroId,
             ...(overrides?.equipmentProgression?.equippedItemIdsByHeroId ?? {}),
         },
+    });
+    const buildState: HeroBuildState = {
+        talentProgression: syncedTalentProgression,
+        equipmentProgression: syncedEquipmentProgression,
     };
 
     return {
-        party: overrides?.party?.map((entity) => hydrateEntity(entity, metaUpgrades, prestigeUpgrades)) ?? [],
+        party: rawParty.map((entity) => hydrateEntity(entity, metaUpgrades, prestigeUpgrades, buildState)),
         enemies: overrides?.enemies?.map((entity) => hydrateEntity(entity, BASE_META_UPGRADES)) ?? [],
         gold: new Decimal(overrides?.gold ?? 0),
         floor: overrides?.floor ?? 1,
@@ -272,18 +294,26 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
         activeSection: overrides?.activeSection ?? "dungeon",
         heroSouls: new Decimal(overrides?.heroSouls ?? 0),
         prestigeUpgrades,
+        talentProgression: syncedTalentProgression,
+        equipmentProgression: syncedEquipmentProgression,
+    };
+};
+
+export const getInitializedPartyState = (state: GameState, party: Entity[]): Partial<GameState> => {
+    const talentProgression = synchronizeTalentProgression(party, createEmptyTalentProgressionState());
+    const equipmentProgression = synchronizeEquipmentProgression(party, createEmptyEquipmentProgressionState());
+    const buildState: HeroBuildState = { talentProgression, equipmentProgression };
+
+    return {
+        party: recalculateParty(party, state.metaUpgrades, state.prestigeUpgrades, buildState),
+        enemies: createEncounter(1),
+        combatLog: [`${party[0]?.name ?? "The party"} leads the party into the dungeon...`],
+        combatEvents: [],
+        activeSection: "dungeon",
         talentProgression,
         equipmentProgression,
     };
 };
-
-export const getInitializedPartyState = (state: GameState, party: Entity[]): Partial<GameState> => ({
-    party: recalculateParty(party, state.metaUpgrades, state.prestigeUpgrades),
-    enemies: createEncounter(1),
-    combatLog: [`${party[0]?.name ?? "The party"} leads the party into the dungeon...`],
-    combatEvents: [],
-    activeSection: "dungeon",
-});
 
 export const getFloorTransitionState = (state: GameState, floor: number): Partial<GameState> => ({
     floor,
@@ -301,8 +331,12 @@ export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
 });
 
 export const getPartyWipeState = (state: GameState): Partial<GameState> => {
+    const buildState: HeroBuildState = {
+        talentProgression: state.talentProgression,
+        equipmentProgression: state.equipmentProgression,
+    };
     const healedParty = state.party.map((hero) => {
-        const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades, state.prestigeUpgrades);
+        const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades, state.prestigeUpgrades, buildState);
         const heroTemplate = getHeroClassTemplate(hero.class);
         refreshed.currentHp = refreshed.maxHp;
         refreshed.currentResource = heroTemplate.resourceModel.startsFull ? refreshed.maxResource : new Decimal(0);
@@ -421,9 +455,13 @@ const getAtbMultiplier = (entity: Entity) => {
     return Math.max(0.1, 1 - getStatusPotency(entity, "slow"));
 };
 
-export const getActionProgressPerTick = (entity: Entity, prestigeUpgrades?: Pick<PrestigeUpgrades, "gameSpeed">) => {
+export const getActionProgressPerTick = (
+    entity: Entity,
+    prestigeUpgrades?: Pick<PrestigeUpgrades, "gameSpeed">,
+    buildState?: HeroBuildState,
+) => {
     const hasteBonus = (prestigeUpgrades?.gameSpeed ?? 0) * 0.1;
-    const combatRatings = getCombatRatings(entity);
+    const combatRatings = getCombatRatings(entity, buildState);
     return (ATB_RATE + (combatRatings.haste * HASTE_ATB_RATE)) * (1 + hasteBonus) * getAtbMultiplier(entity);
 };
 
@@ -701,12 +739,13 @@ const selectTarget = (entity: Entity, targets: Entity[], action: DamageAction, r
     }
 };
 
-const getDamageAction = (entity: Entity): DamageAction => {
+const getDamageAction = (entity: Entity, buildState?: HeroBuildState): DamageAction => {
     if (entity.isEnemy) {
         return getEnemyDamageAction(entity, inferEnemyArchetype(entity) ?? "Bruiser");
     }
 
     const heroTemplate = getHeroClassTemplate(entity.class);
+    const buildProfile = getHeroBuildProfile(entity, buildState);
     const basicAction = heroTemplate.combatProfile.basicAction;
     let action: DamageAction = {
         name: basicAction.name,
@@ -721,12 +760,13 @@ const getDamageAction = (entity: Entity): DamageAction => {
     switch (heroTemplate.actionPackage.id) {
         case "warrior": {
             const specialAttack = heroTemplate.actionPackage.specialAttack;
-            if (specialAttack && entity.currentResource.gte(specialAttack.cost)) {
-                entity.currentResource = entity.currentResource.minus(specialAttack.cost);
+            const specialAttackCost = Math.max(0, (specialAttack?.cost ?? 0) + buildProfile.effects.specialAttackCostDelta);
+            if (specialAttack && entity.currentResource.gte(specialAttackCost)) {
+                entity.currentResource = entity.currentResource.minus(specialAttackCost);
                 action = {
                     ...action,
                     name: specialAttack.name,
-                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier),
+                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier + buildProfile.effects.specialAttackDamageMultiplierBonus),
                     canParry: specialAttack.canParry,
                 };
             }
@@ -734,13 +774,19 @@ const getDamageAction = (entity: Entity): DamageAction => {
         }
         case "archer": {
             const specialAttack = heroTemplate.actionPackage.specialAttack;
-            if (specialAttack && entity.currentResource.gte(specialAttack.cost)) {
-                entity.currentResource = entity.currentResource.minus(specialAttack.cost);
+            const specialAttackCost = Math.max(0, (specialAttack?.cost ?? 0) + buildProfile.effects.specialAttackCostDelta);
+            if (specialAttack && entity.currentResource.gte(specialAttackCost)) {
+                entity.currentResource = entity.currentResource.minus(specialAttackCost);
                 action = {
                     ...action,
                     name: specialAttack.name,
-                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier),
-                    critChance: Math.min(1, entity.critChance + (specialAttack.critChanceBonus ?? 0)),
+                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier + buildProfile.effects.specialAttackDamageMultiplierBonus),
+                    critChance: Math.min(
+                        1,
+                        entity.critChance
+                            + (specialAttack.critChanceBonus ?? 0)
+                            + buildProfile.effects.specialAttackCritChanceBonus,
+                    ),
                     canParry: specialAttack.canParry,
                 };
             }
@@ -757,22 +803,30 @@ const getDamageAction = (entity: Entity): DamageAction => {
     return action;
 };
 
-const grantResolvedAttackResource = (entity: Entity) => {
+const grantResolvedAttackResource = (entity: Entity, buildState?: HeroBuildState) => {
     const heroTemplate = getHeroTemplateForEntity(entity);
     if (!heroTemplate || heroTemplate.resourceModel.gainOnResolvedAttack <= 0) {
         return;
     }
 
-    entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(heroTemplate.resourceModel.gainOnResolvedAttack));
+    const buildProfile = getHeroBuildProfile(entity, buildState);
+    entity.currentResource = Decimal.min(
+        entity.maxResource,
+        entity.currentResource.plus(heroTemplate.resourceModel.gainOnResolvedAttack + buildProfile.effects.resourceOnResolvedAttackBonus),
+    );
 };
 
-const grantTakeDamageResource = (entity: Entity) => {
+const grantTakeDamageResource = (entity: Entity, buildState?: HeroBuildState) => {
     const heroTemplate = getHeroTemplateForEntity(entity);
     if (!heroTemplate || heroTemplate.resourceModel.gainOnTakeDamage <= 0) {
         return;
     }
 
-    entity.currentResource = Decimal.min(entity.maxResource, entity.currentResource.plus(heroTemplate.resourceModel.gainOnTakeDamage));
+    const buildProfile = getHeroBuildProfile(entity, buildState);
+    entity.currentResource = Decimal.min(
+        entity.maxResource,
+        entity.currentResource.plus(heroTemplate.resourceModel.gainOnTakeDamage + buildProfile.effects.resourceOnTakeDamageBonus),
+    );
 };
 
 export const simulateTick = (state: GameState, randomSource: SimulationRandomSource = defaultRandomSource): SimulationResult => {
@@ -784,6 +838,22 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         combatLog: [...state.combatLog],
         combatEvents: state.combatEvents.map((event) => ({ ...event })),
         metaUpgrades: { ...state.metaUpgrades },
+        talentProgression: {
+            unlockedTalentIdsByHeroId: Object.fromEntries(
+                Object.entries(state.talentProgression.unlockedTalentIdsByHeroId).map(([heroId, talentIds]) => [heroId, [...talentIds]]),
+            ),
+            talentPointsByHeroId: { ...state.talentProgression.talentPointsByHeroId },
+        },
+        equipmentProgression: {
+            inventoryItemIds: [...state.equipmentProgression.inventoryItemIds],
+            equippedItemIdsByHeroId: Object.fromEntries(
+                Object.entries(state.equipmentProgression.equippedItemIdsByHeroId).map(([heroId, itemIds]) => [heroId, [...itemIds]]),
+            ),
+        },
+    };
+    const buildState: HeroBuildState = {
+        talentProgression: draft.talentProgression,
+        equipmentProgression: draft.equipmentProgression,
     };
 
     let anyActionTaken = false;
@@ -938,6 +1008,9 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
             let nextHero = draft.party[index];
             while (nextHero.exp.gte(nextHero.expToNext)) {
+                const earnedPointsBefore = isHeroClass(nextHero.class)
+                    ? getEarnedTalentPointTotal(nextHero.class, nextHero.level)
+                    : 0;
                 nextHero.exp = nextHero.exp.minus(nextHero.expToNext);
                 nextHero.level += 1;
                 nextHero.expToNext = getExpRequirement(nextHero.level);
@@ -947,8 +1020,18 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 nextHero.attributes.dex += heroTemplate.growth.dex;
                 nextHero.attributes.int += heroTemplate.growth.int;
                 nextHero.attributes.wis += heroTemplate.growth.wis;
+                const earnedPointsAfter = isHeroClass(nextHero.class)
+                    ? getEarnedTalentPointTotal(nextHero.class, nextHero.level)
+                    : 0;
+                const gainedTalentPoints = Math.max(0, earnedPointsAfter - earnedPointsBefore);
 
-                nextHero = recalculateEntity(nextHero, draft.metaUpgrades, draft.prestigeUpgrades);
+                if (gainedTalentPoints > 0) {
+                    draft.talentProgression.talentPointsByHeroId[nextHero.id] =
+                        (draft.talentProgression.talentPointsByHeroId[nextHero.id] ?? 0) + gainedTalentPoints;
+                    logMessages.push(`${nextHero.name} gained ${gainedTalentPoints} talent point${gainedTalentPoints === 1 ? "" : "s"}!`);
+                }
+
+                nextHero = recalculateEntity(nextHero, draft.metaUpgrades, draft.prestigeUpgrades, buildState);
                 logMessages.push(`${nextHero.name} reached level ${nextHero.level}!`);
             }
 
@@ -1024,8 +1107,9 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             return;
         }
 
-        entity.actionProgress += getActionProgressPerTick(entity, draft.prestigeUpgrades);
+        entity.actionProgress += getActionProgressPerTick(entity, draft.prestigeUpgrades, buildState);
         const heroTemplate = getHeroTemplateForEntity(entity);
+        const heroBuildProfile = getHeroBuildProfile(entity, buildState);
 
         if (heroTemplate) {
             let regen = 0;
@@ -1057,7 +1141,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             const healTarget = getLowestHpRatioTarget(livingAllies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
 
             if (healDefinition && healTarget && entity.currentResource.gte(healDefinition.cost) && getHpRatio(healTarget) < healDefinition.hpThreshold) {
-                const rawHealAmount = entity.magicDamage.times(healDefinition.healMultiplier);
+                const rawHealAmount = entity.magicDamage.times(healDefinition.healMultiplier + heroBuildProfile.effects.healMultiplierBonus);
                 const healAmount = rawHealAmount.times(getHealingMultiplier(healTarget));
                 setActiveSkill(entity, healDefinition.name);
                 entity.currentResource = entity.currentResource.minus(healDefinition.cost);
@@ -1079,7 +1163,9 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && getCleanseableStatusEffect(ally))
                 ?? livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((se) => se.key === "regen"));
             if (blessDefinition && blessTarget && entity.currentResource.gte(blessDefinition.cost)) {
-                const regenPotency = entity.magicDamage.times(blessDefinition.regenMultiplier).toNumber();
+                const regenPotency = entity.magicDamage
+                    .times(blessDefinition.regenMultiplier + heroBuildProfile.effects.blessRegenMultiplierBonus)
+                    .toNumber();
                 const regenEffect: StatusEffect = {
                     ...getStatusConfig("regen"),
                     sourceId: entity.id,
@@ -1148,7 +1234,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             return;
         }
 
-        let action = getDamageAction(entity);
+        let action = getDamageAction(entity, buildState);
         action = {
             ...action,
             damage: action.damage.times(getDamageOutputMultiplier(entity)),
@@ -1162,7 +1248,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             : getPhysicalHitChance(entity, target);
 
         if (action.canDodge && randomSource.next() >= hitChance) {
-            grantResolvedAttackResource(entity);
+            grantResolvedAttackResource(entity, buildState);
             queueCombatEvent({
                 sourceId: entity.id,
                 targetId: target.id,
@@ -1175,7 +1261,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         }
 
         if (action.canParry && action.deliveryType === "melee" && action.damageElement === "physical" && randomSource.next() < getParryChance(entity, target)) {
-            grantResolvedAttackResource(entity);
+            grantResolvedAttackResource(entity, buildState);
             queueCombatEvent({
                 sourceId: entity.id,
                 targetId: target.id,
@@ -1232,8 +1318,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             ttlTicks: COMBAT_EVENT_TICKS,
         });
 
-        grantResolvedAttackResource(entity);
-        grantTakeDamageResource(target);
+        grantResolvedAttackResource(entity, buildState);
+        grantTakeDamageResource(target, buildState);
 
         const critSuffix = isCrit ? " (CRIT)" : "";
         logMessages.push(`${entity.name} uses ${action.name} on ${target.name} for ${finalDamage.floor().toString()}!${critSuffix}${damageSuffix}`);

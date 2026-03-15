@@ -198,6 +198,40 @@ describe("createGameStore", () => {
         expect(upgradedDamage?.gt(startingDamage ?? 0)).toBe(true);
     });
 
+    it("learns talents and equips gear through progression actions", () => {
+        const store = createGameStore({
+            party: createStarterParty("Ayla", "Cleric"),
+            talentProgression: {
+                unlockedTalentIdsByHeroId: {},
+                talentPointsByHeroId: {
+                    hero_1: 1,
+                },
+            },
+        });
+
+        const startingMagicDamage = store.getState().party[0]?.magicDamage;
+
+        store.getState().unlockTalent("hero_1", "cleric-sunfire");
+        let state = store.getState();
+
+        expect(state.talentProgression.unlockedTalentIdsByHeroId.hero_1).toEqual(["cleric-sunfire"]);
+        expect(state.talentProgression.talentPointsByHeroId.hero_1).toBe(0);
+        expect(state.party[0]?.magicDamage.gt(startingMagicDamage ?? 0)).toBe(true);
+
+        store.getState().equipItem("hero_1", "sunlit-censer");
+        state = store.getState();
+
+        expect(state.equipmentProgression.equippedItemIdsByHeroId.hero_1).toContain("sunlit-censer");
+
+        const gearedMagicDamage = state.party[0]?.magicDamage;
+        expect(gearedMagicDamage?.gt(startingMagicDamage ?? 0)).toBe(true);
+
+        store.getState().unequipItem("hero_1", "weapon");
+        state = store.getState();
+
+        expect(state.equipmentProgression.equippedItemIdsByHeroId.hero_1).toEqual([]);
+    });
+
     it("stores presentational UI state separately from combat state", () => {
         const store = createGameStore();
 

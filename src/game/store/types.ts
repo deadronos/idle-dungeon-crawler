@@ -2,6 +2,7 @@ import type Decimal from "decimal.js";
 import type { StateCreator } from "zustand";
 
 import type { Entity, HeroClass, MetaUpgrades, StatusEffectKey } from "../entity";
+import type { EquipmentSlot } from "../heroBuilds";
 import type { PartySlotUnlock } from "../partyProgression";
 
 export type AppSection = "dungeon" | "shop";
@@ -98,6 +99,9 @@ export interface ProgressionActions {
     getRecruitCost: () => Decimal;
     recruitHero: (heroClass: HeroClass) => void;
     retireHero: (heroId: string) => void;
+    unlockTalent: (heroId: string, talentId: string) => void;
+    equipItem: (heroId: string, itemId: string) => void;
+    unequipItem: (heroId: string, slot: EquipmentSlot) => void;
     getPrestigeUpgradeCost: (upgradeId: keyof PrestigeUpgrades) => number;
     buyPrestigeUpgrade: (upgradeId: keyof PrestigeUpgrades) => void;
 }

@@ -21,6 +21,7 @@ We use a format inspired by Architecture Decision Records (ADRs) to document sig
 - [006 - Hero Retirement and Prestige Mechanics](gamedecisions/006-hero-retirement-and-prestige.md)
 - [007 - Layered Combat Model](gamedecisions/007-layered-combat-model.md)
 - [008 - Hero Class Templates, Growth Packages, and Resource Models](gamedecisions/008-hero-class-templates.md)
+- [009 - Differentiation MVP: Class Passives, Talents, Equipment, and Build Surfacing](gamedecisions/009-differentiation-mvp-talents-equipment-and-build-surfacing.md)
 
 ### Technical Decisions
 

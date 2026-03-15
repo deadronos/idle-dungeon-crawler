@@ -1,5 +1,15 @@
 import { getFortificationUpgradeCost as calculateFortificationUpgradeCost, getTrainingUpgradeCost as calculateTrainingUpgradeCost } from "../upgrades";
 import { createRecruitHero } from "../entity";
+import type { HeroClass } from "../entity";
+import {
+    canHeroEquipItem,
+    getEquipmentItem,
+    getEquipmentOwnerId,
+    getTalentDefinition,
+    synchronizeEquipmentProgression,
+    synchronizeTalentProgression,
+    type HeroBuildState,
+} from "../heroBuilds";
 import { prependCombatMessages, recalculateParty } from "../engine/simulation";
 import { getNextPartySlotUnlock as getNextSlotUnlock, getRecruitCost as calculateRecruitCost } from "../partyProgression";
 import type { GameState, GameStateCreator, PrestigeUpgrades, ProgressionActions, ProgressionSlice } from "./types";
@@ -25,6 +35,11 @@ export const selectProgressionState = (state: GameState): ProgressionSlice => ({
 export const createProgressionSlice = (
     initialState: ProgressionSlice,
 ): GameStateCreator<ProgressionSlice & ProgressionActions> => {
+    const getBuildState = (state: Pick<GameState, "talentProgression" | "equipmentProgression">): HeroBuildState => ({
+        talentProgression: state.talentProgression,
+        equipmentProgression: state.equipmentProgression,
+    });
+
     return (set, get) => ({
         ...initialState,
         getTrainingUpgradeCost: () => {
@@ -46,7 +61,7 @@ export const createProgressionSlice = (
                 return {
                     gold: state.gold.minus(cost),
                     metaUpgrades: newUpgrades,
-                    party: recalculateParty(state.party, newUpgrades, state.prestigeUpgrades),
+                    party: recalculateParty(state.party, newUpgrades, state.prestigeUpgrades, getBuildState(state)),
                 };
             });
         },
@@ -66,7 +81,7 @@ export const createProgressionSlice = (
                 return {
                     gold: state.gold.minus(cost),
                     metaUpgrades: nextUpgrades,
-                    party: recalculateParty(state.party, nextUpgrades, state.prestigeUpgrades),
+                    party: recalculateParty(state.party, nextUpgrades, state.prestigeUpgrades, getBuildState(state)),
                 };
             });
         },
@@ -106,9 +121,18 @@ export const createProgressionSlice = (
                 }
 
                 const newHero = createRecruitHero(heroClass, state.party, state.metaUpgrades, state.prestigeUpgrades);
+                const nextParty = [...state.party, newHero];
+                const talentProgression = synchronizeTalentProgression(nextParty, state.talentProgression);
+                const equipmentProgression = synchronizeEquipmentProgression(nextParty, state.equipmentProgression);
+
                 return {
                     gold: state.gold.minus(cost),
-                    party: [...state.party, newHero],
+                    party: recalculateParty(nextParty, state.metaUpgrades, state.prestigeUpgrades, {
+                        talentProgression,
+                        equipmentProgression,
+                    }),
+                    talentProgression,
+                    equipmentProgression,
                     combatLog: prependCombatMessages(state.combatLog, `${newHero.name} the ${heroClass} joined the party!`),
                 };
             });
@@ -127,9 +151,16 @@ export const createProgressionSlice = (
                 
                 const newParty = [...state.party];
                 newParty.splice(heroIndex, 1);
+                const talentProgression = synchronizeTalentProgression(newParty, state.talentProgression);
+                const equipmentProgression = synchronizeEquipmentProgression(newParty, state.equipmentProgression);
 
                 return {
-                    party: newParty,
+                    party: recalculateParty(newParty, state.metaUpgrades, state.prestigeUpgrades, {
+                        talentProgression,
+                        equipmentProgression,
+                    }),
+                    talentProgression,
+                    equipmentProgression,
                     heroSouls: state.heroSouls.plus(soulsAwarded),
                     combatLog: prependCombatMessages(
                         state.combatLog,
@@ -137,6 +168,118 @@ export const createProgressionSlice = (
                             ? `${hero.name} was retired in exchange for ${soulsAwarded} Hero Souls.`
                             : `${hero.name} was dismissed.`
                     ),
+                };
+            });
+        },
+        unlockTalent: (heroId: string, talentId: string) => {
+            set((state) => {
+                const hero = state.party.find((partyMember) => partyMember.id === heroId);
+                const talentDefinition = getTalentDefinition(talentId);
+
+                if (!hero || !talentDefinition || talentDefinition.heroClass !== hero.class) {
+                    return {};
+                }
+
+                const unlockedTalentIds = state.talentProgression.unlockedTalentIdsByHeroId[heroId] ?? [];
+                const availablePoints = state.talentProgression.talentPointsByHeroId[heroId] ?? 0;
+                if (availablePoints <= 0 || unlockedTalentIds.includes(talentId)) {
+                    return {};
+                }
+
+                const talentProgression = synchronizeTalentProgression(state.party, {
+                    unlockedTalentIdsByHeroId: {
+                        ...state.talentProgression.unlockedTalentIdsByHeroId,
+                        [heroId]: [...unlockedTalentIds, talentId],
+                    },
+                    talentPointsByHeroId: {
+                        ...state.talentProgression.talentPointsByHeroId,
+                        [heroId]: availablePoints - 1,
+                    },
+                });
+
+                return {
+                    talentProgression,
+                    party: recalculateParty(state.party, state.metaUpgrades, state.prestigeUpgrades, {
+                        talentProgression,
+                        equipmentProgression: state.equipmentProgression,
+                    }),
+                    combatLog: prependCombatMessages(state.combatLog, `${hero.name} learned ${talentDefinition.name}.`),
+                };
+            });
+        },
+        equipItem: (heroId: string, itemId: string) => {
+            set((state) => {
+                const hero = state.party.find((partyMember) => partyMember.id === heroId);
+                const item = getEquipmentItem(itemId);
+
+                if (!hero || hero.isEnemy || !item) {
+                    return {};
+                }
+                const heroClass = hero.class as HeroClass;
+                if (!canHeroEquipItem(heroClass, item)) {
+                    return {};
+                }
+
+                if (!state.equipmentProgression.inventoryItemIds.includes(itemId)) {
+                    return {};
+                }
+
+                const ownerId = getEquipmentOwnerId(itemId, state.equipmentProgression);
+                if (ownerId && ownerId !== heroId) {
+                    return {};
+                }
+
+                const currentItemIds = state.equipmentProgression.equippedItemIdsByHeroId[heroId] ?? [];
+                const nextItemIds = currentItemIds
+                    .filter((equippedItemId) => getEquipmentItem(equippedItemId)?.slot !== item.slot)
+                    .concat(itemId);
+
+                const equipmentProgression = synchronizeEquipmentProgression(state.party, {
+                    ...state.equipmentProgression,
+                    equippedItemIdsByHeroId: {
+                        ...state.equipmentProgression.equippedItemIdsByHeroId,
+                        [heroId]: nextItemIds,
+                    },
+                });
+
+                return {
+                    equipmentProgression,
+                    party: recalculateParty(state.party, state.metaUpgrades, state.prestigeUpgrades, {
+                        talentProgression: state.talentProgression,
+                        equipmentProgression,
+                    }),
+                    combatLog: prependCombatMessages(state.combatLog, `${hero.name} equipped ${item.name}.`),
+                };
+            });
+        },
+        unequipItem: (heroId, slot) => {
+            set((state) => {
+                const hero = state.party.find((partyMember) => partyMember.id === heroId);
+                if (!hero) {
+                    return {};
+                }
+
+                const currentItemIds = state.equipmentProgression.equippedItemIdsByHeroId[heroId] ?? [];
+                const nextItemIds = currentItemIds.filter((itemId) => getEquipmentItem(itemId)?.slot !== slot);
+                if (nextItemIds.length === currentItemIds.length) {
+                    return {};
+                }
+
+                const equipmentProgression = synchronizeEquipmentProgression(state.party, {
+                    ...state.equipmentProgression,
+                    equippedItemIdsByHeroId: {
+                        ...state.equipmentProgression.equippedItemIdsByHeroId,
+                        [heroId]: nextItemIds,
+                    },
+                });
+
+                return {
+                    equipmentProgression,
+                    party: recalculateParty(state.party, state.metaUpgrades, state.prestigeUpgrades, {
+                        talentProgression: state.talentProgression,
+                        equipmentProgression,
+                    }),
+                    combatLog: prependCombatMessages(state.combatLog, `${hero.name} cleared their ${slot} slot.`),
                 };
             });
         },
@@ -168,7 +311,7 @@ export const createProgressionSlice = (
                 return {
                     heroSouls: state.heroSouls.minus(cost),
                     prestigeUpgrades: newPrestigeUpgrades,
-                    party: recalculateParty(state.party, state.metaUpgrades, newPrestigeUpgrades),
+                    party: recalculateParty(state.party, state.metaUpgrades, newPrestigeUpgrades, getBuildState(state)),
                     combatLog: prependCombatMessages(state.combatLog, `Altar of Souls: Purchased ${names[upgradeId]} Lv ${currentLevel + 1}.`),
                 };
             });
