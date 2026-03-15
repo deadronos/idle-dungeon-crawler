@@ -1,6 +1,7 @@
 import {
     GAME_TICK_MS,
-    getFloorReplayState,
+    getPostVictoryFloorReplayState,
+    getPostVictoryFloorTransitionState,
     getFloorTransitionState,
     getInitializedPartyState,
     getPartyWipeState,
@@ -92,9 +93,9 @@ export const createHotSimulationSlice = (
                     }
 
                     if (nextState.autoAdvance) {
-                        nextState = { ...nextState, ...getFloorTransitionState(nextState, nextState.floor + 1) };
+                        nextState = { ...nextState, ...getPostVictoryFloorTransitionState(nextState, nextState.floor + 1) };
                     } else {
-                        nextState = { ...nextState, ...getFloorReplayState(nextState) };
+                        nextState = { ...nextState, ...getPostVictoryFloorReplayState(nextState) };
                     }
                     break;
                 }
