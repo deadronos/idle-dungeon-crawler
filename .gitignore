@@ -11,6 +11,7 @@ node_modules
 dist
 coverage
 dist-ssr
+.scratch/
 *.local
 
 # Editor directories and files
