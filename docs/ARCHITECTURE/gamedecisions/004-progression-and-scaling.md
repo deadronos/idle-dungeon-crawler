@@ -101,7 +101,14 @@ If all party members reach 0 HP, a wipe is triggered. The party is fully healed,
 
 ### Save-Safe Expansion Rule
 
-Because future differentiation layers will introduce new progression fields, additive systems in this area must remain migration-safe. The accepted direction in this issue is to define the progression stack now and leave versioned save migration behavior to follow-up issue `#71`.
+Because future differentiation layers introduce new progression fields, additive systems in this area must remain migration-safe.
+
+Issue `#71` implements the current persistence rule:
+
+* save payloads are explicitly versioned
+* older payloads are migrated forward step-by-step before runtime hydration
+* additive progression layers default through named migration steps instead of ad hoc tolerant parsing
+* placeholder progression state for talents and equipment is now part of the canonical save shape, even before those systems have full gameplay behavior
 
 ## Consequences
 

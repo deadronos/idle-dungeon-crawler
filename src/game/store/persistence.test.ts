@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createEnemy, createStarterParty } from "@/game/entity";
 import { createInitialGameState } from "@/game/engine/simulation";
 
-import { deserializeGameState, serializeGameState } from "./persistence";
+import { deserializeGameState, GAME_STATE_EXPORT_VERSION, serializeGameState } from "./persistence";
 
 describe("game-state persistence", () => {
     it("roundtrips the playable game state through JSON export and import", () => {
@@ -32,10 +32,27 @@ describe("game-state persistence", () => {
             partyCapacity: 2,
             highestFloorCleared: 7,
             activeSection: "shop",
+            talentProgression: {
+                unlockedTalentIdsByHeroId: {
+                    hero_1: ["blessed-light", "renewing-faith"],
+                },
+                talentPointsByHeroId: {
+                    hero_1: 2,
+                },
+            },
+            equipmentProgression: {
+                inventoryItemIds: ["oak-staff", "saintly-charm"],
+                equippedItemIdsByHeroId: {
+                    hero_1: ["oak-staff"],
+                },
+            },
         });
 
-        const restoredState = deserializeGameState(serializeGameState(exportedState));
+        const serializedState = serializeGameState(exportedState);
+        const payload = JSON.parse(serializedState) as { version: number };
+        const restoredState = deserializeGameState(serializedState);
 
+        expect(payload.version).toBe(GAME_STATE_EXPORT_VERSION);
         expect(restoredState.gold.toString()).toBe("345");
         expect(restoredState.party[0]?.name).toBe("Selene");
         expect(restoredState.party[0]?.currentHp.eq(exportedState.party[0]?.currentHp ?? 0)).toBe(true);
@@ -50,6 +67,8 @@ describe("game-state persistence", () => {
         expect(restoredState.enemies[0]?.name).toBe(exportedState.enemies[0]?.name);
         expect(restoredState.autoFight).toBe(false);
         expect(restoredState.activeSection).toBe("shop");
+        expect(restoredState.talentProgression).toEqual(exportedState.talentProgression);
+        expect(restoredState.equipmentProgression).toEqual(exportedState.equipmentProgression);
     });
 
     it("does not persist transient combat events in exported saves", () => {
@@ -72,18 +91,20 @@ describe("game-state persistence", () => {
         expect(restoredState.combatEvents).toEqual([]);
     });
 
-    it("rehydrates missing combat ratings and scaling stats from older save payloads", () => {
+    it("migrates older versioned saves and defaults missing combat and progression fields", () => {
         const exportedState = createInitialGameState({
             party: createStarterParty("Selene", "Cleric"),
             enemies: [createEnemy(3, "enemy_3")],
         });
 
         const payload = JSON.parse(serializeGameState(exportedState)) as {
+            version: number;
             state: {
                 party: Array<Record<string, unknown>>;
                 enemies: Array<Record<string, unknown>>;
             };
         };
+        payload.version = 1;
 
         delete payload.state.party[0]?.accuracyRating;
         delete payload.state.party[0]?.evasionRating;
@@ -103,6 +124,8 @@ describe("game-state persistence", () => {
         delete payload.state.enemies[0]?.enemyElement;
         delete payload.state.enemies[0]?.guardStacks;
         delete payload.state.enemies[0]?.statusEffects;
+        delete (payload.state as Record<string, unknown>).talentProgression;
+        delete (payload.state as Record<string, unknown>).equipmentProgression;
 
         const restoredState = deserializeGameState(JSON.stringify(payload));
 
@@ -123,6 +146,59 @@ describe("game-state persistence", () => {
         expect(restoredState.enemies[0]?.enemyArchetype).toBe("Bruiser");
         expect(restoredState.enemies[0]?.guardStacks).toBe(0);
         expect(restoredState.enemies[0]?.statusEffects).toEqual([]);
+        expect(restoredState.talentProgression).toEqual({
+            unlockedTalentIdsByHeroId: {},
+            talentPointsByHeroId: {},
+        });
+        expect(restoredState.equipmentProgression).toEqual({
+            inventoryItemIds: [],
+            equippedItemIdsByHeroId: {},
+        });
+    });
+
+    it("restores supported mid-combat encounter state while dropping transient combat events", () => {
+        const party = createStarterParty("Selene", "Cleric");
+        const enemy = createEnemy(3, "enemy_3");
+        party[0].actionProgress = 64;
+        party[0].activeSkill = "Casting Bless";
+        party[0].activeSkillTicks = 8;
+        party[0].guardStacks = 1;
+        enemy.actionProgress = 37;
+        enemy.guardStacks = 1;
+
+        const exportedState = createInitialGameState({
+            party,
+            enemies: [enemy],
+            combatEvents: [
+                {
+                    id: "combat-event-1",
+                    targetId: "enemy_3",
+                    kind: "damage",
+                    text: "-12",
+                    ttlTicks: 8,
+                },
+            ],
+        });
+
+        const restoredState = deserializeGameState(serializeGameState(exportedState));
+
+        expect(restoredState.party[0]?.actionProgress).toBe(64);
+        expect(restoredState.party[0]?.activeSkill).toBe("Casting Bless");
+        expect(restoredState.party[0]?.activeSkillTicks).toBe(8);
+        expect(restoredState.party[0]?.guardStacks).toBe(1);
+        expect(restoredState.enemies[0]?.actionProgress).toBe(37);
+        expect(restoredState.enemies[0]?.guardStacks).toBe(1);
+        expect(restoredState.combatEvents).toEqual([]);
+    });
+
+    it("rejects save payloads from a newer unsupported version", () => {
+        const payload = {
+            version: GAME_STATE_EXPORT_VERSION + 1,
+            savedAt: new Date().toISOString(),
+            state: {},
+        };
+
+        expect(() => deserializeGameState(JSON.stringify(payload))).toThrow(/newer than this build supports/i);
     });
 
     it("rejects malformed save payloads", () => {

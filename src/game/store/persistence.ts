@@ -1,11 +1,166 @@
 import { createInitialGameState } from "../engine/simulation";
+import {
+    createEmptyEquipmentProgressionState,
+    createEmptyTalentProgressionState,
+} from "./types";
 import type { GameState } from "./types";
 
 export const GAME_STATE_STORAGE_KEY = "idle-dungeon-crawler.game-state";
 export const GAME_STATE_AUTOSAVE_MS = 10_000;
-export const GAME_STATE_EXPORT_VERSION = 1;
+export const GAME_STATE_EXPORT_VERSION = 2;
+const LEGACY_UNVERSIONED_SAVE_VERSION = 0;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
+const hasOwn = <TKey extends string>(value: Record<string, unknown>, key: TKey): value is Record<TKey, unknown> =>
+    Object.prototype.hasOwnProperty.call(value, key);
+const DEFAULT_SAVE_TIMESTAMP = new Date(0).toISOString();
+
+type RawSaveRecord = Record<string, unknown>;
+
+interface SaveEnvelope {
+    version: number;
+    savedAt: string;
+    state: RawSaveRecord;
+}
+
+type SaveMigration = (state: RawSaveRecord) => RawSaveRecord;
+
+const getStringArray = (value: unknown): string[] =>
+    Array.isArray(value) ? value.filter((entry): entry is string => typeof entry === "string") : [];
+
+const getStringArrayRecord = (value: unknown): Record<string, string[]> => {
+    if (!isRecord(value)) {
+        return {};
+    }
+
+    return Object.fromEntries(
+        Object.entries(value).map(([key, entryValue]) => [key, getStringArray(entryValue)]),
+    );
+};
+
+const getNumberRecord = (value: unknown): Record<string, number> => {
+    if (!isRecord(value)) {
+        return {};
+    }
+
+    return Object.entries(value).reduce<Record<string, number>>((accumulator, [key, entryValue]) => {
+        if (typeof entryValue === "number") {
+            accumulator[key] = entryValue;
+        }
+
+        return accumulator;
+    }, {});
+};
+
+const sanitizeTalentProgression = (value: unknown) => {
+    const defaults = createEmptyTalentProgressionState();
+    if (!isRecord(value)) {
+        return defaults;
+    }
+
+    return {
+        unlockedTalentIdsByHeroId: hasOwn(value, "unlockedTalentIdsByHeroId")
+            ? getStringArrayRecord(value.unlockedTalentIdsByHeroId)
+            : defaults.unlockedTalentIdsByHeroId,
+        talentPointsByHeroId: hasOwn(value, "talentPointsByHeroId")
+            ? getNumberRecord(value.talentPointsByHeroId)
+            : defaults.talentPointsByHeroId,
+    };
+};
+
+const sanitizeEquipmentProgression = (value: unknown) => {
+    const defaults = createEmptyEquipmentProgressionState();
+    if (!isRecord(value)) {
+        return defaults;
+    }
+
+    return {
+        inventoryItemIds: hasOwn(value, "inventoryItemIds") ? getStringArray(value.inventoryItemIds) : defaults.inventoryItemIds,
+        equippedItemIdsByHeroId: hasOwn(value, "equippedItemIdsByHeroId")
+            ? getStringArrayRecord(value.equippedItemIdsByHeroId)
+            : defaults.equippedItemIdsByHeroId,
+    };
+};
+
+const sanitizeMigratedEntity = (value: unknown): unknown => {
+    if (!isRecord(value)) {
+        return value;
+    }
+
+    return {
+        ...value,
+        activeSkill: typeof value.activeSkill === "string" ? value.activeSkill : null,
+        activeSkillTicks: typeof value.activeSkillTicks === "number" ? value.activeSkillTicks : 0,
+        actionProgress: typeof value.actionProgress === "number" ? value.actionProgress : 0,
+        guardStacks: typeof value.guardStacks === "number" ? value.guardStacks : 0,
+        statusEffects: Array.isArray(value.statusEffects) ? value.statusEffects : [],
+    };
+};
+
+const sanitizeEntityArray = (value: unknown) => Array.isArray(value) ? value.map(sanitizeMigratedEntity) : value;
+
+const SAVE_MIGRATIONS: Record<number, SaveMigration> = {
+    0: (state) => ({ ...state }),
+    1: (state) => ({
+        ...state,
+        party: sanitizeEntityArray(state.party),
+        enemies: sanitizeEntityArray(state.enemies),
+        combatEvents: [],
+        talentProgression: sanitizeTalentProgression(state.talentProgression),
+        equipmentProgression: sanitizeEquipmentProgression(state.equipmentProgression),
+    }),
+};
+
+const normalizeSaveEnvelope = (value: unknown): SaveEnvelope => {
+    if (!isRecord(value)) {
+        throw new Error("Save data must be a JSON object.");
+    }
+
+    if (hasOwn(value, "state")) {
+        if (!isRecord(value.state)) {
+            throw new Error("Save file is missing required game-state data.");
+        }
+
+        return {
+            version: typeof value.version === "number" ? value.version : 1,
+            savedAt: typeof value.savedAt === "string" ? value.savedAt : DEFAULT_SAVE_TIMESTAMP,
+            state: { ...value.state },
+        };
+    }
+
+    return {
+        version: LEGACY_UNVERSIONED_SAVE_VERSION,
+        savedAt: DEFAULT_SAVE_TIMESTAMP,
+        state: { ...(value as RawSaveRecord) },
+    };
+};
+
+const migrateSaveEnvelope = (envelope: SaveEnvelope): SaveEnvelope => {
+    if (!Number.isInteger(envelope.version) || envelope.version < LEGACY_UNVERSIONED_SAVE_VERSION) {
+        throw new Error("Save file version is invalid.");
+    }
+
+    if (envelope.version > GAME_STATE_EXPORT_VERSION) {
+        throw new Error(`Save file version ${envelope.version} is newer than this build supports.`);
+    }
+
+    let migratedEnvelope = { ...envelope, state: { ...envelope.state } };
+
+    while (migratedEnvelope.version < GAME_STATE_EXPORT_VERSION) {
+        const migration = SAVE_MIGRATIONS[migratedEnvelope.version];
+        if (!migration) {
+            throw new Error(`No migration path from save version ${migratedEnvelope.version}.`);
+        }
+
+        migratedEnvelope = {
+            ...migratedEnvelope,
+            version: migratedEnvelope.version + 1,
+            state: migration(migratedEnvelope.state),
+        };
+    }
+
+    return migratedEnvelope;
+};
 
 const toPartialGameState = (value: unknown): Partial<GameState> => {
     if (!isRecord(value)) {
@@ -80,6 +235,14 @@ const toPartialGameState = (value: unknown): Partial<GameState> => {
         candidate.prestigeUpgrades = prestigeUpgrades;
     }
 
+    if (isRecord(value.talentProgression)) {
+        candidate.talentProgression = sanitizeTalentProgression(value.talentProgression);
+    }
+
+    if (isRecord(value.equipmentProgression)) {
+        candidate.equipmentProgression = sanitizeEquipmentProgression(value.equipmentProgression);
+    }
+
     return candidate;
 };
 
@@ -108,10 +271,10 @@ export const deserializeGameState = (serializedState: string): GameState => {
         throw new Error("Save file is not valid JSON.");
     }
 
-    const rawState = isRecord(parsed) && "state" in parsed ? parsed.state : parsed;
+    const migratedEnvelope = migrateSaveEnvelope(normalizeSaveEnvelope(parsed));
 
     try {
-        return createInitialGameState(toPartialGameState(rawState));
+        return createInitialGameState(toPartialGameState(migratedEnvelope.state));
     } catch (error) {
         if (error instanceof Error) {
             throw error;

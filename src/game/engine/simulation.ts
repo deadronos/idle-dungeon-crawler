@@ -15,6 +15,10 @@ import {
 } from "../entity";
 import type { DamageElement, EnemyArchetype, Entity, MetaUpgrades, PrestigeUpgrades, StatusEffect, StatusEffectKey } from "../entity";
 import { MAX_PARTY_SIZE } from "../partyProgression";
+import {
+    createEmptyEquipmentProgressionState,
+    createEmptyTalentProgressionState,
+} from "../store/types";
 import type { CombatEvent, GameState } from "../store/types";
 
 export const GAME_TICK_RATE = 20;
@@ -230,6 +234,27 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
         gameSpeed: overrides?.prestigeUpgrades?.gameSpeed ?? 0,
         xpMultiplier: overrides?.prestigeUpgrades?.xpMultiplier ?? 0,
     };
+    const talentProgression = {
+        ...createEmptyTalentProgressionState(),
+        ...overrides?.talentProgression,
+        unlockedTalentIdsByHeroId: {
+            ...createEmptyTalentProgressionState().unlockedTalentIdsByHeroId,
+            ...(overrides?.talentProgression?.unlockedTalentIdsByHeroId ?? {}),
+        },
+        talentPointsByHeroId: {
+            ...createEmptyTalentProgressionState().talentPointsByHeroId,
+            ...(overrides?.talentProgression?.talentPointsByHeroId ?? {}),
+        },
+    };
+    const equipmentProgression = {
+        ...createEmptyEquipmentProgressionState(),
+        ...overrides?.equipmentProgression,
+        inventoryItemIds: [...(overrides?.equipmentProgression?.inventoryItemIds ?? [])],
+        equippedItemIdsByHeroId: {
+            ...createEmptyEquipmentProgressionState().equippedItemIdsByHeroId,
+            ...(overrides?.equipmentProgression?.equippedItemIdsByHeroId ?? {}),
+        },
+    };
 
     return {
         party: overrides?.party?.map((entity) => hydrateEntity(entity, metaUpgrades, prestigeUpgrades)) ?? [],
@@ -247,6 +272,8 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
         activeSection: overrides?.activeSection ?? "dungeon",
         heroSouls: new Decimal(overrides?.heroSouls ?? 0),
         prestigeUpgrades,
+        talentProgression,
+        equipmentProgression,
     };
 };
 
