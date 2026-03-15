@@ -4,84 +4,126 @@
 **Status:** Accepted
 
 ## Context
-As defined in [001 - Player Classes and Party System](001-player-classes.md), units in our game have various attributes that define their performance. Initially, the scaling and formula definitions were tightly coupled with the implementation and not officially documented, leading to confusion on how much 1 point of Strength was actually worth compared to 1 point of Vitality.
+
+As defined in [001 - Player Classes and Party System](001-player-classes.md), units in our game have a shared pool of core attributes that establish class identity and support simple enemy generation. That baseline worked, but the combat model gradually pushed too much long-term combat identity into the same five numbers.
+
+As of the layered combat pass documented in [007 - Layered Combat Model](007-layered-combat-model.md), these primary attributes remain foundational, but they are no longer the intended long-term owner of every combat output. This record now documents:
+
+* the broad identity role of the five primary attributes
+* the current live runtime formulas that still ship today
+* which outputs stay primarily attribute-facing versus which outputs are accepted as layered-rating-facing going forward
 
 ## Decision
-We formally document the core attributes and the formulas used to calculate a unit's derived combat stats. We use a base starting point for each derived stat to ensure level 1 entities are viable before attribute scaling applies.
 
-### Core Attributes
-The game uses five primary attributes:
-*   **Constitution (VIT):** Governs physical health and base durability.
-*   **Strength (STR):** Measures physical power and heavily influences physical resistance (armor).
-*   **Dexterity (DEX):** Determines precision and speed. Increases critical hit chance, ranged damage, and slightly boosts action speed.
-*   **Intelligence (INT):** Dictates magical prowess, influencing magic damage and maximum magical resource pools.
-*   **Wisdom (WIS):** Reflects spiritual/mental defense, increasing elemental resistances and cleric mana regeneration.
+We keep five core attributes as the foundation for hero identity, class flavor, and baseline scaling:
+
+* **Constitution (VIT):** Governs health, survivability, and the physical sturdiness baseline.
+* **Strength (STR):** Measures physical force and contributes to melee-facing offense and durability.
+* **Dexterity (DEX):** Reflects agility, coordination, and baseline action speed.
+* **Intelligence (INT):** Governs magical throughput and caster resource baselines.
+* **Wisdom (WIS):** Governs magical steadiness, resistance baselines, and support-oriented sustain.
+
+The layered-model rule is:
+
+> Attributes answer **what kind of character is this?**
+> Templates, talents, equipment, and temporary effects answer **how does this character fight?**
 
 ### Starting Attribute Templates
-Each hero class begins with a predefined spread of attributes to reinforce its role. These base values are applied when a new hero is created and before any level‑up allocations:
+
+Each hero class begins with a predefined spread of core attributes. These values still matter because they establish the class baseline before level-up growth and later layered systems apply:
 
 * **Warrior:** VIT 10, STR 10, DEX 5, INT 3, WIS 3
 * **Cleric:** VIT 7, STR 4, DEX 4, INT 8, WIS 10
 * **Archer:** VIT 6, STR 5, DEX 12, INT 4, WIS 4
 
-Monsters use a simple base of 5 in each attribute, which is then scaled by floor level during encounter generation. Enemy archetypes now apply a second pass of role-specific stat bias on top of that baseline so bruisers, skirmishers, casters, supports, and bosses can all inherit the same formulas without needing a separate stat system. Documenting the starting templates helps designers understand baseline differences between classes.
+Monsters use a simple base of 5 in each attribute before floor scaling and archetype bias are applied. This keeps encounter generation cheap, deterministic, and readable.
 
-### Derived Stat Formulas
-When a unit is created or levels up, their total attributes are summed and used to calculate derived stats:
+### What Stays Attribute-Facing
 
-*   **Max Health (HP):** `50 + (VIT * 10)`
-*   **Armor (Physical Defense):** `(STR * 1) + (VIT * 0.5)`
-*   **Physical Damage (Melee):** `10 + (STR * 1.5)`
-*   **Ranged Damage (Archers):** `10 + (DEX * 1.5)`
-*   **Magic Damage:** `5 + (INT * 2.0)`
-*   **Accuracy Rating:** `50 + (DEX * 1.5) + (INT * 1)`
-*   **Evasion Rating:** `35 + (DEX * 1.0) + (WIS * 1)`
-*   **Parry Rating:** `(STR * 1.75) + (DEX * 0.25)`
-*   **Armor Penetration:** `(STR * 1.0) + (DEX * 0.5)`
-*   **Elemental Penetration:** `(INT * 1.0) + (WIS * 0.5)`
-*   **Tenacity:** `(VIT * 0.75) + (WIS * 1.0)`
+The following outputs remain broadly primary-attribute-facing even as the combat model layers additional sources on top:
 
-These additional ratings are intentionally coupled to the same five core attributes instead of introducing a sixth or seventh combat stat. `DEX` now contributes to both offensive precision and defensive footwork, `STR` helps melee defense through parry, and `WIS` helps magical awareness and avoidance pressure.
+* baseline HP and durability tendency
+* baseline physical versus magical leaning
+* baseline resource pools and regeneration tendencies
+* class identity at hero creation
+* level-up growth direction
 
-The newer long-term scaling ratings follow the same philosophy: `STR` and `DEX` feed physical mitigation bypass, `INT` and `WIS` feed magical mitigation bypass, and `VIT` plus `WIS` provide a bounded anti-spike defense through `Tenacity`.
+These are the places where direct primary-stat influence remains desirable because they reinforce broad role identity without overloading minute-by-minute combat behavior.
 
-### Classes & Secondary Resources
-Classes use secondary resources to cast powerful abilities (future-proofing) or sustain basic actions:
-*   **Warrior (Rage):** Fixed maximum of `100`. Starts at `0`. Generates `8` Rage after resolving an attack action and `5` Rage when taking damage.
-*   **Cleric (Mana):** Maximum is `50 + (INT * 5)`. Starts full. Regenerates passively based on Wisdom (`WIS * 0.5` per action tick).
-*   **Archer (Cunning):** Maximum is `50 + (INT * 5)`. Starts full. Regenerates at a fixed flat rate (`0.75` per action tick).
+### What Moves to Layered Combat Ratings
 
-### Hard Caps
-To prevent infinite scaling breaking the game logic:
-*   **Critical Hit Chance:** Scales at `+0.5% per DEX`. Base is `5%`. Hard capped at `100% (1.0)`.
-*   **Elemental Resistances:** Affects Fire, Water, Earth, Air, Light, and Shadow. Scales at `+1% per WIS`. Hard capped at `75% (0.75)`.
-*   **Physical / Ranged Hit Chance:** Uses `Accuracy Rating` vs `Evasion Rating`, then clamps to a floor of `72%` and a ceiling of `97%`.
-*   **Spell Hit Chance:** Uses a magic-biased contest of `Accuracy + INT` versus `Evasion + WIS`, then clamps to `75%` to `98%`.
-*   **Parry Chance:** Applies only to `melee + physical` attacks and is capped at `30%`.
-*   **Penetration Reduction:** Both `Armor Penetration` and `Elemental Penetration` convert through `min(60%, penetration / (penetration + 60))`, so mitigation bypass scales with diminishing returns and cannot erase more than 60% of the target's armor or resistance.
-*   **Tenacity Reduction:** `Tenacity` converts through `min(60%, tenacity / (tenacity + 80))`, so it can only reduce a portion of incoming critical bonus damage.
-*   **Status Application Chance:** Elemental status riders use `clamp(15%, 75%, baseChance + (attacker.ElementalPenetration - defender.Tenacity) * 0.3%)`, so high penetration helps elemental pressure while Tenacity is the first resistance hook against ongoing combat conditions.
+The following outputs are accepted as layered-rating-facing in the long-term model, even where the current runtime still derives them mostly from attributes:
 
-### Combat Role Implications
-The new derived ratings reinforce class roles without adding bespoke per-class rules:
+* raw damage packages
+* hit reliability
+* ATB speed pressure
+* crit chance and crit bonus pressure
+* parry-facing defense
+* penetration and bypass pressure
+* magical resistance packages
+* tenacity/status resistance
+* status application pressure
 
-* **Warrior:** naturally develops the highest `Parry Rating` thanks to STR-heavy growth and retains a sturdier melee identity now that DEX contributes less to avoidance stacking.
-* **Cleric:** gains steadier spell reliability from INT while WIS continues to scale elemental resistance and magical defense.
-* **Archer:** still receives the strongest `Accuracy` and `Evasion` growth through DEX, but the lighter DEX weighting reduces all-in-one stat stacking and keeps the class focused on agility rather than passive durability.
-* **Monsters:** inherit the same formulas, which keeps enemy combat behavior scalable without a separate balance table for hit logic. Archetype bias changes which attributes are emphasized, but not how those attributes convert into combat stats.
-* **Tenacity:** now does two jobs: it still dampens incoming crit spikes, and it also resists elemental status pressure such as `Burn`, `Slow`, `Weaken`, `Hex`, and `Blind`. It remains bounded, so it softens those systems without shutting them off entirely.
+The MVP layered ratings for that transition are defined in [007 - Layered Combat Model](007-layered-combat-model.md): `power`, `spellPower`, `precision`, `haste`, `guard`, `resolve`, `potency`, and `crit`.
 
-### Elemental Status Hooks
-The first shipped reusable status-effect framework still derives its pressure from the same five attributes rather than introducing a new ailment stat:
+## Transitional Runtime Baseline
 
-* **Fire -> Burn:** a timed damage-over-time effect. Burn potency is snapshot from the applier's spell power when the effect lands.
-* **Water -> Slow:** temporarily reduces ATB gain by a bounded percentage.
-* **Earth -> Weaken:** temporarily reduces outgoing damage by a bounded percentage.
-* **Shadow -> Hex:** temporarily reduces all incoming healing on the target, giving Shadow a sustain-pressure identity instead of raw damage-over-time.
-* **Light -> Blind:** temporarily reduces `Accuracy Rating` by `15`, letting Light pressure both physical and spell reliability through the existing hit formulas.
+The live game still calculates most combat-facing outputs directly from the five primary attributes. Those formulas remain the canonical current runtime until implementation issue `#70` moves the code to layered stat sourcing.
 
-Light also introduces the first cleanse-style interaction through Cleric `Bless`, which removes one debuff from the target ally (prioritizing `Hex`) while applying or refreshing `Regen`. These status effects deliberately reuse `Elemental Penetration` on the attacker side and `Tenacity` on the defender side. That keeps status pressure aligned with the existing magical combat stats instead of adding a sixth defensive axis.
+### Current Derived Stat Formulas
+
+When a unit is created or levels up, the current runtime derives the following baseline stats:
+
+* **Max Health (HP):** `50 + (VIT * 10)`
+* **Armor:** `(STR * 1) + (VIT * 0.5)`
+* **Physical Damage (melee):** `10 + (STR * 1.5)`
+* **Physical Damage (archer basics):** `10 + (DEX * 1.5)`
+* **Magic Damage:** `5 + (INT * 2.0)`
+* **Accuracy Rating:** `50 + (DEX * 1.5) + (INT * 1.0)`
+* **Evasion Rating:** `35 + (DEX * 1.0) + (WIS * 1.0)`
+* **Parry Rating:** `(STR * 1.75) + (DEX * 0.25)`
+* **Armor Penetration:** `(STR * 1.0) + (DEX * 0.5)`
+* **Elemental Penetration:** `(INT * 1.0) + (WIS * 0.5)`
+* **Tenacity:** `(VIT * 0.75) + (WIS * 1.0)`
+
+### Current Class Resource Baselines
+
+Classes still use class-specific secondary resources:
+
+* **Warrior (Rage):** fixed maximum of `100`; starts at `0`; gains `8` Rage after resolving an attack action and `5` Rage when taking damage
+* **Cleric (Mana):** maximum `50 + (INT * 5)`; starts full; regenerates `WIS * 0.5` per action tick
+* **Archer (Cunning):** maximum `50 + (INT * 5)`; starts full; regenerates `0.75` per action tick
+
+These are still acceptable as attribute-facing baselines. The layered model does not require replacing them before the class-template work in `#69`.
+
+### Current Hard Caps and Bounds
+
+To keep the live game stable under idle scaling, the runtime currently applies the following caps and bounded formulas:
+
+* **Critical Hit Chance:** base `5%`, gains `+0.5%` per DEX, hard capped at `100%`
+* **Elemental Resistances:** `+1%` per WIS, hard capped at `75%`
+* **Physical / Ranged Hit Chance:** `clamp(72%, 97%, 82% + (attacker.Accuracy - defender.Evasion) * 0.2%)`
+* **Spell Hit Chance:** `clamp(74%, 96%, 82% + (attacker.Accuracy - defender.Evasion) * 0.16% + (attacker.INT - defender.WIS) * 0.08%)`
+* **Parry Chance:** melee-physical only, `clamp(0%, 25%, 4% + (defender.Parry - attacker.Accuracy * 0.3) * 0.25%)`
+* **Penetration Reduction:** `min(60%, penetration / (penetration + 60))`
+* **Tenacity Reduction:** `min(60%, tenacity / (tenacity + 80))`
+* **Status Application Chance:** `clamp(15%, 75%, baseChance + (attacker.ElementalPenetration - defender.Tenacity) * 0.3%)`
+
+These numbers intentionally match the current runtime, including the spell-hit clamp of `74%` to `96%` and the parry cap of `25%`.
+
+## Combat Role Implications
+
+While the runtime still routes many results directly through attributes, the accepted design intent is now:
+
+* **Warrior:** keeps the strongest baseline `guard` tendency through VIT/STR-heavy starts and growth
+* **Cleric:** keeps the strongest baseline `spellPower` and `resolve` tendency through INT/WIS-heavy starts and growth
+* **Archer:** keeps the strongest baseline `precision`, `haste`, and `crit` tendency through DEX-heavy starts and growth
+* **Monsters:** continue to inherit a shared baseline attribute model, while future templates and archetype packages carry more of the differentiated combat identity
+
+This keeps broad class readability while opening space for later template, talent, and equipment systems to own more of the final combat package.
 
 ## Consequences
-*   **Easier:** Designing items or buffs that grant `+X STR`, `+X DEX`, or `+X WIS` is clearer because those attributes now affect both raw throughput and hit-resolution outcomes.
-*   **Difficult:** Because the same attributes now scale multiple combat layers, balance drift is easier to introduce. Penetration and Tenacity help long-term scaling stay interesting, but future status systems still need to avoid turning `WIS` plus `Tenacity` into an all-purpose answer package.
+
+* **Easier:** The five primary attributes stay readable for players and designers because they remain broad identity stats instead of expanding into a giant new primary-stat roster.
+* **Easier:** Follow-up issues can move overloaded outputs into layered ratings without first redefining how heroes are created or how enemies are scaled.
+* **Difficult:** During the transition period, the docs must distinguish between the accepted long-term ownership model and the current live runtime formulas so we do not accidentally treat temporary math as permanent design.

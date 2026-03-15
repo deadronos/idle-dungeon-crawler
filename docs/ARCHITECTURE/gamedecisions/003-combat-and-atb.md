@@ -11,6 +11,11 @@ With the introduction of the Party System ([001 - Player Classes and Party Syste
 
 We implemented an Active Time Battle (ATB) system to manage turn order and action sequencing.
 
+As of [007 - Layered Combat Model](007-layered-combat-model.md), this record serves two jobs:
+
+* document the current live runtime combat flow
+* define which parts of that flow will be owned by layered combat ratings instead of raw attributes as follow-up issues land
+
 ### Game Tick and ATB Scaling
 
 To ensure smooth visual progression of action bars on the UI, the Game Loop operates at **20 ticks per second** (`GAME_TICK_RATE = 20`).
@@ -24,6 +29,8 @@ If `Autofight` is disabled, the simulation pauses in place: ATB does not fill, a
 * **Base ATB Rate:** `2.0` per tick.
 * **Speed Bonus:** Dexterity provides a speed bonus calculation: `+ (DEX * 0.06)` per tick.
 * **Status Timing:** reusable timed effects decrement once per game tick, while periodic effects such as Burn resolve once per second (`20` ticks).
+
+This DEX-based speed bonus remains the live runtime baseline. In the accepted layered model, long-term ATB speed ownership moves to `haste`, with core attributes remaining only one input into that final rating.
 
 When an entity's `actionProgress` reaches or exceeds `100`, they consume their bar (reset to `0`) and perform an action.
 
@@ -114,6 +121,22 @@ The first deeper-combat pass uses bounded formulas to stay stable under long-ter
 * **Penetration Reduction:** `min(60%, penetration / (penetration + 60))`
 * **Tenacity Reduction:** `min(60%, tenacity / (tenacity + 80))`
 
+These formulas are the current runtime baseline and are intentionally preserved as bounded shapes for the layered follow-up work.
+
+### Accepted Layered Ownership
+
+The layered combat pass does not replace the ATB combat loop itself. It changes which systems own the final combat numbers that feed the loop:
+
+* **`precision`:** owns hit reliability pressure. Physical and spell hit formulas remain contested and clamped, but future offensive hit strength should flow primarily through `precision` rather than raw DEX or INT alone.
+* **`haste`:** owns long-term action-speed pressure. The current DEX-based ATB bonus is a baseline placeholder until layered stat sourcing lands.
+* **`crit`:** owns crit chance and crit bonus pressure. Crits remain bounded and continue to be softened defensively rather than removed outright.
+* **`guard`:** owns physical durability packages, especially armor-facing mitigation and parry-facing melee defense.
+* **`resolve`:** owns magical durability packages, including elemental resistance baselines and tenacity-facing anti-spike / anti-status resistance.
+* **`potency`:** owns bypass and application pressure, especially penetration and elemental status application pressure.
+* **`power` / `spellPower`:** own the outgoing damage packages that feed the mitigation pipeline, with `spellPower` also owning healing throughput.
+
+Follow-up issue `#70` should preserve the same readability and boundedness even as these systems stop being mostly direct primary-stat products.
+
 ### Combat Readability
 
 Whenever an entity resolves an action, the UI displays a short-lived skill banner near that unit's portrait (for example, `Casting Mend` or `Casting Rage Strike`) so the player can read combat intent at a glance without relying only on the combat log.
@@ -140,5 +163,5 @@ The combat loop now advances through a provider-backed `zustand` store action (`
 
 ## Consequences
 
-* **Easier:** Combat is more readable and less deterministic. The same core attributes now support both raw throughput and hit-resolution gameplay without introducing a separate stat sheet, and the new timed-effect payload gives future cleric/support buffs or debuffs a clear extension path.
-* **Difficult:** Because hit chance, dodge pressure, parry, resistance, penetration, tenacity, archetype targeting, and status application all scale from shared attributes, balance drift becomes easier to introduce at high levels. Future combat additions should prefer bounded formulas and explicit caps rather than open-ended avoidance stacking, stun chains, or mitigation bypass that fully invalidates earlier systems.
+* **Easier:** Combat remains readable and less deterministic, while the accepted layered model now gives later issues a clear place to move hit, speed, crit, mitigation, and status ownership without redesigning the ATB loop itself.
+* **Difficult:** Until `#70` lands, many of these systems still scale from shared attributes in runtime. Future combat additions should continue to prefer bounded formulas and explicit caps rather than open-ended avoidance stacking, stun chains, or mitigation bypass that fully invalidates earlier systems.

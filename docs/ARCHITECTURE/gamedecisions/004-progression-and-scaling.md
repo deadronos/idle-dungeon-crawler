@@ -11,6 +11,12 @@ Idle games require near-infinite progression paths to maintain engagement. As th
 
 We established formal scaling mechanisms for both the player party's growth and the opposing enemy dungeon encounters.
 
+As of [007 - Layered Combat Model](007-layered-combat-model.md), progression also carries a structural rule for how combat identity should grow over time:
+
+> final combat stats = core attributes + class template + talents + equipment + temporary effects
+
+This record keeps the current live progression formulas, but future progression systems should add differentiation through those later layers instead of repeatedly expanding the direct workload of `VIT`, `STR`, `DEX`, `INT`, and `WIS`.
+
 ### Player Experience and Leveling
 
 When an enemy is defeated, Experience Points (EXP) and Gold are granted to all living party members. Dead party members receive zero.
@@ -27,6 +33,20 @@ When an EXP threshold is reached, the hero levels up, deducting the required amo
 * **Warrior:** +2 STR, +2 VIT, +1 DEX, +1 INT, +1 WIS
 * **Cleric:** +2 INT, +2 WIS, +1 STR, +1 VIT, +1 DEX
 * **Archer:** +2 DEX, +1 STR, +1 VIT, +1 INT, +1 WIS
+
+These growth packages remain the live runtime baseline. Follow-up issue `#69` will define the explicit class-template source of truth that owns these growth patterns more cleanly.
+
+### Layered Progression Sources
+
+Progression should now be understood in layers:
+
+* **Core attributes:** broad identity and baseline scaling
+* **Class templates:** baseline combat package, growth profile, and resource model
+* **Talents / passives:** compact specialization hooks that change how a class fights without requiring a giant tree
+* **Equipment:** low-friction build differentiation that adds targeted combat ratings without turning the game into inventory management
+* **Temporary effects:** encounter-specific buffs, debuffs, wards, and similar combat-state modifiers
+
+This keeps progression extensible without creating a wall of new primary stats or requiring manual per-level stat allocation.
 
 ### Persistent Gold Upgrades
 
@@ -46,6 +66,8 @@ Gold can be invested into persistent party-wide upgrades before a wipe occurs. T
   * Party size `4` → recruit cost `550` Gold
 
 These upgrades persist through wipes, but unspent Gold is still lost on party defeat. They are purchased from a dedicated **Upgrade Shop** section rather than directly inside the dungeon combat view so the player can deliberately switch between fighting and progression planning.
+
+Gold upgrades remain intentionally broad. They are not the primary answer for future class specialization, which should come from templates, talents, equipment, and temporary combat effects instead.
 
 ### Enemy Scaling
 
@@ -77,7 +99,12 @@ Every 10th floor is flagged as a Boss floor. Boss floors spawn exactly **one** e
 
 If all party members reach 0 HP, a wipe is triggered. The party is fully healed, but they are forcibly returned to Floor 1, and the collected Gold is reset to `0`. Levels, purchased persistent upgrades, the highest cleared floor, unlocked party slots, and recruited heroes are retained, forming the core "Idle Loop" where the low floors become exponentially faster to clear due to accumulated power.
 
+### Save-Safe Expansion Rule
+
+Because future differentiation layers will introduce new progression fields, additive systems in this area must remain migration-safe. The accepted direction in this issue is to define the progression stack now and leave versioned save migration behavior to follow-up issue `#71`.
+
 ## Consequences
 
-* **Easier:** Auto-allocation of attributes on level-up prevents the user from being interrupted in an idle game. The wipe loop guarantees eventual success just through passive farming, and archetypes add encounter variety without forcing a large enemy-content pipeline.
-* **Difficult:** Because enemy VIT and STR still scale linearly per level/floor, and the EXP requirement scales exponentially (1.5x each level), there will still be a mathematical "wall" where the enemies eventually out-scale the heroes' raw level-up stats. Archetype bias and boss stat packages make those spikes more interesting, but they also make balancing reward curves and support/healer encounters more sensitive.
+* **Easier:** Auto-allocation of attributes still prevents idle-flow interruption, while the new layered rule creates a cleaner place for later build differentiation systems to live.
+* **Easier:** The wipe loop, slot unlocks, and prestige systems can keep functioning while later issues add template, talent, and equipment layers on top.
+* **Difficult:** Because the runtime still uses attribute-heavy derived stat math today, the mathematical wall remains sensitive until `#69` and `#70` redistribute more identity into templates and layered ratings.
