@@ -2,9 +2,10 @@ import React from 'react';
 import { Skull } from 'lucide-react';
 
 import { getHeroClassTemplate } from '../game/classTemplates';
-import { getEnemyArchetypeLabel, getStatusEffectBadge, getStatusEffectName } from '../game/entity';
+import { getHeroBuildProfile } from '../game/heroBuilds';
+import { getCombatRatings, getEnemyArchetypeLabel, getStatusEffectBadge, getStatusEffectName } from '../game/entity';
 import type { Entity, StatusEffect } from '../game/entity';
-import type { CombatEvent } from '../game/store/types';
+import type { CombatEvent, EquipmentProgressionState, TalentProgressionState } from '../game/store/types';
 import { useGame, useGameStore } from '../game/store/gameStore';
 import { formatNumber } from '../utils/format';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,6 +80,27 @@ const resistanceStatsFor = (entity: Entity): TooltipStat[] => [
   { label: "Shadow", value: `${Math.round(entity.resistances.shadow * 100)}%` },
 ];
 
+const combatRatingStatsFor = (
+  entity: Entity,
+  buildState: {
+    talentProgression: TalentProgressionState,
+    equipmentProgression: EquipmentProgressionState,
+  },
+): TooltipStat[] => {
+  const ratings = getCombatRatings(entity, buildState);
+
+  return [
+    { label: 'Power', value: formatTooltipValue(ratings.power) },
+    { label: 'Spell', value: formatTooltipValue(ratings.spellPower) },
+    { label: 'Precision', value: formatTooltipValue(ratings.precision) },
+    { label: 'Haste', value: formatTooltipValue(ratings.haste) },
+    { label: 'Guard', value: formatTooltipValue(ratings.guard) },
+    { label: 'Resolve', value: formatTooltipValue(ratings.resolve) },
+    { label: 'Potency', value: formatTooltipValue(ratings.potency) },
+    { label: 'Crit', value: formatTooltipValue(ratings.crit) },
+  ];
+};
+
 const statusChipClassName = (statusEffect: Pick<StatusEffect, 'polarity'>) => {
   return statusEffect.polarity === 'buff'
     ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
@@ -120,6 +142,9 @@ const combatEventClassName = (event: CombatEvent) => {
 export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, className }) => {
   const { actions } = useGame();
   const combatEvents = useGameStore((state) => state.combatEvents);
+  const talentProgression = useGameStore((state) => state.talentProgression);
+  const equipmentProgression = useGameStore((state) => state.equipmentProgression);
+  const buildState = { talentProgression, equipmentProgression };
 
   const sortedEntities = [...entities].sort((a, b) => Number(b.currentHp.gt(0)) - Number(a.currentHp.gt(0)));
 
@@ -131,7 +156,10 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 custom-scrollbar snap-y snap-proximity">
-        {sortedEntities.map(entity => (
+        {sortedEntities.map(entity => {
+          const buildProfile = getHeroBuildProfile(entity, buildState);
+
+          return (
           <Card key={entity.id} className={`shrink-0 snap-start overflow-visible border-slate-700/60 bg-slate-800/40 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
             <div className="p-3 space-y-2.5">
               <div className={`flex justify-between items-center ${alignRight ? 'flex-row-reverse' : ''}`}>
@@ -142,6 +170,21 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                       ? `${entity.class} • ${getEnemyArchetypeLabel(entity)}`
                       : entity.class}
                   </p>
+                  {!entity.isEnemy && buildProfile.passive ? (
+                    <p className="mt-1 text-[10px] text-slate-400">
+                      Passive: <span className="font-semibold text-slate-200">{buildProfile.passive.name}</span>
+                    </p>
+                  ) : null}
+                  {!entity.isEnemy ? (
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-violet-100">
+                        {buildProfile.talents.length}T
+                      </span>
+                      <span className="rounded-full border border-sky-400/25 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-sky-100">
+                        {buildProfile.equippedItems.length}G
+                      </span>
+                    </div>
+                  ) : null}
                   {entity.statusEffects.length > 0 && (
                     <div className="mt-1 flex flex-wrap gap-1">
                       {entity.statusEffects.map((statusEffect) => (
@@ -216,11 +259,22 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                 <div
                   id={`${entity.id}-stats-tooltip`}
                   role="tooltip"
-                  className="absolute z-30 pointer-events-none w-[min(18rem,calc(100%-0.5rem))] opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-y-full group-hover:opacity-100 group-focus-within:translate-y-full group-focus-within:opacity-100 rounded-xl border border-slate-600/90 bg-slate-950/97 px-3 py-2.5 text-[10px] text-slate-200 shadow-2xl shadow-black/60 -bottom-1 left-1/2 -translate-x-1/2 translate-y-[calc(100%+0.25rem)]"
+                  className="absolute z-30 pointer-events-none w-[min(19rem,calc(100%-0.5rem))] opacity-0 transition-[opacity,transform] duration-150 group-hover:translate-y-full group-hover:opacity-100 group-focus-within:translate-y-full group-focus-within:opacity-100 rounded-xl border border-slate-600/90 bg-slate-950/97 px-3 py-2.5 text-[10px] text-slate-200 shadow-2xl shadow-black/60 -bottom-1 left-1/2 -translate-x-1/2 translate-y-[calc(100%+0.25rem)]"
                 >
                   <div className="space-y-2">
                     <div>
-                      <p className="text-[9px] font-black uppercase tracking-[0.28em] text-amber-200/85">Attributes</p>
+                      <p className="text-[9px] font-black uppercase tracking-[0.28em] text-violet-200/85">Combat Ratings</p>
+                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
+                        {combatRatingStatsFor(entity, buildState).map((stat) => (
+                          <div key={stat.label} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
+                            <dt className="text-slate-400">{stat.label}</dt>
+                            <dd className="font-mono font-bold text-slate-50">{stat.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-[0.28em] text-amber-200/85">Derived Detail</p>
                       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
                         {attributeStatsFor(entity).map((stat) => (
                           <div key={stat.label} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
@@ -230,6 +284,34 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                         ))}
                       </dl>
                     </div>
+                    {!entity.isEnemy && buildProfile.passive ? (
+                      <div className="border-t border-slate-800/80 pt-2">
+                        <p className="text-[9px] font-black uppercase tracking-[0.28em] text-emerald-200/80">Build</p>
+                        <div className="mt-2 space-y-1">
+                          <div className="rounded-md bg-slate-900/70 px-2 py-1">
+                            <p className="text-slate-400">Passive</p>
+                            <p className="font-bold text-slate-50">{buildProfile.passive.name}</p>
+                            <p className="mt-0.5 text-[9px] text-slate-400">{buildProfile.passive.description}</p>
+                          </div>
+                          <div className="rounded-md bg-slate-900/70 px-2 py-1">
+                            <p className="text-slate-400">Talents</p>
+                            <p className="font-bold text-slate-50">
+                              {buildProfile.talents.length > 0
+                                ? buildProfile.talents.map((talent) => talent.name).join(", ")
+                                : "No talents learned"}
+                            </p>
+                          </div>
+                          <div className="rounded-md bg-slate-900/70 px-2 py-1">
+                            <p className="text-slate-400">Equipment</p>
+                            <p className="font-bold text-slate-50">
+                              {buildProfile.equippedItems.length > 0
+                                ? buildProfile.equippedItems.map((item) => item.name).join(", ")
+                                : "No gear equipped"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                     <div className="border-t border-slate-800/80 pt-2">
                       <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-200/80">Resistances</p>
                       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
@@ -317,7 +399,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
               )}
             </div>
           </Card>
-        ))}
+        )})}
       </CardContent>
     </Card>
   );

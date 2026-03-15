@@ -35,7 +35,8 @@ describe("App integration", () => {
         expect(screen.getByLabelText(/autoadvance/i)).toBeChecked();
         expect(screen.getByRole("button", { name: /previous floor/i })).toBeDisabled();
         expect(screen.getByRole("button", { name: /next floor/i })).toBeInTheDocument();
-        expect(screen.getAllByText(/^Attributes$/i)).toHaveLength(2);
+        expect(screen.getAllByText(/^Combat Ratings$/i)).toHaveLength(2);
+        expect(screen.getAllByText(/^Derived Detail$/i)).toHaveLength(2);
         expect(screen.getAllByText(/^VIT$/i)).toHaveLength(2);
         expect(screen.getAllByText(/^STR$/i)).toHaveLength(2);
         expect(screen.getAllByText(/^DEX$/i)).toHaveLength(2);

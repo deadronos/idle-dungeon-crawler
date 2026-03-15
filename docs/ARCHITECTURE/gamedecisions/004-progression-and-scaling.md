@@ -48,6 +48,19 @@ Progression should now be understood in layers:
 
 This keeps progression extensible without creating a wall of new primary stats or requiring manual per-level stat allocation.
 
+### Current Differentiation MVP Baseline
+
+[009 - Differentiation MVP: Class Passives, Talents, Equipment, and Build Surfacing](009-differentiation-mvp-talents-equipment-and-build-surfacing.md) is the current live follow-through for those later progression layers.
+
+The current shipped baseline is intentionally compact:
+
+* heroes gain talent points at **level 2** and **level 4**
+* each class has **2** fixed talent picks rather than a full tree
+* heroes equip up to **4** items (`weapon`, `armor`, `charm`, `trinket`)
+* equipment comes from a stocked fixed armory rather than random drops
+
+This keeps the first build-differentiation pass readable and easy to tune while still making the layered model playable.
+
 ### Persistent Gold Upgrades
 
 Gold can be invested into persistent party-wide upgrades before a wipe occurs. The current implementation supports both stat upgrades and long-term party growth through the **Upgrade Shop**.

@@ -82,6 +82,10 @@ This keeps the combat model idle-readable and reduces runaway scaling risk.
 
 Implementation issue `#70` now derives combat-facing outputs through the MVP layered ratings documented here. Attributes still seed those ratings, but the runtime now also applies template or archetype bias packages before converting them into final hit, speed, crit, penetration, resistance, and status-facing numbers. Existing formulas documented in [002 - Attributes and Derived Stats](002-attributes-and-stats.md) and [003 - Combat Loop and ATB Mechanics](003-combat-and-atb.md) are the canonical live baseline.
 
+The first playable build follow-through now also exists:
+
+* [009 - Differentiation MVP: Class Passives, Talents, Equipment, and Build Surfacing](009-differentiation-mvp-talents-equipment-and-build-surfacing.md) adds explicit class passives, compact talent picks, four-slot equipment, and the current roster/UI surfacing for those layers
+
 ### Follow-up Issue Boundaries
 
 This decision intentionally sets boundaries for the rest of the foundation work:
@@ -90,6 +94,7 @@ This decision intentionally sets boundaries for the rest of the foundation work:
 * **`#69`** defines class-template data modeling for base stats, growth, resources, and action packages, implemented in [008 - Hero Class Templates, Growth Packages, and Resource Models](008-hero-class-templates.md)
 * **`#70`** refactors runtime derived stat sourcing and tunes coefficient-level formulas against the accepted model
 * **`#71`** adds explicit versioned save migrations so new progression/combat fields remain backward-compatible
+* **`#72` / `#73` / `#74`** provide the first playable build layer on top of that foundation through class passives, talent picks, equipment, and build surfacing, documented in [009 - Differentiation MVP: Class Passives, Talents, Equipment, and Build Surfacing](009-differentiation-mvp-talents-equipment-and-build-surfacing.md)
 
 ## Consequences
 
