@@ -308,12 +308,12 @@ describe("balance snapshots", () => {
           {
             "floor10Boss": {
               "duoClericArcherLevel5": {
-                "baseline": 0.417,
-                "curatedBuild": 0.917,
+                "baseline": 0.5,
+                "curatedBuild": 1,
                 "expectedBuild": 1,
               },
               "duoWarriorClericLevel5": {
-                "baseline": 0.75,
+                "baseline": 0.833,
                 "curatedBuild": 1,
                 "expectedBuild": 1,
               },

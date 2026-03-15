@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 
 import { getHeroClassTemplate } from "./classTemplates";
 import { getHeroBuildProfile, type HeroBuildState } from "./heroBuilds";
+import { BASE_HERO_EXP_REQUIREMENT, HERO_EXP_GROWTH_RATE } from "./progressionMath";
 import type { HeroCombatRating } from "./classTemplates";
 export { HERO_CLASSES } from "./classTemplates";
 
@@ -343,8 +344,8 @@ export const getBaseAttributes = (entityClass: EntityClass): Attributes => {
 };
 
 export const getExpRequirement = (level: number): Decimal => {
-    // Basic scaling: 100 * (1.5 ^ (level - 1))
-    return new Decimal(100).times(Decimal.pow(1.5, level - 1)).floor();
+    // First-region scaling: 100 * (1.26 ^ (level - 1))
+    return new Decimal(BASE_HERO_EXP_REQUIREMENT).times(Decimal.pow(HERO_EXP_GROWTH_RATE, level - 1)).floor();
 };
 
 export const getCombatRatings = (

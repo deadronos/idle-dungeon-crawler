@@ -1,18 +1,22 @@
 # 006 - Hero Retirement & Prestige Mechanics
 
 ## Context
+
 As the player progresses deeper into the dungeon and recruits more heroes, the primary currency (Gold) scales exponentially for permanent upgrades (`Battle Drills`, `Fortification`, and Recruitment limits). To provide a deeper, long-term progression system without resetting the entire game state (a "soft wipe"), we introduced the **Hero Retirement** mechanic.
 
 ## Decision
+
 Players can now permanently retire recruited heroes in exchange for a premium currency: **Hero Souls**. These souls are spent at the **Altar of Souls** (the prestige shop) for account-wide, permanent meta-upgrades that persist forever and modify the core mathematical scaling of the game.
 
 ### Retirement Rules
+
 1. **Minimum Level to earn Souls:** While any non-starter hero can be dismissed, they must be at least Level 5 to yield any Hero Souls upon retirement.
 2. **Anchor Protection:** The starter hero (`hero_1`) cannot be retired under any circumstance. The player must always have at least one character to continue progressing or farming gold.
-3. **Reward Formula:** Souls reward scales with the level of the retired hero: `floor(Hero Level / 5) * 10`. 
+3. **Reward Formula:** Souls reward scales with the level of the retired hero: `floor(Hero Level / 5) * 10`.
    - *Example:* Level 5 grants 10 souls; Level 10 grants 20 souls.
 
 ### Altar of Souls (Prestige Upgrades)
+
 The Altar provides upgrades that alter fundamental game mechanics, not just flat stat boosts (which gold already covers).
 
 1. **Greed (Gold Cost Reducer)**
@@ -29,8 +33,9 @@ The Altar provides upgrades that alter fundamental game mechanics, not just flat
 
 4. **Insight (XP Multiplier)**
    - *Effect:* Increases experience gained from all defeated enemies.
-   - *Mechanic:* Each level grants a flat +20% multiplier to the base experience calculation (`baseExp * (1 + level * 0.2)`). This acts as a catch-up mechanic so players can level recruited replacements faster after a retirement.
+   - *Mechanic:* Each level grants a flat +60% multiplier to the base experience calculation (`baseExp * (1 + level * 0.6)`). This now acts as both a replacement catch-up mechanic and a first-region pacing lever so late first-region levels remain reachable without touching Haste or other more runaway-sensitive prestige knobs.
 
 ## Consequences
+
 - **Positive:** Introduces a compelling choice (sacrificing a high-level hero) for long-term power. It provides a prestige system without the friction of a total progress wipe.
 - **Negative:** The player must re-grind a new hero from Level 1 after a retirement, requiring careful UI communication (via a confirmation dialog) so players don't accidentally ruin their active party composition.

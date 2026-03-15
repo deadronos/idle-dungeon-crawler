@@ -15,6 +15,8 @@ The original isolated-floor snapshot is still useful for measuring per-encounter
 
 The goal is still not to declare a new balance pass finished. It is to capture the pre-ranked-talent baseline that justified the next progression pass before follow-up issues extend equipment depth or retune slot-gate pacing.
 
+This baseline should now be interpreted inside the current **first-region target band of Floors `1-50`** rather than as a forever-global floor expectation. For the current region, **Floors `30+` count as endgame**. Some farming of XP and items on safer floors is acceptable before breaching deeper late-region checkpoints or before a future region handoff exists.
+
 ## Method
 
 The balance harness in `src/game/engine/balanceSnapshot.ts` now keeps **two lenses**, still using **12 seeded runs** per scenario:
@@ -138,6 +140,17 @@ It suggests the next build-progression work should focus less on squeezing more 
 * longer-lived talent progression
 * more headroom before the system saturates
 
+### 6. Issue `#89` should be tuned against the current first-region target, not an infinite-floor assumption
+
+The late milestone snapshots in this document should now be read as part of the current first-region pacing target:
+
+* the active balance target is Floors `1-50`
+* Floors `30+` are endgame for that first region
+* some farming of XP and items before breaching the deeper late-region floors is acceptable
+* future regions can carry the next major difficulty jump instead of forcing one endless floor ladder to hold every future scaling need
+
+That means Issue `#89` is still a real pacing problem, but the fix target is more specific than "every floor should be beaten immediately at near-identical level forever." The current work should instead make slot-4 and slot-5 progression feel fair inside the first-region band while preserving room for item farming, XP farming, and later cross-region systems.
+
 ## Outcome
 
 The build-aware baseline clarifies the current state:
@@ -148,6 +161,7 @@ The build-aware baseline clarifies the current state:
 * later slot-gate walls are still primarily structural
 * the live trio approach into Floor `20` is still a major pacing problem even after partial recovery
 * the current build layer saturates quickly enough that future equipment and talent issues should be treated as progression-depth work, not only tuning garnish
+* the current balance target is the first region's Floors `1-50`, with Floors `30+` treated as endgame rather than as the start of a forever-linear expectation
 
 ## Follow-up Alignment
 

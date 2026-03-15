@@ -10,6 +10,21 @@ import { PrestigeUpgradesPanel } from "./PrestigeUpgradesPanel";
 import { UpgradesPanel } from "./UpgradesPanel";
 
 describe("UpgradesPanel", () => {
+    it("surfaces the stronger Insight bonus in the prestige panel copy", () => {
+        render(
+            <GameProvider
+                initialState={{
+                    heroSouls: new Decimal(10),
+                    party: createStarterParty("Ayla", "Warrior"),
+                }}
+            >
+                <PrestigeUpgradesPanel />
+            </GameProvider>,
+        );
+
+        expect(screen.getByText(/60% per level/i)).toBeInTheDocument();
+    });
+
     it("buys a persistent training upgrade when enough gold is available", async () => {
         const user = userEvent.setup();
 

@@ -2,6 +2,7 @@ import React from "react";
 import { CircleDollarSign, FastForward, HeartPulse, Brain } from "lucide-react";
 
 import { useGame } from "../game/store/gameStore";
+import { INSIGHT_XP_BONUS_PER_LEVEL } from "../game/progressionMath";
 import { formatNumber } from "../utils/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -106,7 +107,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                                 <Brain size={16} className="text-blue-400" />
                                 Insight
                             </div>
-                            <p className="text-xs text-slate-400 mt-1">Increases experience gained from enemies by 20% per level.</p>
+                            <p className="text-xs text-slate-400 mt-1">Increases experience gained from enemies by {Math.round(INSIGHT_XP_BONUS_PER_LEVEL * 100)}% per level.</p>
                         </div>
                         <span className="text-xs font-black uppercase tracking-wider text-blue-400">Lv {currentXpLevel}</span>
                     </div>

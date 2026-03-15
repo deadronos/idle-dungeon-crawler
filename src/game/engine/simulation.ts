@@ -20,6 +20,7 @@ import {
     inferEnemyArchetype,
     recalculateEntity,
 } from "../entity";
+import { getInsightXpMultiplier } from "../progressionMath";
 import type { DamageElement, EnemyArchetype, Entity, MetaUpgrades, PrestigeUpgrades, StatusEffect, StatusEffectKey } from "../entity";
 import { MAX_PARTY_SIZE } from "../partyProgression";
 import {
@@ -1034,7 +1035,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         }
 
         const baseExp = new Decimal(draft.floor).times(10).plus(target.attributes.vit);
-        const xpBonus = 1 + (draft.prestigeUpgrades.xpMultiplier * 0.2); // +20% base EXP per level
+        const xpBonus = getInsightXpMultiplier(draft.prestigeUpgrades.xpMultiplier); // +60% base EXP per level
         const experienceReward = baseExp.times(xpBonus).floor();
         const goldReward = new Decimal(draft.floor).times(2).plus(5);
         draft.gold = draft.gold.plus(goldReward);

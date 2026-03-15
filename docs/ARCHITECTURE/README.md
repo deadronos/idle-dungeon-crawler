@@ -25,6 +25,7 @@ We use a format inspired by Architecture Decision Records (ADRs) to document sig
 - [010 - Post-Refactor Combat Identity Balance Report](gamedecisions/010-post-refactor-balance-report.md)
 - [011 - Future Class Extensibility Proof: Rogue Spec](gamedecisions/011-future-class-extensibility-proof-rogue.md)
 - [012 - Build-Aware Milestone Balance Baseline](gamedecisions/012-build-aware-milestone-balance-baseline.md)
+- [013 - Regional Progression and Ascension Direction](gamedecisions/013-regional-progression-and-ascension-direction.md)
 
 ### Technical Decisions
 
