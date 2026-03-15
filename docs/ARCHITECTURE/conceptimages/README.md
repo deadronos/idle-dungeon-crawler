@@ -21,10 +21,10 @@ These images were captured from the running app at a desktop viewport of `1600×
 - `005-dungeon-events-view.png` — main dungeon gameplay view with the bottom-anchored `Events` panel visible, combat outcomes like `Dodge` surfaced inline, and the enemy archetype label still readable in the stage view
 - `006-dungeon-hover-tooltip.png` — dungeon gameplay view with the entity hover tooltip expanded, showing combat ratings, build summaries, derived combat detail, and resistances without truncation
 - `007-status-effects-view.png` — dungeon gameplay view with reusable status chips visible on roster cards, status-focused log entries, and tooltip status details expanded alongside existing combat stats.
-- `009-party-basic-stats.png` — party character sheet with the hero portrait, basic combat stats, and primary attributes visible
-- `010-party-secondary-stats.png` — party character sheet secondary stats tab with derived values, combat ratings, and resistances
-- `011-party-talents.png` — party character sheet talents tab with per-hero talent learning controls
-- `012-party-equipment.png` — party character sheet equipment tab with the stocked four-slot armory surfaced for the selected hero
+- `008-party-basic-stats.png` — party character sheet with the hero portrait, basic combat stats, and primary attributes visible
+- `009-party-secondary-stats.png` — party character sheet secondary stats tab with derived values, combat ratings, and resistances
+- `010-party-talents.png` — party character sheet talents tab with per-hero talent learning controls
+- `011-party-equipment.png` — party character sheet equipment tab with the stocked four-slot armory surfaced for the selected hero
 
 ## Naming convention
 
