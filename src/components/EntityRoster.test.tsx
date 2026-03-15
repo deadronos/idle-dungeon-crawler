@@ -162,6 +162,32 @@ describe("EntityRoster", () => {
         expect(tooltip).toHaveTextContent(/hex/i);
     });
 
+    it("anchors build and status chips as overlays so they do not resize the card body", () => {
+        const overlayEntity = {
+            ...heroEntity,
+            statusEffects: [
+                {
+                    key: "regen" as const,
+                    polarity: "buff" as const,
+                    sourceId: "hero_cleric",
+                    remainingTicks: 60,
+                    stacks: 1,
+                    maxStacks: 1,
+                    potency: 3.0,
+                },
+            ],
+        };
+
+        render(
+            <GameProvider initialState={{ party: [overlayEntity] }}>
+                <EntityRoster title="Party" entities={[overlayEntity]} />
+            </GameProvider>,
+        );
+
+        expect(screen.getByTestId(`build-badges-${overlayEntity.id}`)).toHaveClass("absolute", "right-0", "top-0");
+        expect(screen.getByTestId(`status-badges-${overlayEntity.id}`)).toHaveClass("absolute", "left-0", "top-0");
+    });
+
     it("keeps roster cards at full height inside the scrollable panel when the list grows", () => {
         const roster = Array.from({ length: 5 }, (_, index) => ({
             ...heroEntity,

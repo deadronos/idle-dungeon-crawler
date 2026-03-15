@@ -175,28 +175,6 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                       Passive: <span className="font-semibold text-slate-200">{buildProfile.passive.name}</span>
                     </p>
                   ) : null}
-                  {!entity.isEnemy ? (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-violet-100">
-                        {buildProfile.talents.reduce((total, talent) => total + talent.currentRank, 0)}R
-                      </span>
-                      <span className="rounded-full border border-sky-400/25 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-sky-100">
-                        {buildProfile.equippedItems.length}G
-                      </span>
-                    </div>
-                  ) : null}
-                  {entity.statusEffects.length > 0 && (
-                    <div className="mt-1 flex flex-wrap gap-1">
-                      {entity.statusEffects.map((statusEffect) => (
-                        <span
-                          key={`${entity.id}-${statusEffect.key}`}
-                          className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] ${statusChipClassName(statusEffect)}`}
-                        >
-                          {getStatusEffectBadge(statusEffect)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-black text-amber-400 text-sm">Lv {entity.level}</span>
@@ -234,14 +212,42 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
               </div>
 
               <div
-                className="relative group w-full h-12 sm:h-14 flex justify-center items-center"
+                className="relative group w-full h-16 sm:h-[4.5rem] flex justify-center items-center px-14"
                 tabIndex={0}
                 aria-describedby={`${entity.id}-stats-tooltip`}
               >
+                {!entity.isEnemy ? (
+                  <div
+                    data-testid={`build-badges-${entity.id}`}
+                    className="pointer-events-none absolute right-0 top-0 z-10 flex max-w-[40%] flex-wrap justify-end gap-1"
+                  >
+                    <span className="rounded-full border border-violet-400/25 bg-slate-950/85 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-violet-100 shadow-md backdrop-blur-sm">
+                      {buildProfile.talents.reduce((total, talent) => total + talent.currentRank, 0)}R
+                    </span>
+                    <span className="rounded-full border border-sky-400/25 bg-slate-950/85 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-sky-100 shadow-md backdrop-blur-sm">
+                      {buildProfile.equippedItems.length}G
+                    </span>
+                  </div>
+                ) : null}
+                {entity.statusEffects.length > 0 && (
+                  <div
+                    data-testid={`status-badges-${entity.id}`}
+                    className="pointer-events-none absolute left-0 top-0 z-10 flex max-w-[45%] flex-wrap gap-1"
+                  >
+                    {entity.statusEffects.map((statusEffect) => (
+                      <span
+                        key={`${entity.id}-${statusEffect.key}`}
+                        className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] shadow-md backdrop-blur-sm ${statusChipClassName(statusEffect)}`}
+                      >
+                        {getStatusEffectBadge(statusEffect)}
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <img src={entity.image} alt={entity.name} className="h-full object-contain drop-shadow-md" />
                 <div
                   data-testid={`combat-events-${entity.id}`}
-                  className="pointer-events-none absolute inset-x-0 top-0 z-20 flex flex-col items-center gap-1"
+                  className="pointer-events-none absolute inset-x-0 top-1 z-20 flex flex-col items-center gap-1"
                 >
                   {combatEvents
                     .filter((event) => event.targetId === entity.id || (event.sourceId === entity.id && event.kind === 'skill'))
@@ -343,7 +349,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                   </div>
                 </div>
                 {entity.activeSkill && (
-                  <span className="absolute -top-2 rounded-full border border-amber-300/40 bg-slate-950/90 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-amber-200 shadow-lg">
+                  <span className="pointer-events-none absolute left-1/2 top-0 z-20 -translate-x-1/2 -translate-y-1/2 rounded-full border border-amber-300/40 bg-slate-950/90 px-2 py-0.5 text-[9px] sm:text-[10px] font-bold uppercase tracking-wide text-amber-200 shadow-lg">
                     {entity.activeSkill}
                   </span>
                 )}
