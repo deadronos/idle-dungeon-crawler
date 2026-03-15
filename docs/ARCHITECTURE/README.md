@@ -18,6 +18,8 @@ We use a format inspired by Architecture Decision Records (ADRs) to document sig
 - [003 - Combat Loop and ATB Mechanics](gamedecisions/003-combat-and-atb.md)
 - [004 - Progression, Leveling, and Scaling](gamedecisions/004-progression-and-scaling.md)
 - [005 - Expandable Party System](gamedecisions/005-expandable-party-system.md)
+- [006 - Hero Retirement and Prestige Mechanics](gamedecisions/006-hero-retirement-and-prestige.md)
+- [007 - Layered Combat Model](gamedecisions/007-layered-combat-model.md)
 
 ### Technical Decisions
 
