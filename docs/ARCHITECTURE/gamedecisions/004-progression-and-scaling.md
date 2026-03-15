@@ -154,6 +154,7 @@ Issue `#71` implements the current persistence rule:
 * older payloads are migrated forward step-by-step before runtime hydration
 * additive progression layers default through named migration steps instead of ad hoc tolerant parsing
 * placeholder progression state for talents and equipment is now part of the canonical save shape, even before those systems have full gameplay behavior
+* progression retunes that change level requirements must also migrate saved hero level progress onto the live curve, so older saves do not keep stale `expToNext` thresholds after a rebalance
 
 ## Consequences
 

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { createEnemy, createStarterParty } from "@/game/entity";
 import { createLegacyEquipmentProgression } from "@/game/equipmentProgression";
 import { createInitialGameState } from "@/game/engine/simulation";
+import { getExpRequirement } from "@/game/entity";
 
 import { deserializeGameState, GAME_STATE_EXPORT_VERSION, serializeGameState } from "./persistence";
 
@@ -250,5 +251,45 @@ describe("game-state persistence", () => {
                 hero_1: 1,
             },
         });
+    });
+
+    it("migrates saved hero level progress onto the current XP curve", () => {
+        const party = createStarterParty("Selene", "Cleric");
+        party[0].level = 28;
+        party[0].exp = new Decimal(18_000);
+        party[0].expToNext = new Decimal(72_000);
+
+        const exportedState = createInitialGameState({
+            party,
+            enemies: [createEnemy(28, "enemy_28")],
+        });
+
+        const restoredState = deserializeGameState(JSON.stringify({
+            version: 4,
+            savedAt: new Date().toISOString(),
+            state: exportedState,
+        }));
+        const restoredHero = restoredState.party[0];
+        const expectedExpToNext = getExpRequirement(28);
+        const expectedExp = expectedExpToNext.div(4).floor();
+
+        expect(restoredHero?.level).toBe(28);
+        expect(restoredHero?.expToNext.eq(expectedExpToNext)).toBe(true);
+        expect(restoredHero?.exp.toString()).toBe(expectedExp.toString());
+    });
+
+    it("normalizes stale hero XP thresholds when exporting a current save snapshot", () => {
+        const party = createStarterParty("Selene", "Cleric");
+        party[0].level = 28;
+        party[0].exp = new Decimal(18_000);
+        party[0].expToNext = new Decimal(72_000);
+
+        const restoredState = deserializeGameState(serializeGameState(createInitialGameState({ party })));
+        const restoredHero = restoredState.party[0];
+        const expectedExpToNext = getExpRequirement(28);
+        const expectedExp = expectedExpToNext.div(4).floor();
+
+        expect(restoredHero?.expToNext.eq(expectedExpToNext)).toBe(true);
+        expect(restoredHero?.exp.toString()).toBe(expectedExp.toString());
     });
 });
