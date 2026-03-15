@@ -765,7 +765,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
     };
 
     const getCleanseableStatusEffect = (target: Entity) => {
-        return target.statusEffects.find((statusEffect) => statusEffect.key === "hex" && statusEffect.polarity === "debuff")
+        return target.statusEffects.find((statusEffect) => statusEffect.key === "hex")
             ?? target.statusEffects.find((statusEffect) => statusEffect.polarity === "debuff");
     };
 

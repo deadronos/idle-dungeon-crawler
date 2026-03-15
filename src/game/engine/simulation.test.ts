@@ -1161,7 +1161,7 @@ describe("simulation engine", () => {
             {
                 key: "blind",
                 polarity: "debuff",
-                sourceId: "hero_light",
+                sourceId: "hero_1",
                 remainingTicks: 2,
                 stacks: 1,
                 maxStacks: 1,
@@ -1200,7 +1200,7 @@ describe("simulation engine", () => {
             {
                 key: "hex",
                 polarity: "debuff",
-                sourceId: "enemy_shadow",
+                sourceId: "enemy_1",
                 remainingTicks: 30,
                 stacks: 1,
                 maxStacks: 1,
@@ -1209,7 +1209,7 @@ describe("simulation engine", () => {
             {
                 key: "regen",
                 polarity: "buff",
-                sourceId: "hero_old_cleric",
+                sourceId: "hero_3",
                 remainingTicks: 2,
                 stacks: 1,
                 maxStacks: 1,
