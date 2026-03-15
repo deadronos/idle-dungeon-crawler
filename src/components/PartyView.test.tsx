@@ -73,7 +73,7 @@ describe("PartyView", () => {
                 initialState={{
                     party: createStarterParty("Ayla", "Cleric"),
                     talentProgression: {
-                        unlockedTalentIdsByHeroId: {},
+                        talentRanksByHeroId: {},
                         talentPointsByHeroId: { hero_1: 1 },
                     },
                 }}
@@ -92,6 +92,7 @@ describe("PartyView", () => {
         await user.click(learnButtons[0]);
 
         expect(screen.getByText(/0 pts/i)).toBeInTheDocument();
+    expect(screen.getByText(/rank 1\/3/i)).toBeInTheDocument();
     });
 
     it("switches to equipment panel and shows all four gear slots", async () => {

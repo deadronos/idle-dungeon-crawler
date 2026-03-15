@@ -36,6 +36,13 @@ export interface TalentDefinition {
     name: string;
     description: string;
     effects: HeroBuildEffects;
+    maxRank?: number;
+    perRankEffects?: HeroBuildEffects;
+}
+
+export interface RankedTalentDefinition extends Omit<TalentDefinition, "maxRank"> {
+    maxRank: number;
+    currentRank: number;
 }
 
 export interface EquipmentItemDefinition {
@@ -66,7 +73,7 @@ export interface HeroBuildState {
 
 export interface HeroBuildProfile {
     passive: ClassPassiveDefinition | null;
-    talents: TalentDefinition[];
+    talents: RankedTalentDefinition[];
     equippedItems: ResolvedEquipmentItem[];
     effects: Required<Omit<HeroBuildEffects, "ratingBonuses">> & {
         ratingBonuses: Partial<Record<HeroCombatRating, number>>;
@@ -85,6 +92,7 @@ const BUILD_EFFECT_KEYS: Array<keyof Omit<HeroBuildEffects, "ratingBonuses">> = 
     "resourceOnTakeDamageBonus",
     "maxResourceFlatBonus",
 ];
+const DEFAULT_TALENT_MAX_RANK = 3;
 
 export const EQUIPMENT_SLOT_LABELS: Record<EquipmentSlot, string> = {
     weapon: "Weapon",
@@ -135,6 +143,10 @@ export const TALENT_DEFINITIONS: TalentDefinition[] = [
         effects: {
             ratingBonuses: { guard: 4, resolve: 2 },
         },
+        maxRank: DEFAULT_TALENT_MAX_RANK,
+        perRankEffects: {
+            ratingBonuses: { guard: 2, resolve: 1 },
+        },
     },
     {
         id: "warrior-rampage",
@@ -145,6 +157,11 @@ export const TALENT_DEFINITIONS: TalentDefinition[] = [
             specialAttackCostDelta: -5,
             specialAttackDamageMultiplierBonus: 0.35,
         },
+        maxRank: DEFAULT_TALENT_MAX_RANK,
+        perRankEffects: {
+            specialAttackCostDelta: -1,
+            specialAttackDamageMultiplierBonus: 0.12,
+        },
     },
     {
         id: "cleric-sunfire",
@@ -153,6 +170,10 @@ export const TALENT_DEFINITIONS: TalentDefinition[] = [
         description: "Lean harder into radiant pressure with stronger spell output and potency.",
         effects: {
             ratingBonuses: { spellPower: 4, potency: 3 },
+        },
+        maxRank: DEFAULT_TALENT_MAX_RANK,
+        perRankEffects: {
+            ratingBonuses: { spellPower: 2, potency: 1 },
         },
     },
     {
@@ -164,6 +185,11 @@ export const TALENT_DEFINITIONS: TalentDefinition[] = [
             healMultiplierBonus: 0.35,
             blessRegenMultiplierBonus: 0.05,
         },
+        maxRank: DEFAULT_TALENT_MAX_RANK,
+        perRankEffects: {
+            healMultiplierBonus: 0.1,
+            blessRegenMultiplierBonus: 0.03,
+        },
     },
     {
         id: "archer-deadeye",
@@ -172,6 +198,10 @@ export const TALENT_DEFINITIONS: TalentDefinition[] = [
         description: "Trade discipline for deadlier crit pressure and cleaner shots.",
         effects: {
             ratingBonuses: { precision: 4, crit: 4 },
+        },
+        maxRank: DEFAULT_TALENT_MAX_RANK,
+        perRankEffects: {
+            ratingBonuses: { precision: 2, crit: 1 },
         },
     },
     {
@@ -182,6 +212,11 @@ export const TALENT_DEFINITIONS: TalentDefinition[] = [
         effects: {
             ratingBonuses: { haste: 3 },
             specialAttackDamageMultiplierBonus: 0.2,
+        },
+        maxRank: DEFAULT_TALENT_MAX_RANK,
+        perRankEffects: {
+            ratingBonuses: { haste: 1 },
+            specialAttackDamageMultiplierBonus: 0.08,
         },
     },
 ];
@@ -447,8 +482,13 @@ export const getClassPassive = (heroClass: HeroClass) => CLASS_PASSIVES[heroClas
 
 export const getTalentDefinition = (talentId: string) => TALENT_LOOKUP.get(talentId) ?? null;
 
+export const getTalentMaxRank = (talent: Pick<TalentDefinition, "maxRank">) => Math.max(1, talent.maxRank ?? DEFAULT_TALENT_MAX_RANK);
+
 export const getTalentDefinitionsForClass = (heroClass: HeroClass) =>
     TALENT_DEFINITIONS.filter((talent) => talent.heroClass === heroClass);
+
+export const getTotalTalentRankCapacity = (heroClass: HeroClass) =>
+    getTalentDefinitionsForClass(heroClass).reduce((total, talent) => total + getTalentMaxRank(talent), 0);
 
 export const getEquipmentDefinition = (definitionId: string) => EQUIPMENT_LOOKUP.get(definitionId) ?? null;
 
@@ -610,8 +650,22 @@ export const getAvailableInventoryItemsForHero = (
 export const getTalentPointsForHero = (heroId: string, talentProgression: TalentProgressionState) =>
     talentProgression.talentPointsByHeroId[heroId] ?? 0;
 
+export const getHeroTalentRanks = (heroId: string, talentProgression: TalentProgressionState) =>
+    talentProgression.talentRanksByHeroId[heroId] ?? {};
+
+export const getTalentRankForHero = (heroId: string, talentId: string, talentProgression: TalentProgressionState) =>
+    getHeroTalentRanks(heroId, talentProgression)[talentId] ?? 0;
+
 export const getHeroUnlockedTalentIds = (heroId: string, talentProgression: TalentProgressionState) =>
-    talentProgression.unlockedTalentIdsByHeroId[heroId] ?? [];
+    Object.entries(getHeroTalentRanks(heroId, talentProgression))
+        .filter(([, rank]) => rank > 0)
+        .map(([talentId]) => talentId);
+
+export const getSpentTalentRanksForHero = (heroId: string, talentProgression: TalentProgressionState) =>
+    Object.values(getHeroTalentRanks(heroId, talentProgression)).reduce((total, rank) => total + rank, 0);
+
+export const getTalentEffectsForRank = (talent: TalentDefinition, rank: number): HeroBuildEffects =>
+    getMergedEffects(talent.effects, scaleBuildEffects(talent.perRankEffects, Math.max(0, rank - 1)));
 
 export const getHeroUnlockedTalents = (
     hero: Pick<Entity, "id" | "class" | "isEnemy">,
@@ -621,14 +675,27 @@ export const getHeroUnlockedTalents = (
         return [];
     }
     const heroClass = hero.class;
+    const heroTalentRanks = getHeroTalentRanks(hero.id, talentProgression);
 
-    return getHeroUnlockedTalentIds(hero.id, talentProgression)
-        .map((talentId) => getTalentDefinition(talentId))
-        .filter((talent): talent is TalentDefinition => Boolean(talent && talent.heroClass === heroClass));
+    return Object.entries(heroTalentRanks)
+        .map(([talentId, rank]) => {
+            const talent = getTalentDefinition(talentId);
+            if (!talent || talent.heroClass !== heroClass || rank <= 0) {
+                return null;
+            }
+
+            return {
+                ...talent,
+                maxRank: getTalentMaxRank(talent),
+                currentRank: Math.min(getTalentMaxRank(talent), rank),
+                effects: getTalentEffectsForRank(talent, rank),
+            } satisfies RankedTalentDefinition;
+        })
+        .filter((talent): talent is RankedTalentDefinition => Boolean(talent));
 };
 
 export const getEarnedTalentPointTotal = (heroClass: HeroClass, level: number) =>
-    Math.min(getTalentDefinitionsForClass(heroClass).length, Math.floor(level / 2));
+    Math.min(getTotalTalentRankCapacity(heroClass), Math.floor(level / 2));
 
 export const getHeroBuildProfile = (
     hero: Pick<Entity, "id" | "class" | "isEnemy">,
@@ -679,7 +746,7 @@ export const synchronizeTalentProgression = (
     party: Array<Pick<Entity, "id" | "class" | "level" | "isEnemy">>,
     talentProgression: TalentProgressionState,
 ): TalentProgressionState => {
-    const nextUnlocked: Record<string, string[]> = {};
+    const nextTalentRanks: Record<string, Record<string, number>> = {};
     const nextPoints: Record<string, number> = {};
 
     party.forEach((hero) => {
@@ -688,18 +755,27 @@ export const synchronizeTalentProgression = (
         }
 
         const heroClass = hero.class;
-        const availableTalentIds = new Set(getTalentDefinitionsForClass(heroClass).map((talent) => talent.id));
-        const validUnlockedIds = dedupeStrings(getHeroUnlockedTalentIds(hero.id, talentProgression))
-            .filter((talentId) => availableTalentIds.has(talentId));
-        const minimumRemainingPoints = Math.max(0, getEarnedTalentPointTotal(heroClass, hero.level) - validUnlockedIds.length);
+        const availableTalents = new Map(getTalentDefinitionsForClass(heroClass).map((talent) => [talent.id, talent]));
+        const validTalentRanks: Record<string, number> = Object.fromEntries(
+            Object.entries(getHeroTalentRanks(hero.id, talentProgression))
+                .filter(([talentId]) => availableTalents.has(talentId))
+                .map(([talentId, rank]) => {
+                    const talent = availableTalents.get(talentId)!;
+                    return [talentId, Math.max(0, Math.min(getTalentMaxRank(talent), Math.floor(rank)))];
+                })
+                .filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > 0),
+        );
+        const spentRanks = Object.values(validTalentRanks).reduce<number>((total, rank) => total + rank, 0);
+        const minimumRemainingPoints = Math.max(0, getEarnedTalentPointTotal(heroClass, hero.level) - spentRanks);
         const existingPoints = getTalentPointsForHero(hero.id, talentProgression);
+        const maximumRemainingPoints = Math.max(0, getTotalTalentRankCapacity(heroClass) - spentRanks);
 
-        nextUnlocked[hero.id] = validUnlockedIds;
-        nextPoints[hero.id] = Math.max(existingPoints, minimumRemainingPoints);
+        nextTalentRanks[hero.id] = validTalentRanks;
+        nextPoints[hero.id] = Math.max(0, Math.min(Math.max(existingPoints, minimumRemainingPoints), maximumRemainingPoints));
     });
 
     return {
-        unlockedTalentIdsByHeroId: nextUnlocked,
+        talentRanksByHeroId: nextTalentRanks,
         talentPointsByHeroId: nextPoints,
     };
 };

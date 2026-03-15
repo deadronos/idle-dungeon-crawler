@@ -34,8 +34,11 @@ describe("game-state persistence", () => {
             highestFloorCleared: 7,
             activeSection: "shop",
             talentProgression: {
-                unlockedTalentIdsByHeroId: {
-                    hero_1: ["blessed-light", "renewing-faith"],
+                talentRanksByHeroId: {
+                    hero_1: {
+                        "cleric-sunfire": 2,
+                        "cleric-shepherd": 1,
+                    },
                 },
                 talentPointsByHeroId: {
                     hero_1: 2,
@@ -148,8 +151,8 @@ describe("game-state persistence", () => {
         expect(restoredState.enemies[0]?.guardStacks).toBe(0);
         expect(restoredState.enemies[0]?.statusEffects).toEqual([]);
         expect(restoredState.talentProgression).toEqual({
-            unlockedTalentIdsByHeroId: {
-                hero_1: [],
+            talentRanksByHeroId: {
+                hero_1: {},
             },
             talentPointsByHeroId: {
                 hero_1: 0,
@@ -214,5 +217,38 @@ describe("game-state persistence", () => {
 
     it("rejects malformed save payloads", () => {
         expect(() => deserializeGameState("[]")).toThrow(/json object/i);
+    });
+
+    it("migrates legacy learned-talent arrays into rank-1 talent maps", () => {
+        const payload = {
+            version: 3,
+            savedAt: new Date().toISOString(),
+            state: {
+                party: createStarterParty("Selene", "Cleric"),
+                enemies: [],
+                talentProgression: {
+                    unlockedTalentIdsByHeroId: {
+                        hero_1: ["cleric-sunfire", "cleric-shepherd"],
+                    },
+                    talentPointsByHeroId: {
+                        hero_1: 1,
+                    },
+                },
+            },
+        };
+
+        const restoredState = deserializeGameState(JSON.stringify(payload));
+
+        expect(restoredState.talentProgression).toEqual({
+            talentRanksByHeroId: {
+                hero_1: {
+                    "cleric-sunfire": 1,
+                    "cleric-shepherd": 1,
+                },
+            },
+            talentPointsByHeroId: {
+                hero_1: 1,
+            },
+        });
     });
 });

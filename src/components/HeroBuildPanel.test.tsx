@@ -17,7 +17,7 @@ describe("HeroBuildPanel", () => {
                 initialState={{
                     party: createStarterParty("Ayla", "Cleric"),
                     talentProgression: {
-                        unlockedTalentIdsByHeroId: {},
+                        talentRanksByHeroId: {},
                         talentPointsByHeroId: {
                             hero_1: 1,
                         },
@@ -39,7 +39,8 @@ describe("HeroBuildPanel", () => {
         await user.click(within(sunfireCard).getByRole("button", { name: /learn/i }));
 
         expect(screen.getByText(/talent points: 0/i)).toBeInTheDocument();
-        expect(within(sunfireCard).getByRole("button", { name: /learned/i })).toBeDisabled();
+    expect(within(sunfireCard).getByText(/rank 1\/3/i)).toBeInTheDocument();
+    expect(within(sunfireCard).getByRole("button", { name: /upgrade/i })).toBeDisabled();
 
         const weaponSection = screen.getByText(/weapon/i).closest<HTMLElement>("div.rounded-xl");
         if (!weaponSection) {

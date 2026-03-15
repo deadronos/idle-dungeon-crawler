@@ -97,8 +97,11 @@ describe("entity model", () => {
         const boostedCleric = createHero("hero_1", "Ayla", "Cleric");
         const buildState = {
             talentProgression: {
-                unlockedTalentIdsByHeroId: {
-                    hero_1: ["cleric-sunfire", "cleric-shepherd"],
+                talentRanksByHeroId: {
+                    hero_1: {
+                        "cleric-sunfire": 3,
+                        "cleric-shepherd": 2,
+                    },
                 },
                 talentPointsByHeroId: {
                     hero_1: 0,
@@ -121,6 +124,7 @@ describe("entity model", () => {
         expect(boostedRatings.potency).toBeGreaterThan(baselineRatings.potency);
         expect(boostedCleric.magicDamage.gt(baselineCleric.magicDamage)).toBe(true);
         expect(boostedCleric.maxResource.gt(baselineCleric.maxResource)).toBe(true);
+        expect(boostedRatings.spellPower - baselineRatings.spellPower).toBeGreaterThanOrEqual(10);
     });
 
     it("creates tougher boss enemies on every tenth floor with the softened boss multipliers", () => {

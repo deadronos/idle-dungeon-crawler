@@ -43,10 +43,24 @@ These passives are intentionally compact. They are not a second class-template s
 The talent system stays intentionally small:
 
 * each shipped class has **2** fixed talent choices
-* talents are permanent once learned in the current save
-* heroes earn talent points at **level 2** and **level 4**
+* each shipped talent has a fixed **3-rank** cap
+* talents are permanent in the current save, but later points reinforce an existing talent instead of requiring a larger tree
+* heroes earn talent points on each **even level** until their class talent-rank cap is filled
 * talent points are stored per hero in `talentProgression.talentPointsByHeroId`
-* learned talents are stored per hero in `talentProgression.unlockedTalentIdsByHeroId`
+* talent ranks are stored per hero in `talentProgression.talentRanksByHeroId`
+
+The live rank cadence for the shipped classes is therefore:
+
+* `2` talents per class
+* `3` ranks per talent
+* `6` total spendable talent points per hero
+* current point gains at levels `2`, `4`, `6`, `8`, `10`, and `12`
+
+Rank behavior stays intentionally readable:
+
+* **Rank 1** carries the main class-facing identity hook
+* **Ranks 2 and 3** add lighter numeric reinforcement, with small capped riders only where the action package needs it
+* burst, healing, crit, and resource hooks scale more conservatively than broad rating bonuses
 
 The current shipped talents stay focused on combat ratings and existing action packages:
 
@@ -54,7 +68,7 @@ The current shipped talents stay focused on combat ratings and existing action p
 * **Cleric:** `Sunfire`, `Shepherd`
 * **Archer:** `Deadeye`, `Quickdraw`
 
-This is a build-pick MVP, not a branching tree, respec system, or long-form meta progression layer.
+This remains a compact build layer, not a branching tree, respec system, or long-form meta progression layer.
 
 ### Equipment MVP
 
@@ -101,15 +115,15 @@ This keeps build differentiation aligned with the layered-combat direction inste
 
 The MVP uses two complementary surfaces:
 
-* **Party -> character sheet tabs (`Talents` and `Equipment`):** the interaction surface for learning talents and equipping gear
-* **Dungeon roster tooltip and card metadata:** the read surface for combat ratings, passive identity, learned talents, and equipped items
+* **Party -> character sheet tabs (`Talents` and `Equipment`):** the interaction surface for learning or upgrading talents and equipping gear
+* **Dungeon roster tooltip and card metadata:** the read surface for combat ratings, passive identity, ranked talents, and equipped items
 
 The roster tooltip now exposes:
 
 * MVP combat ratings
 * existing derived combat detail (`ACC`, `EVA`, `PAR`, `APEN`, `EPEN`, `TEN`)
 * passive summary
-* learned talents
+* ranked talents (`Rank X / 3`)
 * equipped items
 * resistances and statuses
 

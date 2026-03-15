@@ -13,7 +13,7 @@ After issue `#95` added **25% post-victory HP recovery** between encounters, thi
 
 The original isolated-floor snapshot is still useful for measuring per-encounter combat pressure, but it no longer fully describes the live climb because party HP and combat momentum now carry across floor transitions.
 
-The goal is still not to declare a new balance pass finished. It is to capture the current live baseline before follow-up issues extend equipment and talent progression or retune slot-gate pacing.
+The goal is still not to declare a new balance pass finished. It is to capture the pre-ranked-talent baseline that justified the next progression pass before follow-up issues extend equipment depth or retune slot-gate pacing.
 
 ## Method
 
@@ -38,7 +38,7 @@ Both lenses compare the same three deterministic build assumptions:
    * all earned current talents learned
    * the strongest currently stocked loadout we can assign while respecting one-item-per-hero ownership
 
-These scenarios intentionally use the current live talent and armory rules rather than hypothetical future unlock systems.
+These scenarios intentionally capture the then-current live talent and armory rules rather than hypothetical future unlock systems.
 
 The recovery-aware checkpoint runs use these ranges:
 
@@ -155,5 +155,5 @@ This baseline directly supports the current follow-up issues:
 
 * `#89` for slot-4 and slot-5 pacing
 * `#90` for staged equipment progression
-* `#91` for ranked talents and longer-lived talent progression
+* `#91`, now implemented, for ranked talents and longer-lived talent progression grounded in this baseline
 * `#92` for Warrior/frontline checkpoint review against the stronger build-aware and recovery-aware baseline

@@ -21,7 +21,10 @@ import {
     getHeroBuildProfile,
     getSlotLockedReason,
     getTalentDefinitionsForClass,
+    getTalentRankForHero,
     getTalentPointsForHero,
+    getTotalTalentRankCapacity,
+    getSpentTalentRanksForHero,
     getUnequippedInventoryItems,
     type EquipmentSlot,
 } from "../game/heroBuilds";
@@ -247,12 +250,14 @@ const TalentsPanel: React.FC<{
         equipmentProgression,
     });
     const talentPoints = getTalentPointsForHero(hero.id, talentProgression);
+    const spentRanks = getSpentTalentRanksForHero(hero.id, talentProgression);
+    const totalRankCapacity = getTotalTalentRankCapacity(heroClass);
 
     return (
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <span className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
-                    {buildProfile.talents.length}/{availableTalents.length} learned
+                    {spentRanks}/{totalRankCapacity} ranks
                 </span>
                 <span className="rounded-full border border-violet-400/30 bg-violet-950/30 px-3 py-0.5 text-xs font-black uppercase tracking-wider text-violet-200">
                     {talentPoints} pts
@@ -261,7 +266,10 @@ const TalentsPanel: React.FC<{
 
             <div className="space-y-2">
                 {availableTalents.map((talent) => {
-                    const isUnlocked = buildProfile.talents.some((t) => t.id === talent.id);
+                    const currentRank = getTalentRankForHero(hero.id, talent.id, talentProgression);
+                    const maxRank = talent.maxRank ?? 3;
+                    const isUnlocked = currentRank > 0;
+                    const isMaxed = currentRank >= maxRank;
                     return (
                         <div
                             key={talent.id}
@@ -273,7 +281,12 @@ const TalentsPanel: React.FC<{
                         >
                             <div className="flex items-start justify-between gap-2">
                                 <div className="min-w-0">
-                                    <p className="text-sm font-bold text-slate-100">{talent.name}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="text-sm font-bold text-slate-100">{talent.name}</p>
+                                        <span className="rounded-full border border-slate-600/70 bg-slate-950/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-300">
+                                            Rank {currentRank}/{maxRank}
+                                        </span>
+                                    </div>
                                     <p className="mt-0.5 text-xs text-slate-400">
                                         {talent.description}
                                     </p>
@@ -281,11 +294,11 @@ const TalentsPanel: React.FC<{
                                 <Button
                                     size="sm"
                                     variant={isUnlocked ? "secondary" : "upgrade"}
-                                    disabled={isUnlocked || talentPoints <= 0}
+                                    disabled={isMaxed || talentPoints <= 0}
                                     onClick={() => unlockTalent(hero.id, talent.id)}
                                     className="shrink-0"
                                 >
-                                    {isUnlocked ? "✓" : "Learn"}
+                                    {isMaxed ? "Maxed" : currentRank === 0 ? "Learn" : "Upgrade"}
                                 </Button>
                             </div>
                         </div>

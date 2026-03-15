@@ -185,16 +185,22 @@ export const createProgressionSlice = (
                     return {};
                 }
 
-                const unlockedTalentIds = state.talentProgression.unlockedTalentIdsByHeroId[heroId] ?? [];
+                const heroTalentRanks = state.talentProgression.talentRanksByHeroId[heroId] ?? {};
+                const currentRank = heroTalentRanks[talentId] ?? 0;
                 const availablePoints = state.talentProgression.talentPointsByHeroId[heroId] ?? 0;
-                if (availablePoints <= 0 || unlockedTalentIds.includes(talentId)) {
+                if (availablePoints <= 0 || currentRank >= (talentDefinition.maxRank ?? 3)) {
                     return {};
                 }
 
+                const nextRank = currentRank + 1;
+
                 const talentProgression = synchronizeTalentProgression(state.party, {
-                    unlockedTalentIdsByHeroId: {
-                        ...state.talentProgression.unlockedTalentIdsByHeroId,
-                        [heroId]: [...unlockedTalentIds, talentId],
+                    talentRanksByHeroId: {
+                        ...state.talentProgression.talentRanksByHeroId,
+                        [heroId]: {
+                            ...heroTalentRanks,
+                            [talentId]: nextRank,
+                        },
                     },
                     talentPointsByHeroId: {
                         ...state.talentProgression.talentPointsByHeroId,
@@ -208,7 +214,12 @@ export const createProgressionSlice = (
                         talentProgression,
                         equipmentProgression: state.equipmentProgression,
                     }),
-                    combatLog: prependCombatMessages(state.combatLog, `${hero.name} learned ${talentDefinition.name}.`),
+                    combatLog: prependCombatMessages(
+                        state.combatLog,
+                        currentRank === 0
+                            ? `${hero.name} learned ${talentDefinition.name} (Rank ${nextRank}).`
+                            : `${hero.name} upgraded ${talentDefinition.name} to Rank ${nextRank}.`,
+                    ),
                 };
             });
         },

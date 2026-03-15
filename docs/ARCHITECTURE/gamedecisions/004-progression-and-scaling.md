@@ -54,12 +54,13 @@ This keeps progression extensible without creating a wall of new primary stats o
 
 The current shipped baseline is intentionally compact:
 
-* heroes gain talent points at **level 2** and **level 4**
-* each class has **2** fixed talent picks rather than a full tree
+* each class still has **2** fixed talent picks rather than a full tree
+* each talent now has **3** ranks, so the current per-class cap is **6 total talent ranks**
+* heroes gain talent points on each **even level**, currently capping once all class talent ranks are filled (levels `2`, `4`, `6`, `8`, `10`, and `12` for the shipped classes)
 * heroes equip up to **4** items (`weapon`, `armor`, `charm`, `trinket`)
 * equipment now comes from a persistent stash of dropped gear with milestone-gated tiers, simple ranks, and auto-sold overflow
 
-This keeps the first build-differentiation pass readable and easy to tune while still making the layered model playable.
+This keeps the first build-differentiation pass readable and easy to tune while still making the layered model playable deeper into the midgame.
 
 ### Persistent Gold Upgrades
 

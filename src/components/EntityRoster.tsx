@@ -178,7 +178,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                   {!entity.isEnemy ? (
                     <div className="mt-1 flex flex-wrap gap-1">
                       <span className="rounded-full border border-violet-400/25 bg-violet-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-violet-100">
-                        {buildProfile.talents.length}T
+                        {buildProfile.talents.reduce((total, talent) => total + talent.currentRank, 0)}R
                       </span>
                       <span className="rounded-full border border-sky-400/25 bg-sky-500/10 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] text-sky-100">
                         {buildProfile.equippedItems.length}G
@@ -297,7 +297,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                             <p className="text-slate-400">Talents</p>
                             <p className="font-bold text-slate-50">
                               {buildProfile.talents.length > 0
-                                ? buildProfile.talents.map((talent) => talent.name).join(", ")
+                                ? buildProfile.talents.map((talent) => `${talent.name} R${talent.currentRank}/${talent.maxRank}`).join(", ")
                                 : "No talents learned"}
                             </p>
                           </div>
