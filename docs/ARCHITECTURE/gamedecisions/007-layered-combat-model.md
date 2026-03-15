@@ -85,6 +85,7 @@ Implementation issue `#70` now derives combat-facing outputs through the MVP lay
 The first playable build follow-through now also exists:
 
 * [009 - Differentiation MVP: Class Passives, Talents, Equipment, and Build Surfacing](009-differentiation-mvp-talents-equipment-and-build-surfacing.md) adds explicit class passives, compact talent picks, four-slot equipment, and the current roster/UI surfacing for those layers
+* [010 - Post-Refactor Combat Identity Balance Report](010-post-refactor-balance-report.md) records the first post-refactor balance snapshot against the pre-layered baseline and highlights the remaining progression-pressure risks
 
 ### Follow-up Issue Boundaries
 
