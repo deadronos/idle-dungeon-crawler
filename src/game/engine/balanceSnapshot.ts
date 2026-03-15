@@ -10,10 +10,12 @@ import {
     type Entity,
     type HeroClass,
 } from "../entity";
+import type { EquipmentProgressionState, TalentProgressionState } from "../store/types";
 import {
     cloneEntity,
     createEncounter,
     createInitialGameState,
+    getPostVictoryFloorTransitionState,
     simulateTick,
     type SimulationOutcome,
     type SimulationRandomSource,
@@ -82,6 +84,72 @@ export interface MilestoneWinRateSnapshot {
     };
 }
 
+export interface SnapshotHeroBuildConfig {
+    talentIds?: string[];
+    equippedItemIds?: string[];
+}
+
+export interface BuildAwareMilestoneWinRates {
+    baseline: number;
+    expectedBuild: number;
+    curatedBuild: number;
+}
+
+export interface BuildAwareMilestoneWinRateSnapshot {
+    floor8Duo: {
+        warriorClericLevel4: BuildAwareMilestoneWinRates;
+        clericArcherLevel4: BuildAwareMilestoneWinRates;
+    };
+    floor10Boss: {
+        duoWarriorClericLevel5: BuildAwareMilestoneWinRates;
+        duoClericArcherLevel5: BuildAwareMilestoneWinRates;
+    };
+    floor18Slot4: {
+        trioWarriorClericArcherLevel10: BuildAwareMilestoneWinRates;
+    };
+    floor20Boss: {
+        trioWarriorClericArcherLevel11: BuildAwareMilestoneWinRates;
+        trioWarriorClericArcherLevel12: BuildAwareMilestoneWinRates;
+    };
+    floor28Slot5: {
+        quadWarriorClericClericArcherLevel13: BuildAwareMilestoneWinRates;
+    };
+}
+
+export interface RecoveryAwareMilestoneWinRateSnapshot {
+    floor8Duo: {
+        warriorClericLevel4: BuildAwareMilestoneWinRates;
+        clericArcherLevel4: BuildAwareMilestoneWinRates;
+    };
+    floor10Boss: {
+        duoWarriorClericLevel5: BuildAwareMilestoneWinRates;
+        duoClericArcherLevel5: BuildAwareMilestoneWinRates;
+    };
+    floor18Slot4: {
+        trioWarriorClericArcherLevel10: BuildAwareMilestoneWinRates;
+    };
+    floor20Boss: {
+        trioWarriorClericArcherLevel11: BuildAwareMilestoneWinRates;
+        trioWarriorClericArcherLevel12: BuildAwareMilestoneWinRates;
+    };
+    floor28Slot5: {
+        quadWarriorClericClericArcherLevel13: BuildAwareMilestoneWinRates;
+    };
+}
+
+interface BuildAwareMilestoneScenario {
+    partyClasses: HeroClass[];
+    level: number;
+    floor: number;
+    expectedBuilds: SnapshotHeroBuildConfig[];
+    curatedBuilds: SnapshotHeroBuildConfig[];
+}
+
+interface RecoveryAwareMilestoneScenario extends Omit<BuildAwareMilestoneScenario, "floor"> {
+    startFloor: number;
+    endFloor: number;
+}
+
 const LEGACY_STAT_MULTS: LegacyStatMultipliers = {
     armorPerStr: 1,
     armorPerVit: 0.5,
@@ -99,6 +167,7 @@ const LEGACY_STAT_MULTS: LegacyStatMultipliers = {
 };
 
 const getHeroName = (heroClass: HeroClass) => getHeroClassTemplate(heroClass).namePool[0];
+const ENCOUNTER_TICK_LIMIT = 12_000;
 
 const createSeededRandomSource = (seed: number): SimulationRandomSource => {
     let state = seed >>> 0;
@@ -123,6 +192,49 @@ const getCurrentHero = (heroClass: HeroClass, attributes?: Attributes): Entity =
     }
 
     return hero;
+};
+
+const createBuildProgression = (
+    party: Entity[],
+    buildConfigs?: SnapshotHeroBuildConfig[],
+): {
+    talentProgression?: TalentProgressionState;
+    equipmentProgression?: EquipmentProgressionState;
+} => {
+    if (!buildConfigs || buildConfigs.length === 0) {
+        return {};
+    }
+
+    const unlockedTalentIdsByHeroId: Record<string, string[]> = {};
+    const talentPointsByHeroId: Record<string, number> = {};
+    const equippedItemIdsByHeroId: Record<string, string[]> = {};
+    const inventoryItemIds = new Set<string>();
+
+    buildConfigs.forEach((buildConfig, index) => {
+        const hero = party[index];
+        if (!hero) {
+            return;
+        }
+
+        const talentIds = [...new Set(buildConfig.talentIds ?? [])];
+        const equippedItemIds = [...new Set(buildConfig.equippedItemIds ?? [])];
+
+        unlockedTalentIdsByHeroId[hero.id] = talentIds;
+        talentPointsByHeroId[hero.id] = 0;
+        equippedItemIdsByHeroId[hero.id] = equippedItemIds;
+        equippedItemIds.forEach((itemId) => inventoryItemIds.add(itemId));
+    });
+
+    return {
+        talentProgression: {
+            unlockedTalentIdsByHeroId,
+            talentPointsByHeroId,
+        },
+        equipmentProgression: {
+            inventoryItemIds: [...inventoryItemIds],
+            equippedItemIdsByHeroId,
+        },
+    };
 };
 
 const getSnapshotFromEntity = (hero: Entity): CombatSnapshot => ({
@@ -169,17 +281,26 @@ const createLeveledHero = (heroClass: HeroClass, level: number, id: string): Ent
     return hero;
 };
 
-const runEncounter = (party: Entity[], floor: number, seed: number): SimulationOutcome => {
+const runEncounter = (
+    party: Entity[],
+    floor: number,
+    seed: number,
+    buildProgression?: {
+        talentProgression?: TalentProgressionState;
+        equipmentProgression?: EquipmentProgressionState;
+    },
+): SimulationOutcome => {
     let state = createInitialGameState({
         floor,
         party,
         enemies: createEncounter(floor),
         combatLog: [],
+        ...buildProgression,
     });
     let outcome: SimulationOutcome = "running";
     const randomSource = createSeededRandomSource(seed);
 
-    for (let tick = 0; tick < 12_000; tick += 1) {
+    for (let tick = 0; tick < ENCOUNTER_TICK_LIMIT; tick += 1) {
         const result = simulateTick(state, randomSource);
         state = result.state;
         outcome = result.outcome;
@@ -190,6 +311,50 @@ const runEncounter = (party: Entity[], floor: number, seed: number): SimulationO
     }
 
     return outcome;
+};
+
+const runCheckpointSequence = (
+    party: Entity[],
+    startFloor: number,
+    endFloor: number,
+    seed: number,
+    buildProgression?: {
+        talentProgression?: TalentProgressionState;
+        equipmentProgression?: EquipmentProgressionState;
+    },
+): SimulationOutcome => {
+    let state = createInitialGameState({
+        floor: startFloor,
+        party,
+        enemies: createEncounter(startFloor),
+        combatLog: [],
+        ...buildProgression,
+    });
+    const randomSource = createSeededRandomSource(seed);
+
+    for (let floor = startFloor; floor <= endFloor; floor += 1) {
+        let outcome: SimulationOutcome = "running";
+
+        for (let tick = 0; tick < ENCOUNTER_TICK_LIMIT; tick += 1) {
+            const result = simulateTick(state, randomSource);
+            state = result.state;
+            outcome = result.outcome;
+
+            if (outcome === "victory" || outcome === "party-wipe") {
+                break;
+            }
+        }
+
+        if (outcome !== "victory") {
+            return outcome;
+        }
+
+        if (floor < endFloor) {
+            state = { ...state, ...getPostVictoryFloorTransitionState(state, floor + 1) };
+        }
+    }
+
+    return "victory";
 };
 
 export const createLegacyCombatSnapshot = (
@@ -257,12 +422,43 @@ export const estimateEncounterWinRate = (
     level: number,
     floor: number,
     attempts = 12,
+    buildConfigs?: SnapshotHeroBuildConfig[],
 ): number => {
     let wins = 0;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
         const party = partyClasses.map((heroClass, index) => createLeveledHero(heroClass, level, `hero_${index + 1}`));
-        const outcome = runEncounter(party.map((hero) => cloneEntity(hero)), floor, attempt);
+        const buildProgression = createBuildProgression(party, buildConfigs);
+        const outcome = runEncounter(party.map((hero) => cloneEntity(hero)), floor, attempt, buildProgression);
+
+        if (outcome === "victory") {
+            wins += 1;
+        }
+    }
+
+    return wins / attempts;
+};
+
+export const estimateCheckpointRunWinRate = (
+    partyClasses: HeroClass[],
+    level: number,
+    startFloor: number,
+    endFloor: number,
+    attempts = 12,
+    buildConfigs?: SnapshotHeroBuildConfig[],
+): number => {
+    let wins = 0;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+        const party = partyClasses.map((heroClass, index) => createLeveledHero(heroClass, level, `hero_${index + 1}`));
+        const buildProgression = createBuildProgression(party, buildConfigs);
+        const outcome = runCheckpointSequence(
+            party.map((hero) => cloneEntity(hero)),
+            startFloor,
+            endFloor,
+            attempt,
+            buildProgression,
+        );
 
         if (outcome === "victory") {
             wins += 1;
@@ -298,6 +494,393 @@ export const createRepresentativeMilestoneWinRates = (attempts = 12): MilestoneW
     },
     floor28Slot5: {
         quadWarriorClericClericArcherLevel13: estimateEncounterWinRate(["Warrior", "Cleric", "Cleric", "Archer"], 13, 28, attempts),
+    },
+});
+
+const createBuildAwareScenarioWinRates = (
+    scenario: BuildAwareMilestoneScenario,
+    attempts: number,
+): BuildAwareMilestoneWinRates => ({
+    baseline: estimateEncounterWinRate(scenario.partyClasses, scenario.level, scenario.floor, attempts),
+    expectedBuild: estimateEncounterWinRate(
+        scenario.partyClasses,
+        scenario.level,
+        scenario.floor,
+        attempts,
+        scenario.expectedBuilds,
+    ),
+    curatedBuild: estimateEncounterWinRate(
+        scenario.partyClasses,
+        scenario.level,
+        scenario.floor,
+        attempts,
+        scenario.curatedBuilds,
+    ),
+});
+
+const createRecoveryAwareScenarioWinRates = (
+    scenario: RecoveryAwareMilestoneScenario,
+    attempts: number,
+): BuildAwareMilestoneWinRates => ({
+    baseline: estimateCheckpointRunWinRate(
+        scenario.partyClasses,
+        scenario.level,
+        scenario.startFloor,
+        scenario.endFloor,
+        attempts,
+    ),
+    expectedBuild: estimateCheckpointRunWinRate(
+        scenario.partyClasses,
+        scenario.level,
+        scenario.startFloor,
+        scenario.endFloor,
+        attempts,
+        scenario.expectedBuilds,
+    ),
+    curatedBuild: estimateCheckpointRunWinRate(
+        scenario.partyClasses,
+        scenario.level,
+        scenario.startFloor,
+        scenario.endFloor,
+        attempts,
+        scenario.curatedBuilds,
+    ),
+});
+
+const BUILD_AWARE_SCENARIOS = {
+    floor8WarriorCleric: {
+        partyClasses: ["Warrior", "Cleric"],
+        level: 4,
+        floor: 8,
+        expectedBuilds: [
+            {
+                talentIds: ["warrior-unyielding"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate"],
+            },
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["warrior-unyielding", "warrior-rampage"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate", "whetstone-token", "timeworn-hourglass"],
+            },
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+            },
+        ],
+    },
+    floor8ClericArcher: {
+        partyClasses: ["Cleric", "Archer"],
+        level: 4,
+        floor: 8,
+        expectedBuilds: [
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+            {
+                talentIds: ["archer-deadeye"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+            },
+            {
+                talentIds: ["archer-deadeye", "archer-quickdraw"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers", "duelist-loop", "timeworn-hourglass"],
+            },
+        ],
+    },
+    floor10WarriorCleric: {
+        partyClasses: ["Warrior", "Cleric"],
+        level: 5,
+        floor: 10,
+        expectedBuilds: [
+            {
+                talentIds: ["warrior-unyielding"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate"],
+            },
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["warrior-unyielding", "warrior-rampage"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate", "whetstone-token", "timeworn-hourglass"],
+            },
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+            },
+        ],
+    },
+    floor10ClericArcher: {
+        partyClasses: ["Cleric", "Archer"],
+        level: 5,
+        floor: 10,
+        expectedBuilds: [
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+            {
+                talentIds: ["archer-deadeye"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+            },
+            {
+                talentIds: ["archer-deadeye", "archer-quickdraw"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers", "duelist-loop", "timeworn-hourglass"],
+            },
+        ],
+    },
+    floor18WarriorClericArcher: {
+        partyClasses: ["Warrior", "Cleric", "Archer"],
+        level: 10,
+        floor: 18,
+        expectedBuilds: [
+            {
+                talentIds: ["warrior-unyielding"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate"],
+            },
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+            {
+                talentIds: ["archer-deadeye"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["warrior-unyielding", "warrior-rampage"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate", "whetstone-token", "ward-icon"],
+            },
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+            },
+            {
+                talentIds: ["archer-deadeye", "archer-quickdraw"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers", "duelist-loop", "timeworn-hourglass"],
+            },
+        ],
+    },
+    floor20WarriorClericArcherLevel11: {
+        partyClasses: ["Warrior", "Cleric", "Archer"],
+        level: 11,
+        floor: 20,
+        expectedBuilds: [
+            {
+                talentIds: ["warrior-unyielding"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate"],
+            },
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+            {
+                talentIds: ["archer-deadeye"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["warrior-unyielding", "warrior-rampage"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate", "whetstone-token", "ward-icon"],
+            },
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+            },
+            {
+                talentIds: ["archer-deadeye", "archer-quickdraw"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers", "duelist-loop", "timeworn-hourglass"],
+            },
+        ],
+    },
+    floor20WarriorClericArcherLevel12: {
+        partyClasses: ["Warrior", "Cleric", "Archer"],
+        level: 12,
+        floor: 20,
+        expectedBuilds: [
+            {
+                talentIds: ["warrior-unyielding"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate"],
+            },
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+            {
+                talentIds: ["archer-deadeye"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["warrior-unyielding", "warrior-rampage"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate", "whetstone-token", "ward-icon"],
+            },
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+            },
+            {
+                talentIds: ["archer-deadeye", "archer-quickdraw"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers", "duelist-loop", "timeworn-hourglass"],
+            },
+        ],
+    },
+    floor28WarriorClericClericArcher: {
+        partyClasses: ["Warrior", "Cleric", "Cleric", "Archer"],
+        level: 13,
+        floor: 28,
+        expectedBuilds: [
+            {
+                talentIds: ["warrior-unyielding"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate"],
+            },
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments"],
+            },
+            {
+                talentIds: ["cleric-shepherd"],
+                equippedItemIds: ["ward-icon", "iron-prayer-bead"],
+            },
+            {
+                talentIds: ["archer-deadeye"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers"],
+            },
+        ],
+        curatedBuilds: [
+            {
+                talentIds: ["warrior-unyielding", "warrior-rampage"],
+                equippedItemIds: ["greatblade-of-embers", "bastion-plate", "whetstone-token"],
+            },
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["sunlit-censer", "pilgrim-vestments", "ember-charm"],
+            },
+            {
+                talentIds: ["cleric-sunfire", "cleric-shepherd"],
+                equippedItemIds: ["iron-prayer-bead", "ward-icon"],
+            },
+            {
+                talentIds: ["archer-deadeye", "archer-quickdraw"],
+                equippedItemIds: ["hawkstring-bow", "shadowhide-leathers", "duelist-loop", "timeworn-hourglass"],
+            },
+        ],
+    },
+} satisfies Record<string, BuildAwareMilestoneScenario>;
+
+const RECOVERY_AWARE_SCENARIOS = {
+    floor8WarriorCleric: {
+        ...BUILD_AWARE_SCENARIOS.floor8WarriorCleric,
+        startFloor: 6,
+        endFloor: 8,
+    },
+    floor8ClericArcher: {
+        ...BUILD_AWARE_SCENARIOS.floor8ClericArcher,
+        startFloor: 6,
+        endFloor: 8,
+    },
+    floor10WarriorCleric: {
+        ...BUILD_AWARE_SCENARIOS.floor10WarriorCleric,
+        startFloor: 8,
+        endFloor: 10,
+    },
+    floor10ClericArcher: {
+        ...BUILD_AWARE_SCENARIOS.floor10ClericArcher,
+        startFloor: 8,
+        endFloor: 10,
+    },
+    floor18WarriorClericArcher: {
+        ...BUILD_AWARE_SCENARIOS.floor18WarriorClericArcher,
+        startFloor: 16,
+        endFloor: 18,
+    },
+    floor20WarriorClericArcherLevel11: {
+        ...BUILD_AWARE_SCENARIOS.floor20WarriorClericArcherLevel11,
+        startFloor: 19,
+        endFloor: 20,
+    },
+    floor20WarriorClericArcherLevel12: {
+        ...BUILD_AWARE_SCENARIOS.floor20WarriorClericArcherLevel12,
+        startFloor: 19,
+        endFloor: 20,
+    },
+    floor28WarriorClericClericArcher: {
+        ...BUILD_AWARE_SCENARIOS.floor28WarriorClericClericArcher,
+        startFloor: 26,
+        endFloor: 28,
+    },
+} satisfies Record<string, RecoveryAwareMilestoneScenario>;
+
+export const createBuildAwareMilestoneWinRates = (attempts = 12): BuildAwareMilestoneWinRateSnapshot => ({
+    floor8Duo: {
+        warriorClericLevel4: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor8WarriorCleric, attempts),
+        clericArcherLevel4: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor8ClericArcher, attempts),
+    },
+    floor10Boss: {
+        duoWarriorClericLevel5: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor10WarriorCleric, attempts),
+        duoClericArcherLevel5: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor10ClericArcher, attempts),
+    },
+    floor18Slot4: {
+        trioWarriorClericArcherLevel10: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor18WarriorClericArcher, attempts),
+    },
+    floor20Boss: {
+        trioWarriorClericArcherLevel11: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor20WarriorClericArcherLevel11, attempts),
+        trioWarriorClericArcherLevel12: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor20WarriorClericArcherLevel12, attempts),
+    },
+    floor28Slot5: {
+        quadWarriorClericClericArcherLevel13: createBuildAwareScenarioWinRates(BUILD_AWARE_SCENARIOS.floor28WarriorClericClericArcher, attempts),
+    },
+});
+
+export const createRecoveryAwareMilestoneWinRates = (attempts = 12): RecoveryAwareMilestoneWinRateSnapshot => ({
+    floor8Duo: {
+        warriorClericLevel4: createRecoveryAwareScenarioWinRates(RECOVERY_AWARE_SCENARIOS.floor8WarriorCleric, attempts),
+        clericArcherLevel4: createRecoveryAwareScenarioWinRates(RECOVERY_AWARE_SCENARIOS.floor8ClericArcher, attempts),
+    },
+    floor10Boss: {
+        duoWarriorClericLevel5: createRecoveryAwareScenarioWinRates(RECOVERY_AWARE_SCENARIOS.floor10WarriorCleric, attempts),
+        duoClericArcherLevel5: createRecoveryAwareScenarioWinRates(RECOVERY_AWARE_SCENARIOS.floor10ClericArcher, attempts),
+    },
+    floor18Slot4: {
+        trioWarriorClericArcherLevel10: createRecoveryAwareScenarioWinRates(RECOVERY_AWARE_SCENARIOS.floor18WarriorClericArcher, attempts),
+    },
+    floor20Boss: {
+        trioWarriorClericArcherLevel11: createRecoveryAwareScenarioWinRates(
+            RECOVERY_AWARE_SCENARIOS.floor20WarriorClericArcherLevel11,
+            attempts,
+        ),
+        trioWarriorClericArcherLevel12: createRecoveryAwareScenarioWinRates(
+            RECOVERY_AWARE_SCENARIOS.floor20WarriorClericArcherLevel12,
+            attempts,
+        ),
+    },
+    floor28Slot5: {
+        quadWarriorClericClericArcherLevel13: createRecoveryAwareScenarioWinRates(
+            RECOVERY_AWARE_SCENARIOS.floor28WarriorClericClericArcher,
+            attempts,
+        ),
     },
 });
 
