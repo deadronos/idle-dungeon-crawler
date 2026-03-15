@@ -5,6 +5,7 @@ import {
     createBuildAwareMilestoneWinRates,
     createCurrentCombatSnapshot,
     createLegacyCombatSnapshot,
+    createRecoveryAwareMilestoneWinRates,
     createRepresentativeMilestoneWinRates,
     getCombatIdentityDistribution,
 } from "./balanceSnapshot";
@@ -290,4 +291,72 @@ describe("balance snapshots", () => {
           }
         `);
     });
+
+    it("captures recovery-aware checkpoint pressure under baseline, expected, and curated assumptions", () => {
+        const summary = createRecoveryAwareMilestoneWinRates(12);
+
+        expect(summary.floor10Boss.duoWarriorClericLevel5.expectedBuild).toBeGreaterThan(
+            summary.floor10Boss.duoWarriorClericLevel5.baseline,
+        );
+        expect(summary.floor10Boss.duoClericArcherLevel5.expectedBuild).toBeGreaterThan(
+            summary.floor10Boss.duoClericArcherLevel5.baseline,
+        );
+        expect(summary.floor18Slot4.trioWarriorClericArcherLevel10.curatedBuild).toBe(0);
+        expect(summary.floor28Slot5.quadWarriorClericClericArcherLevel13.curatedBuild).toBe(0);
+
+        expect(roundValue(summary)).toMatchInlineSnapshot(`
+          {
+            "floor10Boss": {
+              "duoClericArcherLevel5": {
+                "baseline": 0.417,
+                "curatedBuild": 0.917,
+                "expectedBuild": 1,
+              },
+              "duoWarriorClericLevel5": {
+                "baseline": 0.75,
+                "curatedBuild": 1,
+                "expectedBuild": 1,
+              },
+            },
+            "floor18Slot4": {
+              "trioWarriorClericArcherLevel10": {
+                "baseline": 0,
+                "curatedBuild": 0,
+                "expectedBuild": 0,
+              },
+            },
+            "floor20Boss": {
+              "trioWarriorClericArcherLevel11": {
+                "baseline": 0,
+                "curatedBuild": 0,
+                "expectedBuild": 0,
+              },
+              "trioWarriorClericArcherLevel12": {
+                "baseline": 0,
+                "curatedBuild": 0,
+                "expectedBuild": 0,
+              },
+            },
+            "floor28Slot5": {
+              "quadWarriorClericClericArcherLevel13": {
+                "baseline": 0,
+                "curatedBuild": 0,
+                "expectedBuild": 0,
+              },
+            },
+            "floor8Duo": {
+              "clericArcherLevel4": {
+                "baseline": 0.75,
+                "curatedBuild": 1,
+                "expectedBuild": 1,
+              },
+              "warriorClericLevel4": {
+                "baseline": 1,
+                "curatedBuild": 1,
+                "expectedBuild": 1,
+              },
+            },
+          }
+        `);
+    }, 15_000);
 });
