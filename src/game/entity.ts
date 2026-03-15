@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 
 import { getHeroClassTemplate } from "./classTemplates";
+import { getHeroBuildProfile, type HeroBuildState } from "./heroBuilds";
 import type { HeroCombatRating } from "./classTemplates";
 export { HERO_CLASSES } from "./classTemplates";
 
@@ -346,11 +347,15 @@ export const getExpRequirement = (level: number): Decimal => {
     return new Decimal(100).times(Decimal.pow(1.5, level - 1)).floor();
 };
 
-export const getCombatRatings = (entity: Pick<Entity, "class" | "isEnemy" | "attributes" | "enemyArchetype" | "name">): CombatRatings => {
+export const getCombatRatings = (
+    entity: Pick<Entity, "id" | "class" | "isEnemy" | "attributes" | "enemyArchetype" | "name">,
+    buildState?: HeroBuildState,
+): CombatRatings => {
     const attrs = entity.attributes;
     const template = isHeroClass(entity.class) ? getHeroClassTemplate(entity.class) : null;
     const physicalSourceAttribute = template?.combatProfile.physicalDamageSourceAttribute ?? "str";
     const physicalSourceMultiplier = template?.combatProfile.physicalDamageSourceMultiplier ?? 1.5;
+    const buildProfile = getHeroBuildProfile(entity, buildState);
 
     const ratings: CombatRatings = {
         power: (attrs[physicalSourceAttribute] * physicalSourceMultiplier * 0.8) + (attrs.str * 0.25) + (attrs.vit * 0.15),
@@ -365,6 +370,7 @@ export const getCombatRatings = (entity: Pick<Entity, "class" | "isEnemy" | "att
 
     const biasSources: Array<Partial<CombatRatings>> = [
         template?.combatProfile.ratingBiases ?? createEmptyCombatRatings(),
+        buildProfile.effects.ratingBonuses,
         entity.isEnemy ? getEnemyCombatRatingBiases(entity) : createEmptyCombatRatings(),
     ];
 
@@ -377,10 +383,11 @@ export const getCombatRatings = (entity: Pick<Entity, "class" | "isEnemy" | "att
     return ratings;
 };
 
-export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: PrestigeUpgrades): Entity => {
+export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: PrestigeUpgrades, buildState?: HeroBuildState): Entity => {
     const attrs = entity.attributes;
     const template = isHeroClass(entity.class) ? getHeroClassTemplate(entity.class) : null;
-    const ratings = getCombatRatings(entity);
+    const buildProfile = getHeroBuildProfile(entity, buildState);
+    const ratings = getCombatRatings(entity, buildState);
 
     // Base logic for HP
     // Vitality Prestige adds +1 HP per VIT point per level
@@ -401,7 +408,9 @@ export const calculateDerivedStats = (entity: Entity, prestigeUpgrades?: Prestig
     // Resource (Mana/Cunning/Rage)
     const maxResourceBase = template?.resourceModel.maxBase ?? 100;
     const maxResourcePerInt = template?.resourceModel.maxPerInt ?? 0;
-    entity.maxResource = new Decimal(maxResourceBase).plus(attrs.int * maxResourcePerInt);
+    entity.maxResource = new Decimal(maxResourceBase)
+        .plus(attrs.int * maxResourcePerInt)
+        .plus(buildProfile.effects.maxResourceFlatBonus);
     if (entity.currentResource.gt(entity.maxResource)) entity.currentResource = entity.maxResource;
 
     entity.critChance = Math.min(0.05 + (ratings.crit * STAT_MULTS.CRIT_CHANCE_PER_RATING), 1.0);
@@ -444,8 +453,13 @@ export const applyMetaUpgrades = (entity: Entity, upgrades: MetaUpgrades = BASE_
     return entity;
 };
 
-export const recalculateEntity = (entity: Entity, upgrades: MetaUpgrades = BASE_META_UPGRADES, prestigeUpgrades?: PrestigeUpgrades): Entity => {
-    calculateDerivedStats(entity, prestigeUpgrades);
+export const recalculateEntity = (
+    entity: Entity,
+    upgrades: MetaUpgrades = BASE_META_UPGRADES,
+    prestigeUpgrades?: PrestigeUpgrades,
+    buildState?: HeroBuildState,
+): Entity => {
+    calculateDerivedStats(entity, prestigeUpgrades, buildState);
     applyMetaUpgrades(entity, upgrades);
 
     if (entity.currentHp.gt(entity.maxHp)) {

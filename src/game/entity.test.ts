@@ -12,6 +12,7 @@ import {
     getEnemyArchetypeLabel,
     recalculateEntity,
 } from "./entity";
+import { getDefaultEquipmentInventoryItemIds } from "./heroBuilds";
 
 describe("entity model", () => {
     it("creates a single-hero starter party around the selected leader", () => {
@@ -48,22 +49,22 @@ describe("entity model", () => {
         const warrior = createHero("hero_1", "Brom", "Warrior");
         const warriorRatings = getCombatRatings(warrior);
 
-        expect(warriorRatings.power).toBeCloseTo(22);
+        expect(warriorRatings.power).toBeCloseTo(24);
         expect(warriorRatings.precision).toBeCloseTo(4.5);
         expect(warriorRatings.haste).toBeCloseTo(5.05);
-        expect(warriorRatings.guard).toBeCloseTo(22);
+        expect(warriorRatings.guard).toBeCloseTo(25);
         expect(warriorRatings.resolve).toBeCloseTo(6.6);
         expect(warriorRatings.potency).toBeCloseTo(3.15);
         expect(warriorRatings.crit).toBeCloseTo(2.5);
-        expect(warrior.armor.toNumber()).toBeCloseTo(15.8);
-        expect(warrior.physicalDamage.toNumber()).toBeCloseTo(27.98, 2);
+        expect(warrior.armor.toNumber()).toBeCloseTo(17);
+        expect(warrior.physicalDamage.toNumber()).toBeCloseTo(29.58, 2);
         expect(warrior.magicDamage.toNumber()).toBeCloseTo(9.52, 2);
         expect(warrior.accuracyRating).toBeCloseTo(55.65);
         expect(warrior.evasionRating).toBeCloseTo(40.69);
-        expect(warrior.parryRating).toBeCloseTo(18.5);
-        expect(warrior.armorPenetration).toBeCloseTo(13.64);
+        expect(warrior.parryRating).toBeCloseTo(20.9);
+        expect(warrior.armorPenetration).toBeCloseTo(15);
         expect(warrior.elementalPenetration).toBeCloseTo(2.81);
-        expect(warrior.tenacity).toBeCloseTo(8.69);
+        expect(warrior.tenacity).toBeCloseTo(9.29);
         expect(warrior.resistances.light).toBeCloseTo(0.0728);
         expect(warrior.statusEffects).toEqual([]);
     });
@@ -89,6 +90,37 @@ describe("entity model", () => {
         expect(cleric.magicDamage.gt(archer.magicDamage)).toBe(true);
         expect(cleric.tenacity).toBeGreaterThan(warrior.tenacity);
         expect(cleric.resistances.shadow).toBeGreaterThan(archer.resistances.shadow);
+    });
+
+    it("applies passive, talent, and equipment bonuses through the shared build layer", () => {
+        const baselineCleric = createHero("hero_1", "Ayla", "Cleric");
+        const boostedCleric = createHero("hero_1", "Ayla", "Cleric");
+        const buildState = {
+            talentProgression: {
+                unlockedTalentIdsByHeroId: {
+                    hero_1: ["cleric-sunfire", "cleric-shepherd"],
+                },
+                talentPointsByHeroId: {
+                    hero_1: 0,
+                },
+            },
+            equipmentProgression: {
+                inventoryItemIds: getDefaultEquipmentInventoryItemIds(),
+                equippedItemIdsByHeroId: {
+                    hero_1: ["sunlit-censer", "pilgrim-vestments", "ember-charm", "iron-prayer-bead"],
+                },
+            },
+        };
+
+        const baselineRatings = getCombatRatings(baselineCleric);
+        recalculateEntity(boostedCleric, BASE_META_UPGRADES, undefined, buildState);
+        const boostedRatings = getCombatRatings(boostedCleric, buildState);
+
+        expect(boostedRatings.spellPower).toBeGreaterThan(baselineRatings.spellPower);
+        expect(boostedRatings.resolve).toBeGreaterThan(baselineRatings.resolve);
+        expect(boostedRatings.potency).toBeGreaterThan(baselineRatings.potency);
+        expect(boostedCleric.magicDamage.gt(baselineCleric.magicDamage)).toBe(true);
+        expect(boostedCleric.maxResource.gt(baselineCleric.maxResource)).toBe(true);
     });
 
     it("creates tougher boss enemies on every tenth floor with the softened boss multipliers", () => {

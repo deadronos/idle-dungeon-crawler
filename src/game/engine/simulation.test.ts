@@ -160,7 +160,7 @@ describe("simulation engine", () => {
         );
 
         expect(result.state.enemies[0].currentHp.eq(startingHp)).toBe(true);
-        expect(result.state.party[0].currentResource.toNumber()).toBe(8);
+        expect(result.state.party[0].currentResource.toNumber()).toBe(10);
         expect(result.state.combatLog[0]).toMatch(/dodges/i);
         expect(result.state.combatEvents.some((event) => event.kind === "dodge")).toBe(true);
     });
@@ -185,7 +185,7 @@ describe("simulation engine", () => {
         );
 
         expect(result.state.enemies[0].currentHp.eq(startingHp)).toBe(true);
-        expect(result.state.party[0].currentResource.toNumber()).toBe(8);
+        expect(result.state.party[0].currentResource.toNumber()).toBe(10);
         expect(result.state.combatLog[0]).toMatch(/parries/i);
         expect(result.state.combatEvents.some((event) => event.kind === "parry")).toBe(true);
     });
@@ -294,14 +294,15 @@ describe("simulation engine", () => {
         caster.actionProgress = 99;
         caster.critChance = 0;
 
-        const result = simulateTick(
-            createInitialGameState({
-                party: [warrior, cleric],
-                enemies: [caster],
-                combatLog: [],
-            }),
-            createSequenceRandomSource(0, 0.9),
-        );
+        const initialState = createInitialGameState({
+            party: [warrior, cleric],
+            enemies: [caster],
+            combatLog: [],
+        });
+        initialState.party[0].resistances.fire = 0.6;
+        initialState.party[1].resistances.fire = 0.05;
+
+        const result = simulateTick(initialState, createSequenceRandomSource(0, 0.9));
 
         expect(result.state.combatLog[0]).toMatch(/Fire Bolt on Ayla/i);
     });
@@ -386,28 +387,30 @@ describe("simulation engine", () => {
         boss.actionProgress = 99;
         boss.critChance = 0;
 
-        const opening = simulateTick(
-            createInitialGameState({
-                floor: 20,
-                party: [warrior, cleric],
-                enemies: [boss],
-                combatLog: [],
-            }),
-            createSequenceRandomSource(0, 0.9),
-        );
+        const openingState = createInitialGameState({
+            floor: 20,
+            party: [warrior, cleric],
+            enemies: [boss],
+            combatLog: [],
+        });
+        openingState.party[0].resistances.air = 0.6;
+        openingState.party[1].resistances.air = 0;
+
+        const opening = simulateTick(openingState, createSequenceRandomSource(0, 0.9));
 
         expect(opening.state.combatLog[0]).toMatch(/Overlord Strike on Brom/i);
 
         boss.currentHp = boss.maxHp.times(0.5);
-        const phaseTwo = simulateTick(
-            createInitialGameState({
-                floor: 20,
-                party: [warrior, cleric],
-                enemies: [boss],
-                combatLog: [],
-            }),
-            createSequenceRandomSource(0, 0.9),
-        );
+        const phaseTwoState = createInitialGameState({
+            floor: 20,
+            party: [warrior, cleric],
+            enemies: [boss],
+            combatLog: [],
+        });
+        phaseTwoState.party[0].resistances.air = 0.6;
+        phaseTwoState.party[1].resistances.air = 0;
+
+        const phaseTwo = simulateTick(phaseTwoState, createSequenceRandomSource(0, 0.9));
 
         expect(phaseTwo.state.combatLog[0]).toMatch(/Ruin Bolt on Ayla/i);
     });
