@@ -6,7 +6,7 @@ import type { PartySlotUnlock } from "../partyProgression";
 
 export type AppSection = "dungeon" | "shop";
 export type CombatEventKind = "damage" | "heal" | "dodge" | "parry" | "crit" | "defeat" | "skill" | "status";
-export type CombatEventStatusPhase = "apply" | "tick" | "expire";
+export type CombatEventStatusPhase = "apply" | "tick" | "expire" | "cleanse";
 
 export interface CombatEvent {
     id: string;

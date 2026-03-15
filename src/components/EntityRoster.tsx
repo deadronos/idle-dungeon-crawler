@@ -106,6 +106,9 @@ const combatEventClassName = (event: CombatEvent) => {
       if (event.statusPhase === 'tick') {
         return 'border-orange-300/50 bg-orange-500/15 text-orange-100';
       }
+      if (event.statusPhase === 'cleanse') {
+        return 'border-emerald-300/50 bg-emerald-500/15 text-emerald-100';
+      }
       if (event.statusPhase === 'expire') {
         return 'border-slate-300/40 bg-slate-500/15 text-slate-100';
       }
