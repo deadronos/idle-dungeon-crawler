@@ -464,7 +464,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({
                         {/* Portrait */}
                         <div className="relative mx-auto w-36 h-36 rounded-2xl overflow-hidden border-2 border-slate-600/60 bg-slate-800/60 shadow-lg">
                             <img
-                                src={`/${template.imageAsset}`}
+                                src={`${import.meta.env.BASE_URL}${template.imageAsset}`}
                                 alt={`${hero.name} portrait`}
                                 className="w-full h-full object-cover pointer-events-none select-none"
                                 draggable={false}

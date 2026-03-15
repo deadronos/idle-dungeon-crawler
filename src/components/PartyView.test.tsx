@@ -21,7 +21,10 @@ describe("PartyView", () => {
 
         expect(screen.getByText("Ayla")).toBeInTheDocument();
         expect(screen.getByText(/cleric/i)).toBeInTheDocument();
-        expect(screen.getByAltText(/ayla portrait/i)).toBeInTheDocument();
+        expect(screen.getByAltText(/ayla portrait/i)).toHaveAttribute(
+            "src",
+            expect.stringContaining("/assets/hero_cleric.png"),
+        );
         expect(screen.getByText(/1 \/ 1/i)).toBeInTheDocument();
     });
 
