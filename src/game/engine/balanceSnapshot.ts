@@ -87,6 +87,7 @@ export interface MilestoneWinRateSnapshot {
 
 export interface SnapshotHeroBuildConfig {
     talentIds?: string[];
+    talentRanks?: Record<string, number>;
     equippedItemIds?: string[];
 }
 
@@ -206,7 +207,7 @@ const createBuildProgression = (
         return {};
     }
 
-    const unlockedTalentIdsByHeroId: Record<string, string[]> = {};
+    const talentRanksByHeroId: Record<string, Record<string, number>> = {};
     const talentPointsByHeroId: Record<string, number> = {};
     const equippedItemInstanceIdsByHeroId: Record<string, string[]> = {};
     const inventoryItems: EquipmentItemInstance[] = [];
@@ -218,11 +219,17 @@ const createBuildProgression = (
             return;
         }
 
-        const talentIds = [...new Set(buildConfig.talentIds ?? [])];
+        const talentRanks: Record<string, number> = buildConfig.talentRanks
+            ? Object.fromEntries(
+                Object.entries(buildConfig.talentRanks)
+                    .map(([talentId, rank]) => [talentId, Math.max(0, Math.floor(rank))])
+                        .filter((entry): entry is [string, number] => typeof entry[1] === "number" && entry[1] > 0),
+            )
+            : Object.fromEntries([...new Set(buildConfig.talentIds ?? [])].map((talentId) => [talentId, 1]));
         const equippedItemIds = [...new Set(buildConfig.equippedItemIds ?? [])];
         const equippedItems = createEquipmentInstancesFromDefinitionIds(equippedItemIds, `${hero.id}-item`);
 
-        unlockedTalentIdsByHeroId[hero.id] = talentIds;
+        talentRanksByHeroId[hero.id] = talentRanks;
         talentPointsByHeroId[hero.id] = 0;
         equippedItemInstanceIdsByHeroId[hero.id] = equippedItems.map((item: EquipmentItemInstance) => item.instanceId);
         inventoryItems.push(...equippedItems);
@@ -231,7 +238,7 @@ const createBuildProgression = (
 
     return {
         talentProgression: {
-            unlockedTalentIdsByHeroId,
+            talentRanksByHeroId,
             talentPointsByHeroId,
         },
         equipmentProgression: {

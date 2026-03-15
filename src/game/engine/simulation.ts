@@ -268,9 +268,9 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
     const syncedTalentProgression = synchronizeTalentProgression(rawParty, {
         ...createEmptyTalentProgressionState(),
         ...overrides?.talentProgression,
-        unlockedTalentIdsByHeroId: {
-            ...createEmptyTalentProgressionState().unlockedTalentIdsByHeroId,
-            ...(overrides?.talentProgression?.unlockedTalentIdsByHeroId ?? {}),
+        talentRanksByHeroId: {
+            ...createEmptyTalentProgressionState().talentRanksByHeroId,
+            ...(overrides?.talentProgression?.talentRanksByHeroId ?? {}),
         },
         talentPointsByHeroId: {
             ...createEmptyTalentProgressionState().talentPointsByHeroId,
@@ -875,8 +875,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         combatEvents: state.combatEvents.map((event) => ({ ...event })),
         metaUpgrades: { ...state.metaUpgrades },
         talentProgression: {
-            unlockedTalentIdsByHeroId: Object.fromEntries(
-                Object.entries(state.talentProgression.unlockedTalentIdsByHeroId).map(([heroId, talentIds]) => [heroId, [...talentIds]]),
+            talentRanksByHeroId: Object.fromEntries(
+                Object.entries(state.talentProgression.talentRanksByHeroId).map(([heroId, talentRanks]) => [heroId, { ...talentRanks }]),
             ),
             talentPointsByHeroId: { ...state.talentProgression.talentPointsByHeroId },
         },

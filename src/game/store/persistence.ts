@@ -8,7 +8,7 @@ import type { GameState } from "./types";
 
 export const GAME_STATE_STORAGE_KEY = "idle-dungeon-crawler.game-state";
 export const GAME_STATE_AUTOSAVE_MS = 10_000;
-export const GAME_STATE_EXPORT_VERSION = 3;
+export const GAME_STATE_EXPORT_VERSION = 4;
 const LEGACY_UNVERSIONED_SAVE_VERSION = 0;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
@@ -53,6 +53,16 @@ const getNumberRecord = (value: unknown): Record<string, number> => {
     }, {});
 };
 
+const getNestedNumberRecord = (value: unknown): Record<string, Record<string, number>> => {
+    if (!isRecord(value)) {
+        return {};
+    }
+
+    return Object.fromEntries(
+        Object.entries(value).map(([key, entryValue]) => [key, getNumberRecord(entryValue)]),
+    );
+};
+
 const getInventoryItemArray = (value: unknown) => {
     if (!Array.isArray(value)) {
         return [];
@@ -85,10 +95,21 @@ const sanitizeTalentProgression = (value: unknown) => {
         return defaults;
     }
 
+    const legacyUnlockedTalentIdsByHeroId = hasOwn(value, "unlockedTalentIdsByHeroId")
+        ? value.unlockedTalentIdsByHeroId
+        : undefined;
+
     return {
-        unlockedTalentIdsByHeroId: hasOwn(value, "unlockedTalentIdsByHeroId")
-            ? getStringArrayRecord(value.unlockedTalentIdsByHeroId)
-            : defaults.unlockedTalentIdsByHeroId,
+        talentRanksByHeroId: hasOwn(value, "talentRanksByHeroId")
+            ? getNestedNumberRecord(value.talentRanksByHeroId)
+            : legacyUnlockedTalentIdsByHeroId
+                ? Object.fromEntries(
+                    Object.entries(getStringArrayRecord(legacyUnlockedTalentIdsByHeroId)).map(([heroId, talentIds]) => [
+                        heroId,
+                        Object.fromEntries(talentIds.map((talentId) => [talentId, 1])),
+                    ]),
+                )
+                : defaults.talentRanksByHeroId,
         talentPointsByHeroId: hasOwn(value, "talentPointsByHeroId")
             ? getNumberRecord(value.talentPointsByHeroId)
             : defaults.talentPointsByHeroId,
@@ -161,6 +182,10 @@ const SAVE_MIGRATIONS: Record<number, SaveMigration> = {
     2: (state) => ({
         ...state,
         equipmentProgression: sanitizeEquipmentProgression(state.equipmentProgression),
+    }),
+    3: (state) => ({
+        ...state,
+        talentProgression: sanitizeTalentProgression(state.talentProgression),
     }),
 };
 

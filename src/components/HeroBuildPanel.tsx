@@ -8,7 +8,10 @@ import {
     getEquipmentOwnerId,
     getHeroBuildProfile,
     getTalentDefinitionsForClass,
+    getTalentRankForHero,
     getTalentPointsForHero,
+    getTotalTalentRankCapacity,
+    getSpentTalentRanksForHero,
     getSlotLockedReason,
     type EquipmentSlot,
 } from "../game/heroBuilds";
@@ -72,6 +75,8 @@ export const HeroBuildPanel: React.FC = () => {
                             const combatRatings = getCombatRatings(hero, buildState);
                             const talentPoints = getTalentPointsForHero(hero.id, talentProgression);
                             const availableTalents = getTalentDefinitionsForClass(heroClass);
+                            const spentRanks = getSpentTalentRanksForHero(hero.id, talentProgression);
+                            const totalRankCapacity = getTotalTalentRankCapacity(heroClass);
 
                             return (
                                 <div
@@ -114,12 +119,15 @@ export const HeroBuildPanel: React.FC = () => {
                                             <div className="flex items-center justify-between">
                                                 <h4 className="text-xs font-black uppercase tracking-[0.22em] text-slate-300">Talents</h4>
                                                 <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
-                                                    {buildProfile.talents.length}/{availableTalents.length} learned
+                                                    {spentRanks}/{totalRankCapacity} ranks
                                                 </span>
                                             </div>
                                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                                 {availableTalents.map((talent) => {
-                                                    const isUnlocked = buildProfile.talents.some((unlockedTalent) => unlockedTalent.id === talent.id);
+                                                    const currentRank = getTalentRankForHero(hero.id, talent.id, talentProgression);
+                                                    const maxRank = talent.maxRank ?? 3;
+                                                    const isUnlocked = currentRank > 0;
+                                                    const isMaxed = currentRank >= maxRank;
 
                                                     return (
                                                         <div
@@ -128,16 +136,21 @@ export const HeroBuildPanel: React.FC = () => {
                                                         >
                                                             <div className="flex items-start justify-between gap-3">
                                                                 <div>
-                                                                    <p className="font-bold text-slate-100">{talent.name}</p>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <p className="font-bold text-slate-100">{talent.name}</p>
+                                                                        <span className="rounded-full border border-slate-600/70 bg-slate-950/70 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-300">
+                                                                            Rank {currentRank}/{maxRank}
+                                                                        </span>
+                                                                    </div>
                                                                     <p className="mt-1 text-xs text-slate-400">{talent.description}</p>
                                                                 </div>
                                                                 <Button
                                                                     size="sm"
                                                                     variant={isUnlocked ? "secondary" : "upgrade"}
-                                                                    disabled={isUnlocked || talentPoints <= 0}
+                                                                    disabled={isMaxed || talentPoints <= 0}
                                                                     onClick={() => unlockTalent(hero.id, talent.id)}
                                                                 >
-                                                                    {isUnlocked ? "Learned" : "Learn"}
+                                                                    {isMaxed ? "Maxed" : currentRank === 0 ? "Learn" : "Upgrade"}
                                                                 </Button>
                                                             </div>
                                                         </div>

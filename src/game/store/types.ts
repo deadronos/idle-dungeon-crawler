@@ -41,7 +41,7 @@ export interface PrestigeUpgrades {
 }
 
 export interface TalentProgressionState {
-    unlockedTalentIdsByHeroId: Record<string, string[]>;
+    talentRanksByHeroId: Record<string, Record<string, number>>;
     talentPointsByHeroId: Record<string, number>;
 }
 
@@ -65,7 +65,7 @@ export interface EquipmentProgressionState {
 }
 
 export const createEmptyTalentProgressionState = (): TalentProgressionState => ({
-    unlockedTalentIdsByHeroId: {},
+    talentRanksByHeroId: {},
     talentPointsByHeroId: {},
 });
 

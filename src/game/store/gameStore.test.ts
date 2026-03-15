@@ -239,9 +239,9 @@ describe("createGameStore", () => {
         const store = createGameStore({
             party: createStarterParty("Ayla", "Cleric"),
             talentProgression: {
-                unlockedTalentIdsByHeroId: {},
+                talentRanksByHeroId: {},
                 talentPointsByHeroId: {
-                    hero_1: 1,
+                    hero_1: 3,
                 },
             },
             equipmentProgression: createLegacyEquipmentProgression(["sunlit-censer"], {}),
@@ -252,9 +252,20 @@ describe("createGameStore", () => {
         store.getState().unlockTalent("hero_1", "cleric-sunfire");
         let state = store.getState();
 
-        expect(state.talentProgression.unlockedTalentIdsByHeroId.hero_1).toEqual(["cleric-sunfire"]);
-        expect(state.talentProgression.talentPointsByHeroId.hero_1).toBe(0);
+        expect(state.talentProgression.talentRanksByHeroId.hero_1).toEqual({ "cleric-sunfire": 1 });
+        expect(state.talentProgression.talentPointsByHeroId.hero_1).toBe(2);
         expect(state.party[0]?.magicDamage.gt(startingMagicDamage ?? 0)).toBe(true);
+
+        const rankOneMagicDamage = state.party[0]?.magicDamage;
+
+        store.getState().unlockTalent("hero_1", "cleric-sunfire");
+        store.getState().unlockTalent("hero_1", "cleric-sunfire");
+        store.getState().unlockTalent("hero_1", "cleric-sunfire");
+        state = store.getState();
+
+        expect(state.talentProgression.talentRanksByHeroId.hero_1).toEqual({ "cleric-sunfire": 3 });
+        expect(state.talentProgression.talentPointsByHeroId.hero_1).toBe(0);
+        expect(state.party[0]?.magicDamage.gt(rankOneMagicDamage ?? 0)).toBe(true);
 
         store.getState().equipItem("hero_1", "sunlit-censer");
         state = store.getState();
