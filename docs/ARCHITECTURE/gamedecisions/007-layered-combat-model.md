@@ -78,9 +78,9 @@ Follow-up implementation issues should keep the existing bounded style of combat
 
 This keeps the combat model idle-readable and reduces runaway scaling risk.
 
-### Transitional Baseline
+### Current Runtime Baseline
 
-The current runtime still derives many combat outputs directly from `VIT`, `STR`, `DEX`, `INT`, and `WIS`. That is acceptable during the transition. Existing formulas documented in [002 - Attributes and Derived Stats](002-attributes-and-stats.md) and [003 - Combat Loop and ATB Mechanics](003-combat-and-atb.md) should be treated as the live baseline until implementation issue `#70` moves the code to layered stat sourcing.
+Implementation issue `#70` now derives combat-facing outputs through the MVP layered ratings documented here. Attributes still seed those ratings, but the runtime now also applies template or archetype bias packages before converting them into final hit, speed, crit, penetration, resistance, and status-facing numbers. Existing formulas documented in [002 - Attributes and Derived Stats](002-attributes-and-stats.md) and [003 - Combat Loop and ATB Mechanics](003-combat-and-atb.md) are the canonical live baseline.
 
 ### Follow-up Issue Boundaries
 
@@ -95,5 +95,5 @@ This decision intentionally sets boundaries for the rest of the foundation work:
 
 * **Easier:** Future classes gain a cleaner design space because class identity can live in templates and layered ratings instead of mostly in raw attribute emphasis.
 * **Easier:** Talents and equipment now have a clear destination for targeted build differentiation without forcing a new set of primary attributes.
-* **Easier:** The current runtime can transition incrementally because this record locks ownership and boundaries before coefficient-level refactors happen.
-* **Difficult:** The system now has a stronger conceptual distinction between foundation stats and combat ratings, so docs and code must stay aligned during the transition period.
+* **Easier:** The current runtime could transition incrementally because this record locked ownership and boundaries before coefficient-level refactors happened.
+* **Difficult:** The system now has a stronger conceptual distinction between foundation stats and combat ratings, so docs and code must stay aligned as future tuning continues.

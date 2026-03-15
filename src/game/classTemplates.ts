@@ -73,6 +73,7 @@ export interface HeroCombatProfile {
     critMultiplier: number;
     basicAction: HeroBasicActionDefinition;
     baselineRatings: HeroCombatRating[];
+    ratingBiases: Partial<Record<HeroCombatRating, number>>;
 }
 
 export interface HeroClassTemplate {
@@ -121,6 +122,11 @@ export const HERO_CLASS_TEMPLATES: Record<HeroClass, HeroClassTemplate> = {
                 canParry: true,
             },
             baselineRatings: ["guard", "power"],
+            ratingBiases: {
+                power: 6,
+                guard: 8,
+                haste: 1,
+            },
         },
         actionPackage: {
             id: "warrior",
@@ -167,6 +173,13 @@ export const HERO_CLASS_TEMPLATES: Record<HeroClass, HeroClassTemplate> = {
                 canParry: false,
             },
             baselineRatings: ["spellPower", "resolve"],
+            ratingBiases: {
+                spellPower: 8,
+                precision: 2,
+                resolve: 9,
+                potency: 6,
+                crit: 2,
+            },
         },
         actionPackage: {
             id: "cleric",
@@ -216,6 +229,13 @@ export const HERO_CLASS_TEMPLATES: Record<HeroClass, HeroClassTemplate> = {
                 canParry: false,
             },
             baselineRatings: ["precision", "haste", "crit"],
+            ratingBiases: {
+                power: 4,
+                precision: 9,
+                haste: 8,
+                potency: 2,
+                crit: 8,
+            },
         },
         actionPackage: {
             id: "archer",

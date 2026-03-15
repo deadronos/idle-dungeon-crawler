@@ -14,7 +14,7 @@ We implemented an Active Time Battle (ATB) system to manage turn order and actio
 As of [007 - Layered Combat Model](007-layered-combat-model.md), this record serves two jobs:
 
 * document the current live runtime combat flow
-* define which parts of that flow will be owned by layered combat ratings instead of raw attributes as follow-up issues land
+* define which parts of that flow are now owned by layered combat ratings instead of raw attributes alone
 
 ### Game Tick and ATB Scaling
 
@@ -27,10 +27,10 @@ If `Autofight` is disabled, the simulation pauses in place: ATB does not fill, a
 `Autoadvance` is a separate control. When enabled, the party moves to the next floor after winning an encounter. When disabled, the party immediately starts a fresh encounter on the same floor, allowing the player to continuously farm a target floor without climbing past it.
 
 * **Base ATB Rate:** `2.0` per tick.
-* **Speed Bonus:** Dexterity provides a speed bonus calculation: `+ (DEX * 0.06)` per tick.
+* **Speed Bonus:** layered `haste` provides a speed bonus calculation: `+ (haste * 0.08)` per tick.
 * **Status Timing:** reusable timed effects decrement once per game tick, while periodic effects such as Burn resolve once per second (`20` ticks).
 
-This DEX-based speed bonus remains the live runtime baseline. In the accepted layered model, long-term ATB speed ownership moves to `haste`, with core attributes remaining only one input into that final rating.
+`haste` is derived from attributes plus template or archetype bias, so DEX still matters, but it no longer owns action speed by itself.
 
 When an entity's `actionProgress` reaches or exceeds `100`, they consume their bar (reset to `0`) and perform an action.
 
@@ -57,9 +57,9 @@ Currently, action resolution uses a lightweight class-aware ruleset:
 6. **Damage Roll:**
    * Clerics use their `Magic Damage` stat when attacking.
    * Warriors and Archers use their `Physical Damage` stat.
-7. **Critical Hit Check:** The unit's `Crit Chance` (base 5%, boosted by DEX) is rolled. If successful, damage is multiplied.
-   * Archers have a `2.0x` Crit Multiplier.
-   * All other classes have a `1.5x` Crit Multiplier.
+7. **Critical Hit Check:** The unit's `Crit Chance` (base `5%`, boosted by layered `crit`) is rolled. If successful, damage is multiplied.
+   * The current runtime adds `+0.55%` crit chance per `crit` rating.
+   * Crit damage starts from the class template multiplier and gains a small layered bonus through `min(0.2, crit * 0.01)`.
 8. **Mitigation:** The final incoming damage is reduced based on the action's specific `DamageElement` tag. If the element is `physical`, the attacker's `Armor Penetration` first converts through `min(60%, penetration / (penetration + 60))` and reduces the target's effective armor by that proportion, then damage is reduced with the existing diminishing-return armor curve: `rawDamage * (100 / (100 + effectiveArmor * 2))`. If the element is magical (e.g. `light`, `fire`), the attacker's `Elemental Penetration` uses the same bounded conversion to reduce the target's effective elemental resistance before the percentage-based resistance reduction is applied. Minimum damage remains `1`.
 9. **Status Application:** After a damaging elemental hit lands and deals damage, the engine may apply a timed status rider. The current element-to-status mappings are `fire -> Burn`, `water -> Slow`, `earth -> Weaken`, `shadow -> Hex`, and `light -> Blind`. Application uses `clamp(15%, 75%, baseChance + (attacker.ElementalPenetration - defender.Tenacity) * 0.3%)`, so elemental pressure stays bounded and shares the same offensive/defensive stats as spell damage.
 10. **Protection Effects:** `Ward Ally` remains a lightweight support-only protection effect. It reduces the next damaging hit against the warded target by `35%`, then expires immediately. It still lives outside the timed-status framework because it is a single-hit shield, not a duration-based condition.
@@ -121,21 +121,21 @@ The first deeper-combat pass uses bounded formulas to stay stable under long-ter
 * **Penetration Reduction:** `min(60%, penetration / (penetration + 60))`
 * **Tenacity Reduction:** `min(60%, tenacity / (tenacity + 80))`
 
-These formulas are the current runtime baseline and are intentionally preserved as bounded shapes for the layered follow-up work.
+These formulas are the current runtime baseline and remain intentionally bounded after the layered-stat sourcing refactor.
 
 ### Accepted Layered Ownership
 
 The layered combat pass does not replace the ATB combat loop itself. It changes which systems own the final combat numbers that feed the loop:
 
 * **`precision`:** owns hit reliability pressure. Physical and spell hit formulas remain contested and clamped, but future offensive hit strength should flow primarily through `precision` rather than raw DEX or INT alone.
-* **`haste`:** owns long-term action-speed pressure. The current DEX-based ATB bonus is a baseline placeholder until layered stat sourcing lands.
+* **`haste`:** owns long-term action-speed pressure. The runtime now routes ATB gain through `haste`, with DEX remaining only one contributor to that final rating.
 * **`crit`:** owns crit chance and crit bonus pressure. Crits remain bounded and continue to be softened defensively rather than removed outright.
 * **`guard`:** owns physical durability packages, especially armor-facing mitigation and parry-facing melee defense.
 * **`resolve`:** owns magical durability packages, including elemental resistance baselines and tenacity-facing anti-spike / anti-status resistance.
 * **`potency`:** owns bypass and application pressure, especially penetration and elemental status application pressure.
 * **`power` / `spellPower`:** own the outgoing damage packages that feed the mitigation pipeline, with `spellPower` also owning healing throughput.
 
-Follow-up issue `#70` should preserve the same readability and boundedness even as these systems stop being mostly direct primary-stat products.
+Implementation issue `#70` preserves the same readability and boundedness while moving these systems away from mostly direct primary-stat products.
 
 ### Combat Readability
 
@@ -164,4 +164,4 @@ The combat loop now advances through a provider-backed `zustand` store action (`
 ## Consequences
 
 * **Easier:** Combat remains readable and less deterministic, while the accepted layered model now gives later issues a clear place to move hit, speed, crit, mitigation, and status ownership without redesigning the ATB loop itself.
-* **Difficult:** Until `#70` lands, many of these systems still scale from shared attributes in runtime. Future combat additions should continue to prefer bounded formulas and explicit caps rather than open-ended avoidance stacking, stun chains, or mitigation bypass that fully invalidates earlier systems.
+* **Difficult:** Future combat additions should continue to prefer bounded formulas and explicit caps rather than open-ended avoidance stacking, stun chains, or mitigation bypass that fully invalidates earlier systems.

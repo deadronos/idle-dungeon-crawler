@@ -34,7 +34,7 @@ Each hero template includes:
 * **Base attributes:** the level-1 starting identity package
 * **Growth package:** the attribute increments applied on each level-up
 * **Resource model:** resource type, starting state, maximum-resource formula inputs, per-tick regeneration, and any resource triggers such as on-hit or on-attack gains
-* **Combat profile:** current basic-action identity, crit multiplier, physical damage source attribute, and baseline combat-rating tendencies
+* **Combat profile:** current basic-action identity, crit multiplier, physical damage source attribute, baseline combat-rating tendencies, and numeric rating-bias package for the layered combat pass
 * **Action package:** the current package id plus the data needed for the package's shipped special actions or support actions
 
 ### Current Hero Packages
@@ -42,6 +42,14 @@ Each hero template includes:
 * **Warrior:** STR/VIT-heavy bruiser package with Rage-based burst and resource gains tied to combat participation
 * **Cleric:** INT/WIS-heavy support package with Mana regeneration, triage healing, Bless/Regen support, and Light spell pressure
 * **Archer:** DEX-heavy ranged package with fast Cunning regeneration and crit-oriented burst shots
+
+### Current Layered Rating Bias Packages
+
+The first runtime follow-through for issue `#70` uses these templates as explicit combat-rating sources:
+
+* **Warrior:** `power +6`, `guard +8`, `haste +1`
+* **Cleric:** `spellPower +8`, `precision +2`, `resolve +9`, `potency +6`, `crit +2`
+* **Archer:** `power +4`, `precision +9`, `haste +8`, `potency +2`, `crit +8`
 
 ### Scope Boundaries
 
@@ -57,7 +65,7 @@ That tradeoff is intentional for the first pass:
 This decision is the implementation follow-through for issue `#69`.
 
 * `#69` centralizes current class identity into explicit templates
-* `#70` will use those templates as one of the layered stat sources when combat ratings stop being mostly raw attribute products
+* `#70` now uses those templates as one of the layered stat sources when combat ratings are recomputed
 
 ## Consequences
 

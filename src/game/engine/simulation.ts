@@ -4,6 +4,7 @@ import { getHeroClassTemplate } from "../classTemplates";
 import {
     BASE_META_UPGRADES,
     createEnemy,
+    getCombatRatings,
     getEncounterArchetypes,
     getEnemyElementForEncounter,
     getExpRequirement,
@@ -19,7 +20,7 @@ import type { CombatEvent, GameState } from "../store/types";
 export const GAME_TICK_RATE = 20;
 export const GAME_TICK_MS = 1000 / GAME_TICK_RATE;
 export const ATB_RATE = 2;
-export const DEX_ATB_RATE = 0.06;
+export const HASTE_ATB_RATE = 0.08;
 export const WARRIOR_RAGE_STRIKE_COST = getHeroClassTemplate("Warrior").actionPackage.specialAttack?.cost ?? 40;
 export const WARRIOR_RAGE_PER_ATTACK = getHeroClassTemplate("Warrior").resourceModel.gainOnResolvedAttack;
 export const WARRIOR_RAGE_WHEN_HIT = getHeroClassTemplate("Warrior").resourceModel.gainOnTakeDamage;
@@ -391,6 +392,12 @@ const getDamageOutputMultiplier = (entity: Entity) => {
 
 const getAtbMultiplier = (entity: Entity) => {
     return Math.max(0.1, 1 - getStatusPotency(entity, "slow"));
+};
+
+export const getActionProgressPerTick = (entity: Entity, prestigeUpgrades?: Pick<PrestigeUpgrades, "gameSpeed">) => {
+    const hasteBonus = (prestigeUpgrades?.gameSpeed ?? 0) * 0.1;
+    const combatRatings = getCombatRatings(entity);
+    return (ATB_RATE + (combatRatings.haste * HASTE_ATB_RATE)) * (1 + hasteBonus) * getAtbMultiplier(entity);
 };
 
 /** Returns a multiplier (0–1) reducing incoming healing by the target's hex potency. */
@@ -990,8 +997,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             return;
         }
 
-        const hasteBonus = draft.prestigeUpgrades.gameSpeed * 0.1; // +10% speed up per level
-        entity.actionProgress += (ATB_RATE + (entity.attributes.dex * DEX_ATB_RATE)) * (1 + hasteBonus) * getAtbMultiplier(entity);
+        entity.actionProgress += getActionProgressPerTick(entity, draft.prestigeUpgrades);
         const heroTemplate = getHeroTemplateForEntity(entity);
 
         if (heroTemplate) {
