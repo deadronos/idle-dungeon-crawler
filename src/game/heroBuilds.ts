@@ -798,7 +798,7 @@ export const synchronizeEquipmentProgression = (
     equipmentProgression: EquipmentProgressionState,
 ): EquipmentProgressionState => {
     const inventoryItems = dedupeInventoryItems(equipmentProgression.inventoryItems);
-    const inventoryItemIdSet = new Set(inventoryItems.map((item) => item.instanceId));
+    const inventoryItemMap = new Map(inventoryItems.map((item) => [item.instanceId, item]));
     const claimedItemIds = new Set<string>();
     const nextEquipped: Record<string, string[]> = {};
 
@@ -811,11 +811,11 @@ export const synchronizeEquipmentProgression = (
         const usedSlots = new Set<EquipmentSlot>();
         const rawItemIds = dedupeStrings(equipmentProgression.equippedItemInstanceIdsByHeroId[hero.id] ?? []);
         const validItemIds = rawItemIds.filter((itemId) => {
-            if (!inventoryItemIdSet.has(itemId) || claimedItemIds.has(itemId)) {
+            if (claimedItemIds.has(itemId)) {
                 return false;
             }
 
-            const instance = inventoryItems.find((item) => item.instanceId === itemId);
+            const instance = inventoryItemMap.get(itemId);
             const resolved = instance ? resolveEquipmentItem(instance) : null;
             if (!resolved || !canHeroEquipItem(heroClass, resolved) || usedSlots.has(resolved.slot)) {
                 return false;
