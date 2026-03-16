@@ -21,6 +21,7 @@ import {
     recalculateEntity,
 } from "../entity";
 import { getInsightXpMultiplier } from "../progressionMath";
+import { secureRandom } from "../../utils/random";
 import type { DamageElement, EnemyArchetype, Entity, MetaUpgrades, PrestigeUpgrades, StatusEffect, StatusEffectKey } from "../entity";
 import { MAX_PARTY_SIZE } from "../partyProgression";
 import {
@@ -118,7 +119,7 @@ export interface SimulationRandomSource {
 }
 
 const defaultRandomSource: SimulationRandomSource = {
-    next: () => Math.random(),
+    next: () => secureRandom(),
 };
 
 export const createSequenceRandomSource = (...rolls: number[]): SimulationRandomSource => {
