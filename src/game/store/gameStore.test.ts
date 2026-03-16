@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { createEnemy, createRecruitHero, createStarterParty } from "@/game/entity";
 import { createLegacyEquipmentProgression } from "@/game/equipmentProgression";
+import { getEquipmentOwnerId } from "@/game/heroBuilds";
 
 import { createGameStore } from "./gameStore";
 
@@ -272,6 +273,12 @@ describe("createGameStore", () => {
 
         expect(state.equipmentProgression.equippedItemInstanceIdsByHeroId.hero_1).toHaveLength(1);
 
+        const itemInstanceId = state.equipmentProgression.inventoryItems[0]?.instanceId;
+        expect(itemInstanceId).toBeDefined();
+
+        const ownerIdAfterEquip = getEquipmentOwnerId(itemInstanceId ?? "", state.equipmentProgression);
+        expect(ownerIdAfterEquip).toBe("hero_1");
+
         const gearedMagicDamage = state.party[0]?.magicDamage;
         expect(gearedMagicDamage?.gt(startingMagicDamage ?? 0)).toBe(true);
 
@@ -279,6 +286,9 @@ describe("createGameStore", () => {
         state = store.getState();
 
         expect(state.equipmentProgression.equippedItemInstanceIdsByHeroId.hero_1).toEqual([]);
+
+        const ownerIdAfterUnequip = getEquipmentOwnerId(itemInstanceId ?? "", state.equipmentProgression);
+        expect(ownerIdAfterUnequip).toBeNull();
     });
 
     it("expands inventory capacity and sells stash items through progression actions", () => {
