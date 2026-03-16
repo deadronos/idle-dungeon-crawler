@@ -492,8 +492,6 @@ export const getTotalTalentRankCapacity = (heroClass: HeroClass) =>
 
 export const getEquipmentDefinition = (definitionId: string) => EQUIPMENT_LOOKUP.get(definitionId) ?? null;
 
-export const getEquipmentItem = getEquipmentDefinition;
-
 export const getEquipmentSellValue = (definition: EquipmentItemDefinition, tier: number, rank: number) =>
     definition.sellValueBase + ((tier - 1) * definition.sellValuePerTier) + ((rank - 1) * definition.sellValuePerRank);
 
