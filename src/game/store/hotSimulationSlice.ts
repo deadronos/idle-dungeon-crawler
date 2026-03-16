@@ -11,6 +11,7 @@ import {
 import { formatEquipmentTierRank, getHighestUnlockedEquipmentTier, grantVictoryLoot } from "../equipmentProgression";
 import { getEquipmentDefinition } from "../heroBuilds";
 import { getNextPartySlotUnlock } from "../partyProgression";
+import { secureRandom } from "../../utils/random";
 import { selectProgressionState } from "./progressionSlice";
 import type { GameState, GameStateCreator, HotSimulationActions, HotSimulationSlice } from "./types";
 
@@ -100,7 +101,7 @@ export const createHotSimulationSlice = (
                         nextState.party,
                         clearedFloor,
                         highestFloorCleared,
-                        { next: () => Math.random() },
+                        { next: () => secureRandom() },
                     );
                     const unlockedTier = getHighestUnlockedEquipmentTier(highestFloorCleared);
                     const lootMessages = [
