@@ -583,8 +583,23 @@ export const findEquipableInventoryItem = (
     ) ?? null;
 };
 
+const equipmentOwnerCache = new WeakMap<Record<string, string[]>, Map<string, string>>();
+
 export const getEquipmentOwnerId = (itemId: string, equipmentProgression: EquipmentProgressionState) => {
-    return Object.entries(equipmentProgression.equippedItemInstanceIdsByHeroId).find(([, itemIds]) => itemIds.includes(itemId))?.[0] ?? null;
+    const equippedMapping = equipmentProgression.equippedItemInstanceIdsByHeroId;
+    let reverseMapping = equipmentOwnerCache.get(equippedMapping);
+
+    if (!reverseMapping) {
+        reverseMapping = new Map<string, string>();
+        for (const [heroId, itemIds] of Object.entries(equippedMapping)) {
+            for (const id of itemIds) {
+                reverseMapping.set(id, heroId);
+            }
+        }
+        equipmentOwnerCache.set(equippedMapping, reverseMapping);
+    }
+
+    return reverseMapping.get(itemId) ?? null;
 };
 
 export const getHeroEquippedItemIds = (heroId: string, equipmentProgression: EquipmentProgressionState) =>
