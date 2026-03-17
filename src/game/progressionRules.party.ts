@@ -2,7 +2,7 @@ import { createRecruitHero, type HeroClass } from "./entity";
 import { prependCombatMessages } from "./combatLog";
 import { canUnlockPartySlot, getNextPartySlotUnlock, getRecruitCost as calculateRecruitCost } from "./partyProgression";
 import { synchronizeEquipmentProgression, synchronizeTalentProgression } from "./heroBuilds";
-import { getRecalculatedParty } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState } from "./progressionRules.shared";
 import type { GameState } from "./store/types";
 
 export const getPartySlotUnlockState = (state: GameState): Partial<GameState> | null => {
@@ -31,10 +31,15 @@ export const getRecruitHeroState = (state: GameState, heroClass: HeroClass): Par
 
     return {
         gold: state.gold.minus(cost),
-        party: getRecalculatedParty({ state, party, talentProgression, equipmentProgression }),
         talentProgression,
         equipmentProgression,
-        combatLog: prependCombatMessages(state.combatLog, `${newHero.name} the ${heroClass} joined the party!`),
+        ...buildRecalculatedProgressionState({
+            state,
+            party,
+            talentProgression,
+            equipmentProgression,
+            combatLogMessages: [`${newHero.name} the ${heroClass} joined the party!`],
+        }),
     };
 };
 
@@ -52,16 +57,19 @@ export const getRetireHeroState = (state: GameState, heroId: string): Partial<Ga
     const equipmentProgression = synchronizeEquipmentProgression(party, state.equipmentProgression);
 
     return {
-        party: getRecalculatedParty({ state, party, talentProgression, equipmentProgression }),
         talentProgression,
         equipmentProgression,
+        ...buildRecalculatedProgressionState({
+            state,
+            party,
+            talentProgression,
+            equipmentProgression,
+            combatLogMessages:
+                heroSoulsAwarded > 0
+                    ? [`${hero.name} was retired in exchange for ${heroSoulsAwarded} Hero Souls.`]
+                    : [`${hero.name} was dismissed.`],
+        }),
         heroSouls: state.heroSouls.plus(heroSoulsAwarded),
-        combatLog: prependCombatMessages(
-            state.combatLog,
-            heroSoulsAwarded > 0
-                ? `${hero.name} was retired in exchange for ${heroSoulsAwarded} Hero Souls.`
-                : `${hero.name} was dismissed.`,
-        ),
     };
 };
 

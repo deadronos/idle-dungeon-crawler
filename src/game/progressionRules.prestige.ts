@@ -1,5 +1,4 @@
-import { prependCombatMessages } from "./combatLog";
-import { getRecalculatedParty } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState } from "./progressionRules.shared";
 import type { GameState, PrestigeUpgrades } from "./store/types";
 
 export const PRESTIGE_BASE_COSTS: Record<keyof PrestigeUpgrades, number> = {
@@ -37,10 +36,11 @@ export const getPrestigeUpgradePurchaseState = (
     return {
         heroSouls: state.heroSouls.minus(cost),
         prestigeUpgrades,
-        party: getRecalculatedParty({ state, party: state.party, prestigeUpgrades }),
-        combatLog: prependCombatMessages(
-            state.combatLog,
-            `Altar of Souls: Purchased ${PRESTIGE_UPGRADE_NAMES[upgradeId]} Lv ${currentLevel + 1}.`,
-        ),
+        ...buildRecalculatedProgressionState({
+            state,
+            party: state.party,
+            prestigeUpgrades,
+            combatLogMessages: [`Altar of Souls: Purchased ${PRESTIGE_UPGRADE_NAMES[upgradeId]} Lv ${currentLevel + 1}.`],
+        }),
     };
 };
