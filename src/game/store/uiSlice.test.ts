@@ -23,7 +23,7 @@ describe("uiSlice", () => {
         it("should initialize with the provided state", () => {
             const set = vi.fn();
             const get = vi.fn();
-            const api = {} as any;
+            const api = {} as Parameters<ReturnType<typeof createUiSlice>>[2];
 
             const slice = createUiSlice(initialState)(set, get, api);
 
@@ -34,7 +34,7 @@ describe("uiSlice", () => {
         it("should update activeSection when setActiveSection is called", () => {
             const set = vi.fn();
             const get = vi.fn();
-            const api = {} as any;
+            const api = {} as Parameters<ReturnType<typeof createUiSlice>>[2];
 
             const slice = createUiSlice(initialState)(set, get, api);
             slice.setActiveSection("party");
