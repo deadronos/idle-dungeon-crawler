@@ -1,9 +1,9 @@
+import { prependCombatMessages } from "../combatLog";
 import {
     GAME_TICK_MS,
     getFloorTransitionState,
     getInitializedPartyState,
     getPartyWipeState,
-    prependCombatMessages,
     stepSimulationState,
 } from "../engine/simulation";
 import { selectProgressionState } from "./progressionSlice";

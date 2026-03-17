@@ -161,7 +161,7 @@ To support higher-entity encounters (up to five party members and five enemies),
 
 ### State Updates
 
-The combat loop now advances through a provider-backed `zustand` store action (`stepSimulation`) while the combat math itself lives in pure engine helpers under `src/game/engine/`. This keeps ATB bars and regenerating resources visually in sync without forcing unrelated UI panels to subscribe to every tick. For the architectural rationale behind the migration, see [002 - State Management Evolution](../technicaldecisions/002-state-management-evolution.md).
+The combat loop now advances through a provider-backed `zustand` store action (`stepSimulation`) while the combat math itself lives in pure engine helpers under `src/game/engine/`. `simulation.ts` remains the orchestration entrypoint, `turnResolution.ts` owns per-actor action resolution, `simulationDraft.ts` owns draft preparation and immediate tick-outcome checks, and `simulationProgression.ts` owns post-victory progression transitions. This keeps ATB bars and regenerating resources visually in sync without forcing unrelated UI panels to subscribe to every tick. For the architectural rationale behind the migration, see [002 - State Management Evolution](../technicaldecisions/002-state-management-evolution.md).
 
 ## Consequences
 
