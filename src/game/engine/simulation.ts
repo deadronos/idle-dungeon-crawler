@@ -15,6 +15,9 @@ import {
     type StatusEffect,
     type StatusEffectKey,
 } from "../entity";
+import { formatEquipmentTierRank, getHighestUnlockedEquipmentTier, grantVictoryLoot } from "../equipmentProgression";
+import { getEquipmentDefinition } from "../heroBuilds";
+import { getNextPartySlotUnlock } from "../partyProgression";
 import { getInsightXpMultiplier } from "../progressionMath";
 import type { CombatEvent, GameState } from "../store/types";
 import { secureRandom } from "../../utils/random";
@@ -44,7 +47,13 @@ import {
     getPhysicalHitChance,
     getSpellHitChance,
 } from "./combatMath";
-import { cloneEntity } from "./encounter";
+import {
+    cloneEntity,
+    getPartyWipeState,
+    getPostVictoryFloorReplayState,
+    getPostVictoryFloorTransitionState,
+} from "./encounter";
+import { GAME_TICK_MS } from "./constants";
 import {
     applyStatusEffect,
     cleanseStatusEffect,
@@ -127,6 +136,100 @@ export const createSequenceRandomSource = (...rolls: number[]): SimulationRandom
             return nextRoll;
         },
     };
+};
+
+const getVictoryLootMessages = ({
+    previousHighestTier,
+    highestFloorCleared,
+    lootResult,
+}: {
+    previousHighestTier: number;
+    highestFloorCleared: number;
+    lootResult: ReturnType<typeof grantVictoryLoot>;
+}) => {
+    const unlockedTier = getHighestUnlockedEquipmentTier(highestFloorCleared);
+    return [
+        unlockedTier > previousHighestTier ? `Armory tier ${unlockedTier} is now available.` : null,
+        ...lootResult.gainedItems.map((item) => {
+            const definition = getEquipmentDefinition(item.definitionId);
+            return definition ? `Found ${definition.name} ${formatEquipmentTierRank(item)}.` : null;
+        }),
+        ...lootResult.autoSoldItems.map((item) => {
+            const definition = getEquipmentDefinition(item.definitionId);
+            return definition ? `${definition.name} ${formatEquipmentTierRank(item)} auto-sold for ${item.sellValue} gold.` : null;
+        }),
+    ].filter((message): message is string => Boolean(message));
+};
+
+const getPostVictorySimulationState = (
+    state: GameState,
+    randomSource: SimulationRandomSource,
+): GameState => {
+    const clearedFloor = state.floor;
+    const highestFloorCleared = Math.max(state.highestFloorCleared, clearedFloor);
+    const previousHighestTier = state.equipmentProgression.highestUnlockedEquipmentTier;
+    let nextState = state;
+
+    if (highestFloorCleared !== state.highestFloorCleared) {
+        const nextUnlock = getNextPartySlotUnlock(state.partyCapacity);
+        const hasUnlockedNextSlot = nextUnlock && highestFloorCleared >= nextUnlock.milestoneFloor;
+
+        nextState = {
+            ...nextState,
+            highestFloorCleared,
+            combatLog: hasUnlockedNextSlot
+                ? prependCombatMessages(nextState.combatLog, "A new party slot can now be unlocked in the shop.")
+                : nextState.combatLog,
+        };
+    }
+
+    const lootResult = grantVictoryLoot(
+        nextState.equipmentProgression,
+        nextState.party,
+        clearedFloor,
+        highestFloorCleared,
+        randomSource,
+    );
+    const lootMessages = getVictoryLootMessages({
+        previousHighestTier,
+        highestFloorCleared,
+        lootResult,
+    });
+
+    nextState = {
+        ...nextState,
+        gold: nextState.gold.plus(lootResult.autoSellGold),
+        equipmentProgression: lootResult.equipmentProgression,
+        combatLog: lootMessages.length > 0 ? prependCombatMessages(nextState.combatLog, ...lootMessages) : nextState.combatLog,
+    };
+
+    return nextState.autoAdvance
+        ? { ...nextState, ...getPostVictoryFloorTransitionState(nextState, nextState.floor + 1) }
+        : { ...nextState, ...getPostVictoryFloorReplayState(nextState) };
+};
+
+export const stepSimulationState = (
+    state: GameState,
+    deltaMs = GAME_TICK_MS,
+    randomSource: SimulationRandomSource = defaultRandomSource,
+): GameState => {
+    const stepCount = Math.max(1, Math.floor(deltaMs / GAME_TICK_MS));
+    let nextState = state;
+
+    for (let stepIndex = 0; stepIndex < stepCount; stepIndex += 1) {
+        const result = simulateTick(nextState, randomSource);
+        nextState = result.state;
+
+        if (result.outcome === "party-wipe") {
+            return { ...nextState, ...getPartyWipeState(nextState) };
+        }
+
+        if (result.outcome === "victory") {
+            return getPostVictorySimulationState(nextState, randomSource);
+        }
+    }
+
+    return nextState;
 };
 
 const getHeroTemplateForEntity = (entity: Entity) => {

@@ -1,17 +1,11 @@
 import {
     GAME_TICK_MS,
-    getPostVictoryFloorReplayState,
-    getPostVictoryFloorTransitionState,
     getFloorTransitionState,
     getInitializedPartyState,
     getPartyWipeState,
     prependCombatMessages,
-    simulateTick,
+    stepSimulationState,
 } from "../engine/simulation";
-import { formatEquipmentTierRank, getHighestUnlockedEquipmentTier, grantVictoryLoot } from "../equipmentProgression";
-import { getEquipmentDefinition } from "../heroBuilds";
-import { getNextPartySlotUnlock } from "../partyProgression";
-import { secureRandom } from "../../utils/random";
 import { selectProgressionState } from "./progressionSlice";
 import type { GameState, GameStateCreator, HotSimulationActions, HotSimulationSlice } from "./types";
 
@@ -61,78 +55,12 @@ export const createHotSimulationSlice = (
             set((state) => getPartyWipeState(state));
         },
         stepSimulation: (deltaMs = GAME_TICK_MS) => {
-            const stepCount = Math.max(1, Math.floor(deltaMs / GAME_TICK_MS));
-
-            let nextState: GameState = {
+            const state: GameState = {
                 ...selectHotSimulationState(get()),
                 ...selectProgressionState(get()),
                 activeSection: get().activeSection,
             };
-
-            for (let stepIndex = 0; stepIndex < stepCount; stepIndex += 1) {
-                const result = simulateTick(nextState);
-                nextState = result.state;
-
-                if (result.outcome === "party-wipe") {
-                    nextState = { ...nextState, ...getPartyWipeState(nextState) };
-                    break;
-                }
-
-                if (result.outcome === "victory") {
-                    const clearedFloor = nextState.floor;
-                    const highestFloorCleared = Math.max(nextState.highestFloorCleared, clearedFloor);
-                    const previousHighestTier = nextState.equipmentProgression.highestUnlockedEquipmentTier;
-
-                    if (highestFloorCleared !== nextState.highestFloorCleared) {
-                        const nextUnlock = getNextPartySlotUnlock(nextState.partyCapacity);
-                        const hasUnlockedNextSlot = nextUnlock && highestFloorCleared >= nextUnlock.milestoneFloor;
-
-                        nextState = {
-                            ...nextState,
-                            highestFloorCleared,
-                            combatLog: hasUnlockedNextSlot
-                                ? prependCombatMessages(nextState.combatLog, `A new party slot can now be unlocked in the shop.`)
-                                : nextState.combatLog,
-                        };
-                    }
-
-                    const lootResult = grantVictoryLoot(
-                        nextState.equipmentProgression,
-                        nextState.party,
-                        clearedFloor,
-                        highestFloorCleared,
-                        { next: () => secureRandom() },
-                    );
-                    const unlockedTier = getHighestUnlockedEquipmentTier(highestFloorCleared);
-                    const lootMessages = [
-                        unlockedTier > previousHighestTier ? `Armory tier ${unlockedTier} is now available.` : null,
-                        ...lootResult.gainedItems.map((item) => {
-                            const definition = getEquipmentDefinition(item.definitionId);
-                            return definition ? `Found ${definition.name} ${formatEquipmentTierRank(item)}.` : null;
-                        }),
-                        ...lootResult.autoSoldItems.map((item) => {
-                            const definition = getEquipmentDefinition(item.definitionId);
-                            return definition ? `${definition.name} ${formatEquipmentTierRank(item)} auto-sold for ${item.sellValue} gold.` : null;
-                        }),
-                    ].filter((message): message is string => Boolean(message));
-
-                    nextState = {
-                        ...nextState,
-                        gold: nextState.gold.plus(lootResult.autoSellGold),
-                        equipmentProgression: lootResult.equipmentProgression,
-                        combatLog: lootMessages.length > 0 ? prependCombatMessages(nextState.combatLog, ...lootMessages) : nextState.combatLog,
-                    };
-
-                    if (nextState.autoAdvance) {
-                        nextState = { ...nextState, ...getPostVictoryFloorTransitionState(nextState, nextState.floor + 1) };
-                    } else {
-                        nextState = { ...nextState, ...getPostVictoryFloorReplayState(nextState) };
-                    }
-                    break;
-                }
-            }
-
-            set(nextState);
+            set(stepSimulationState(state, deltaMs));
         },
     });
 };
