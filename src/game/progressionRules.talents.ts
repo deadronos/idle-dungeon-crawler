@@ -1,6 +1,5 @@
-import { prependCombatMessages } from "./combatLog";
 import { getTalentDefinition, synchronizeTalentProgression } from "./heroBuilds";
-import { getRecalculatedParty } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState } from "./progressionRules.shared";
 import type { GameState } from "./store/types";
 
 export const getTalentUnlockState = (state: GameState, heroId: string, talentId: string): Partial<GameState> | null => {
@@ -35,12 +34,15 @@ export const getTalentUnlockState = (state: GameState, heroId: string, talentId:
 
     return {
         talentProgression,
-        party: getRecalculatedParty({ state, party: state.party, talentProgression }),
-        combatLog: prependCombatMessages(
-            state.combatLog,
-            currentRank === 0
-                ? `${hero.name} learned ${talentDefinition.name} (Rank ${nextRank}).`
-                : `${hero.name} upgraded ${talentDefinition.name} to Rank ${nextRank}.`,
-        ),
+        ...buildRecalculatedProgressionState({
+            state,
+            party: state.party,
+            talentProgression,
+            combatLogMessages: [
+                currentRank === 0
+                    ? `${hero.name} learned ${talentDefinition.name} (Rank ${nextRank}).`
+                    : `${hero.name} upgraded ${talentDefinition.name} to Rank ${nextRank}.`,
+            ],
+        }),
     };
 };

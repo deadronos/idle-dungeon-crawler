@@ -7,7 +7,7 @@ import {
     resolveEquipmentItem,
     synchronizeEquipmentProgression,
 } from "./heroBuilds";
-import { getRecalculatedParty } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState } from "./progressionRules.shared";
 import type { HeroClass } from "./entity";
 import type { EquipmentSlot } from "./heroBuilds";
 import type { GameState } from "./store/types";
@@ -42,8 +42,12 @@ export const getEquipItemState = (state: GameState, heroId: string, itemId: stri
 
     return {
         equipmentProgression,
-        party: getRecalculatedParty({ state, party: state.party, equipmentProgression }),
-        combatLog: prependCombatMessages(state.combatLog, `${hero.name} equipped ${item.name}.`),
+        ...buildRecalculatedProgressionState({
+            state,
+            party: state.party,
+            equipmentProgression,
+            combatLogMessages: [`${hero.name} equipped ${item.name}.`],
+        }),
     };
 };
 
@@ -69,8 +73,12 @@ export const getUnequipItemState = (state: GameState, heroId: string, slot: Equi
 
     return {
         equipmentProgression,
-        party: getRecalculatedParty({ state, party: state.party, equipmentProgression }),
-        combatLog: prependCombatMessages(state.combatLog, `${hero.name} cleared their ${slot} slot.`),
+        ...buildRecalculatedProgressionState({
+            state,
+            party: state.party,
+            equipmentProgression,
+            combatLogMessages: [`${hero.name} cleared their ${slot} slot.`],
+        }),
     };
 };
 

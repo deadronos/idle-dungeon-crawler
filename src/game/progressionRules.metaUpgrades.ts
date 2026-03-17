@@ -1,5 +1,5 @@
 import { getFortificationUpgradeCost as calculateFortificationUpgradeCost, getTrainingUpgradeCost as calculateTrainingUpgradeCost } from "./upgrades";
-import { getRecalculatedParty } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState } from "./progressionRules.shared";
 import type { GameState } from "./store/types";
 
 export const getTrainingUpgradePurchaseState = (state: GameState): Partial<GameState> | null => {
@@ -16,7 +16,7 @@ export const getTrainingUpgradePurchaseState = (state: GameState): Partial<GameS
     return {
         gold: state.gold.minus(cost),
         metaUpgrades,
-        party: getRecalculatedParty({ state, party: state.party, metaUpgrades }),
+        ...buildRecalculatedProgressionState({ state, party: state.party, metaUpgrades }),
     };
 };
 
@@ -34,6 +34,6 @@ export const getFortificationUpgradePurchaseState = (state: GameState): Partial<
     return {
         gold: state.gold.minus(cost),
         metaUpgrades,
-        party: getRecalculatedParty({ state, party: state.party, metaUpgrades }),
+        ...buildRecalculatedProgressionState({ state, party: state.party, metaUpgrades }),
     };
 };
