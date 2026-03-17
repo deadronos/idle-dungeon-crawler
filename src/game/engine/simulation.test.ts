@@ -9,6 +9,7 @@ import {
     createEncounter,
     createInitialGameState,
     createSequenceRandomSource,
+    GAME_TICK_MS,
     getEffectiveCritMultiplier,
     getEncounterSize,
     getActionProgressPerTick,
@@ -22,6 +23,7 @@ import {
     POST_VICTORY_HP_RECOVERY_RATIO,
     REGEN_DURATION_TICKS,
     simulateTick,
+    stepSimulationState,
 } from "./simulation";
 import { getInsightXpMultiplier } from "../progressionMath";
 
@@ -1392,5 +1394,61 @@ describe("simulation engine", () => {
 
         expect(result.state.party[1].statusEffects.some((se) => se.key === "regen")).toBe(false);
         expect(result.state.combatLog[0]).toMatch(/smite/i);
+    });
+
+    it("handles post-victory progression in the pure stepSimulationState helper", () => {
+        const initialState = createInitialGameState({
+            floor: 3,
+            highestFloorCleared: 2,
+            autoAdvance: false,
+            partyCapacity: 1,
+            party: [createHero("hero_1", "Ayla", "Cleric")],
+            enemies: [],
+            combatLog: [],
+        });
+
+        const nextState = stepSimulationState(initialState, GAME_TICK_MS, createSequenceRandomSource(0));
+
+        expect(nextState.highestFloorCleared).toBe(3);
+        expect(nextState.floor).toBe(3);
+        expect(nextState.equipmentProgression.inventoryItems.length).toBeGreaterThan(0);
+        expect(nextState.combatLog.some((entry) => /new party slot can now be unlocked/i.test(entry))).toBe(true);
+        expect(nextState.combatLog.some((entry) => /repeating floor 3/i.test(entry))).toBe(true);
+    });
+
+    it("applies the party-wipe reset in the pure stepSimulationState helper", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        warrior.currentHp = new Decimal(6);
+        warrior.statusEffects = [
+            {
+                key: "burn",
+                polarity: "debuff",
+                sourceId: "enemy_fire",
+                remainingTicks: 30,
+                stacks: 1,
+                maxStacks: 2,
+                potency: 6,
+            },
+        ];
+
+        const enemy = createEnemy(4, "enemy_4");
+        enemy.actionProgress = -999;
+
+        const nextState = stepSimulationState(
+            createInitialGameState({
+                floor: 4,
+                gold: new Decimal(123),
+                party: [warrior],
+                enemies: [enemy],
+                combatLog: [],
+            }),
+            GAME_TICK_MS * 20,
+            createSequenceRandomSource(0),
+        );
+
+        expect(nextState.floor).toBe(1);
+        expect(nextState.gold.eq(0)).toBe(true);
+        expect(nextState.party[0].currentHp.eq(nextState.party[0].maxHp)).toBe(true);
+        expect(nextState.combatLog[0]).toMatch(/wiped out/i);
     });
 });
