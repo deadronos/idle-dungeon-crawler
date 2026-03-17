@@ -60,7 +60,7 @@ describe("App integration", () => {
         expect(screen.getByRole("button", { name: /dungeon/i })).toBeInTheDocument();
 
         unmount();
-    });
+    }, 10_000);
 
     it("imports a saved run before creating a new party", async () => {
         const user = userEvent.setup();

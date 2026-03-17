@@ -197,6 +197,9 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
     let anyActionTaken = false;
     let anyVisualUpdate = false;
     const logMessages: string[] = [];
+    const addLogMessage = (message: string) => {
+        logMessages.push(message);
+    };
     const combatEvents: CombatEvent[] = decrementCombatEvents(draft.combatEvents);
     if (draft.combatEvents.length > 0) {
         anyVisualUpdate = true;
@@ -334,8 +337,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         return { state: anyVisualUpdate ? draft : state, outcome: "paused" };
     }
 
-    draft.party.forEach((hero) => processStatusEffects(hero, queueStatusEvent, (message) => logMessages.push(message), handleDefeat));
-    draft.enemies.forEach((enemy) => processStatusEffects(enemy, queueStatusEvent, (message) => logMessages.push(message), handleDefeat));
+    draft.party.forEach((hero) => processStatusEffects(hero, queueStatusEvent, addLogMessage, handleDefeat));
+    draft.enemies.forEach((enemy) => processStatusEffects(enemy, queueStatusEvent, addLogMessage, handleDefeat));
 
     livingHeroes = draft.party.filter((hero) => hero.currentHp.gt(0));
     livingEnemies = draft.enemies.filter((enemy) => enemy.currentHp.gt(0));
@@ -441,7 +444,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 logMessages.push(`${entity.name} casts Bless on ${blessTarget.name}!`);
                 const cleansedStatus = getCleanseableStatusEffect(blessTarget);
                 if (cleansedStatus) {
-                    cleanseStatusEffect(blessTarget, cleansedStatus, queueStatusEvent, (message) => logMessages.push(message));
+                    cleanseStatusEffect(blessTarget, cleansedStatus, queueStatusEvent, addLogMessage);
                 }
                 return;
             }
@@ -575,7 +578,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
         const statusKey = getStatusKeyForElement(action.damageElement);
         if (statusKey && target.currentHp.gt(0)) {
-            applyStatusEffect(entity, target, statusKey, randomSource, queueStatusEvent, (message) => logMessages.push(message));
+            applyStatusEffect(entity, target, statusKey, randomSource, queueStatusEvent, addLogMessage);
         }
 
         if (target.currentHp.lte(0)) {
