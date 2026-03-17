@@ -4,108 +4,99 @@ import { getHeroClassTemplate } from "../classTemplates";
 import {
     getEarnedTalentPointTotal,
     getHeroBuildProfile,
-    synchronizeEquipmentProgression,
-    synchronizeTalentProgression,
     type HeroBuildState,
 } from "../heroBuilds";
 import {
-    BASE_META_UPGRADES,
-    createEnemy,
-    getCombatRatings,
-    getEncounterArchetypes,
-    getEnemyElementForEncounter,
     getExpRequirement,
     getStatusEffectName,
     isHeroClass,
-    inferEnemyArchetype,
     recalculateEntity,
+    type Entity,
+    type StatusEffect,
+    type StatusEffectKey,
 } from "../entity";
 import { getInsightXpMultiplier } from "../progressionMath";
-import { secureRandom } from "../../utils/random";
-import type { DamageElement, EnemyArchetype, Entity, MetaUpgrades, PrestigeUpgrades, StatusEffect, StatusEffectKey } from "../entity";
-import { MAX_PARTY_SIZE } from "../partyProgression";
-import {
-    createEmptyEquipmentProgressionState,
-    createEmptyTalentProgressionState,
-} from "../store/types";
 import type { CombatEvent, GameState } from "../store/types";
+import { secureRandom } from "../../utils/random";
 
-export const GAME_TICK_RATE = 20;
-export const GAME_TICK_MS = 1000 / GAME_TICK_RATE;
-export const ATB_RATE = 2;
-export const HASTE_ATB_RATE = 0.08;
+import {
+    COMBAT_EVENT_TICKS,
+    SKILL_BANNER_TICKS,
+    createCombatEvent,
+    decrementCombatEvents,
+    prependCombatMessages,
+} from "./combatEvents";
+import {
+    getDamageAction,
+    getEnemySupportAction,
+    getHpRatio,
+    getLowestHpRatioTarget,
+    selectTarget,
+    SUPPORT_GUARD_REDUCTION,
+    SUPPORT_HEAL_MULTIPLIER,
+} from "./combatAi";
+import {
+    applyElementalMitigation,
+    applyPhysicalMitigation,
+    getActionProgressPerTick,
+    getEffectiveCritMultiplier,
+    getParryChance,
+    getPhysicalHitChance,
+    getSpellHitChance,
+} from "./combatMath";
+import { cloneEntity } from "./encounter";
+import {
+    applyStatusEffect,
+    cleanseStatusEffect,
+    getCleanseableStatusEffect,
+    getDamageOutputMultiplier,
+    getHealingMultiplier,
+    getStatusConfig,
+    getStatusKeyForElement,
+    processStatusEffects,
+} from "./statusEffects";
+
+export { ATB_RATE, GAME_TICK_MS, GAME_TICK_RATE, HASTE_ATB_RATE } from "./constants";
+export { COMBAT_EVENT_TICKS, prependCombatMessages } from "./combatEvents";
+export {
+    getActionProgressPerTick,
+    getEffectiveCritMultiplier,
+    getParryChance,
+    getPenetrationReduction,
+    getPhysicalHitChance,
+    getSpellHitChance,
+    applyElementalMitigation,
+    applyPhysicalMitigation,
+} from "./combatMath";
+export {
+    cloneEntity,
+    createEncounter,
+    createInitialGameState,
+    getEncounterSize,
+    getFloorReplayState,
+    getFloorTransitionState,
+    getInitializedPartyState,
+    getPartyWipeState,
+    getPostVictoryFloorReplayState,
+    getPostVictoryFloorTransitionState,
+    isBossFloor,
+    POST_VICTORY_HP_RECOVERY_RATIO,
+    recalculateParty,
+} from "./encounter";
+export {
+    getStatusApplicationChance,
+    BURN_DURATION_TICKS,
+    HEX_DURATION_TICKS,
+    REGEN_DURATION_TICKS,
+} from "./statusEffects";
+
 export const WARRIOR_RAGE_STRIKE_COST = getHeroClassTemplate("Warrior").actionPackage.specialAttack?.cost ?? 40;
 export const WARRIOR_RAGE_PER_ATTACK = getHeroClassTemplate("Warrior").resourceModel.gainOnResolvedAttack;
 export const WARRIOR_RAGE_WHEN_HIT = getHeroClassTemplate("Warrior").resourceModel.gainOnTakeDamage;
 export const ARCHER_PIERCING_SHOT_COST = getHeroClassTemplate("Archer").actionPackage.specialAttack?.cost ?? 35;
 export const ARCHER_PIERCING_SHOT_CRIT_BONUS = getHeroClassTemplate("Archer").actionPackage.specialAttack?.critChanceBonus ?? 0.15;
 export const ARCHER_CUNNING_REGEN_PER_TICK = getHeroClassTemplate("Archer").resourceModel.regenFlat;
-export const ARMOR_MITIGATION_SCALE = 2;
-export const MAX_PENETRATION_REDUCTION = 0.6;
-export const PENETRATION_SOFTCAP = 60;
-export const MAX_TENACITY_REDUCTION = 0.6;
-export const TENACITY_SOFTCAP = 80;
-export const MIN_STATUS_APPLICATION_CHANCE = 0.15;
-export const MAX_STATUS_APPLICATION_CHANCE = 0.75;
-export const STATUS_APPLICATION_SCALE = 0.003;
-export const BURN_BASE_CHANCE = 0.45;
-export const BURN_DURATION_TICKS = GAME_TICK_RATE * 4;
-export const BURN_TICK_DAMAGE_MULTIPLIER = 0.15;
-export const BURN_MAX_STACKS = 2;
-export const SLOW_BASE_CHANCE = 0.35;
-export const SLOW_DURATION_TICKS = GAME_TICK_RATE * 3;
-export const SLOW_ATB_REDUCTION = 0.2;
-export const WEAKEN_BASE_CHANCE = 0.35;
-export const WEAKEN_DURATION_TICKS = GAME_TICK_RATE * 4;
-export const WEAKEN_DAMAGE_REDUCTION = 0.15;
-export const REGEN_DURATION_TICKS = GAME_TICK_RATE * 4;
-export const REGEN_TICK_HEAL_MULTIPLIER = 0.15;
-export const HEX_BASE_CHANCE = 0.35;
-export const HEX_DURATION_TICKS = GAME_TICK_RATE * 3;
-export const HEX_HEALING_REDUCTION = 0.3;
-export const BLIND_BASE_CHANCE = 0.35;
-export const BLIND_DURATION_TICKS = GAME_TICK_RATE * 3;
-export const BLIND_ACCURACY_REDUCTION = 15;
 export const CLERIC_BLESS_COST = getHeroClassTemplate("Cleric").actionPackage.bless?.cost ?? 25;
-export const POST_VICTORY_HP_RECOVERY_RATIO = 0.25;
-
-const SKILL_BANNER_TICKS = GAME_TICK_RATE;
-const COMBAT_EVENT_TICKS = Math.round(GAME_TICK_RATE * 1.4);
-const COMBAT_LOG_LIMIT = 10;
-const MIN_PHYSICAL_HIT_CHANCE = 0.72;
-const MAX_PHYSICAL_HIT_CHANCE = 0.97;
-const MIN_SPELL_HIT_CHANCE = 0.74;
-const MAX_SPELL_HIT_CHANCE = 0.96;
-const MAX_PARRY_CHANCE = 0.25;
-const BRUISER_DAMAGE_MULTIPLIER = 1.35;
-const SKIRMISHER_CRIT_BONUS = 0.1;
-const CASTER_DAMAGE_MULTIPLIER = 1.15;
-const SUPPORT_HEAL_THRESHOLD = 0.6;
-const SUPPORT_HEAL_MULTIPLIER = 1.5;
-const SUPPORT_GUARD_REDUCTION = 0.35;
-const SUPPORT_HEX_DAMAGE_MULTIPLIER = 0.8;
-const BOSS_PHASE_SWITCH_THRESHOLD = 0.6;
-const BOSS_MELEE_DAMAGE_MULTIPLIER = 1.4;
-const BOSS_SPELL_DAMAGE_MULTIPLIER = 1.25;
-let combatEventSequence = 0;
-
-type DeliveryType = "melee" | "ranged" | "spell";
-
-interface DamageAction {
-    name: string;
-    damage: Decimal;
-    damageElement: DamageElement;
-    deliveryType: DeliveryType;
-    critChance: number;
-    canDodge: boolean;
-    canParry: boolean;
-}
-
-interface SupportAction {
-    type: "heal" | "guard";
-    name: string;
-    target: Entity;
-}
 
 export type SimulationOutcome = "running" | "paused" | "victory" | "party-wipe";
 
@@ -138,707 +129,12 @@ export const createSequenceRandomSource = (...rolls: number[]): SimulationRandom
     };
 };
 
-export const isBossFloor = (floor: number) => floor % 10 === 0;
-
-export const getEncounterSize = (floor: number) => {
-    if (isBossFloor(floor)) {
-        return 1;
-    }
-
-    const floorCap = Math.max(1, Math.min(MAX_PARTY_SIZE, Math.ceil(floor / 5)));
-    return floorCap;
-};
-
-export const createEncounter = (floor: number) => {
-    const encounterSize = getEncounterSize(floor);
-    const archetypes = getEncounterArchetypes(floor, encounterSize);
-
-    return archetypes.map((archetype, index) => createEnemy(floor, `enemy_${floor}_${index}`, {
-        archetype,
-        boss: archetype === "Boss",
-        element: archetype === "Caster" || archetype === "Boss"
-            ? getEnemyElementForEncounter(floor, index)
-            : undefined,
-    }));
-};
-
-export const cloneEntity = (entity: Entity): Entity => ({
-    ...entity,
-    enemyArchetype: inferEnemyArchetype(entity),
-    enemyElement: (() => {
-        const archetype = inferEnemyArchetype(entity);
-        if (archetype === "Caster" || archetype === "Boss") {
-            return entity.enemyElement ?? getEnemyElementForEncounter(entity.level);
-        }
-
-        return null;
-    })(),
-    exp: new Decimal(entity.exp),
-    expToNext: new Decimal(entity.expToNext),
-    attributes: { ...entity.attributes },
-    maxHp: new Decimal(entity.maxHp),
-    currentHp: new Decimal(entity.currentHp),
-    maxResource: new Decimal(entity.maxResource),
-    currentResource: new Decimal(entity.currentResource),
-    armor: new Decimal(entity.armor),
-    physicalDamage: new Decimal(entity.physicalDamage),
-    magicDamage: new Decimal(entity.magicDamage),
-    accuracyRating: entity.accuracyRating ?? 0,
-    evasionRating: entity.evasionRating ?? 0,
-    parryRating: entity.parryRating ?? 0,
-    armorPenetration: entity.armorPenetration ?? 0,
-    elementalPenetration: entity.elementalPenetration ?? 0,
-    tenacity: entity.tenacity ?? 0,
-    resistances: { ...entity.resistances },
-    activeSkill: entity.activeSkill,
-    activeSkillTicks: entity.activeSkillTicks,
-    guardStacks: entity.guardStacks ?? 0,
-    statusEffects: (entity.statusEffects ?? []).map((statusEffect) => ({ ...statusEffect })),
-});
-
-const clearEncounterState = (entity: Entity): Entity => ({
-    ...cloneEntity(entity),
-    activeSkill: null,
-    activeSkillTicks: 0,
-    guardStacks: 0,
-    actionProgress: 0,
-    statusEffects: [],
-});
-
-const recoverHpAfterVictory = (entity: Entity): Entity => {
-    const cleared = clearEncounterState(entity);
-
-    if (cleared.currentHp.lte(0)) {
-        return cleared;
-    }
-
-    const recoveredHp = cleared.maxHp.times(POST_VICTORY_HP_RECOVERY_RATIO);
-    cleared.currentHp = Decimal.min(cleared.maxHp, cleared.currentHp.plus(recoveredHp));
-    return cleared;
-};
-
-export const recalculateParty = (
-    party: Entity[],
-    upgrades: MetaUpgrades,
-    prestigeUpgrades?: PrestigeUpgrades,
-    buildState?: HeroBuildState,
-): Entity[] => {
-    return party.map((hero) => recalculateEntity(cloneEntity(hero), upgrades, prestigeUpgrades, buildState));
-};
-
-export const prependCombatMessages = (combatLog: string[], ...messages: string[]) => {
-    return [...messages.filter(Boolean), ...combatLog].slice(0, COMBAT_LOG_LIMIT);
-};
-
-const hasValidCombatRatings = (entity: Partial<Entity>) => {
-    return [
-        entity.accuracyRating,
-        entity.evasionRating,
-        entity.parryRating,
-        entity.armorPenetration,
-        entity.elementalPenetration,
-        entity.tenacity,
-    ].every(
-        (rating) => typeof rating === "number" && Number.isFinite(rating),
-    );
-};
-
-const hydrateEntity = (
-    entity: Entity,
-    upgrades: MetaUpgrades,
-    prestigeUpgrades?: PrestigeUpgrades,
-    buildState?: HeroBuildState,
-) => {
-    const cloned = cloneEntity(entity);
-
-    if (hasValidCombatRatings(entity)) {
-        return entity.isEnemy ? cloned : recalculateEntity(cloned, upgrades, prestigeUpgrades, buildState);
-    }
-
-    return recalculateEntity(cloned, upgrades, prestigeUpgrades, buildState);
-};
-
-export const createInitialGameState = (overrides?: Partial<GameState>): GameState => {
-    const metaUpgrades = { ...BASE_META_UPGRADES, ...overrides?.metaUpgrades };
-    const prestigeUpgrades = {
-        costReducer: overrides?.prestigeUpgrades?.costReducer ?? 0,
-        hpMultiplier: overrides?.prestigeUpgrades?.hpMultiplier ?? 0,
-        gameSpeed: overrides?.prestigeUpgrades?.gameSpeed ?? 0,
-        xpMultiplier: overrides?.prestigeUpgrades?.xpMultiplier ?? 0,
-    };
-    const rawParty = overrides?.party ?? [];
-    const syncedTalentProgression = synchronizeTalentProgression(rawParty, {
-        ...createEmptyTalentProgressionState(),
-        ...overrides?.talentProgression,
-        talentRanksByHeroId: {
-            ...createEmptyTalentProgressionState().talentRanksByHeroId,
-            ...(overrides?.talentProgression?.talentRanksByHeroId ?? {}),
-        },
-        talentPointsByHeroId: {
-            ...createEmptyTalentProgressionState().talentPointsByHeroId,
-            ...(overrides?.talentProgression?.talentPointsByHeroId ?? {}),
-        },
-    });
-    const syncedEquipmentProgression = synchronizeEquipmentProgression(rawParty, {
-        ...createEmptyEquipmentProgressionState(),
-        ...overrides?.equipmentProgression,
-        inventoryItems: [...(overrides?.equipmentProgression?.inventoryItems ?? [])],
-        equippedItemInstanceIdsByHeroId: {
-            ...createEmptyEquipmentProgressionState().equippedItemInstanceIdsByHeroId,
-            ...(overrides?.equipmentProgression?.equippedItemInstanceIdsByHeroId ?? {}),
-        },
-    });
-    const buildState: HeroBuildState = {
-        talentProgression: syncedTalentProgression,
-        equipmentProgression: syncedEquipmentProgression,
-    };
-
-    return {
-        party: rawParty.map((entity) => hydrateEntity(entity, metaUpgrades, prestigeUpgrades, buildState)),
-        enemies: overrides?.enemies?.map((entity) => hydrateEntity(entity, BASE_META_UPGRADES)) ?? [],
-        gold: new Decimal(overrides?.gold ?? 0),
-        floor: overrides?.floor ?? 1,
-        autoFight: overrides?.autoFight ?? true,
-        autoAdvance: overrides?.autoAdvance ?? true,
-        combatLog: overrides?.combatLog ? [...overrides.combatLog] : [],
-        combatEvents: overrides?.combatEvents ? overrides.combatEvents.map((event) => ({ ...event })) : [],
-        metaUpgrades,
-        partyCapacity: overrides?.partyCapacity ?? 1,
-        maxPartySize: overrides?.maxPartySize ?? MAX_PARTY_SIZE,
-        highestFloorCleared: overrides?.highestFloorCleared ?? 0,
-        activeSection: overrides?.activeSection ?? "dungeon",
-        heroSouls: new Decimal(overrides?.heroSouls ?? 0),
-        prestigeUpgrades,
-        talentProgression: syncedTalentProgression,
-        equipmentProgression: syncedEquipmentProgression,
-    };
-};
-
-export const getInitializedPartyState = (state: GameState, party: Entity[]): Partial<GameState> => {
-    const talentProgression = synchronizeTalentProgression(party, createEmptyTalentProgressionState());
-    const equipmentProgression = synchronizeEquipmentProgression(party, createEmptyEquipmentProgressionState());
-    const buildState: HeroBuildState = { talentProgression, equipmentProgression };
-
-    return {
-        party: recalculateParty(party, state.metaUpgrades, state.prestigeUpgrades, buildState),
-        enemies: createEncounter(1),
-        combatLog: [`${party[0]?.name ?? "The party"} leads the party into the dungeon...`],
-        combatEvents: [],
-        activeSection: "dungeon",
-        talentProgression,
-        equipmentProgression,
-    };
-};
-
-export const getFloorTransitionState = (state: GameState, floor: number): Partial<GameState> => ({
-    floor,
-    party: state.party.map(clearEncounterState),
-    enemies: createEncounter(floor),
-    combatLog: prependCombatMessages(state.combatLog, `Moved to floor ${floor}...`),
-    combatEvents: [],
-});
-
-export const getFloorReplayState = (state: GameState): Partial<GameState> => ({
-    party: state.party.map(clearEncounterState),
-    enemies: createEncounter(state.floor),
-    combatLog: prependCombatMessages(state.combatLog, `Repeating floor ${state.floor}...`),
-    combatEvents: [],
-});
-
-export const getPostVictoryFloorTransitionState = (state: GameState, floor: number): Partial<GameState> => ({
-    floor,
-    party: state.party.map(recoverHpAfterVictory),
-    enemies: createEncounter(floor),
-    combatLog: prependCombatMessages(
-        state.combatLog,
-        `The party recovers ${Math.round(POST_VICTORY_HP_RECOVERY_RATIO * 100)}% HP before the next encounter.`,
-        `Moved to floor ${floor}...`,
-    ),
-    combatEvents: [],
-});
-
-export const getPostVictoryFloorReplayState = (state: GameState): Partial<GameState> => ({
-    party: state.party.map(recoverHpAfterVictory),
-    enemies: createEncounter(state.floor),
-    combatLog: prependCombatMessages(
-        state.combatLog,
-        `The party recovers ${Math.round(POST_VICTORY_HP_RECOVERY_RATIO * 100)}% HP before the next encounter.`,
-        `Repeating floor ${state.floor}...`,
-    ),
-    combatEvents: [],
-});
-
-export const getPartyWipeState = (state: GameState): Partial<GameState> => {
-    const buildState: HeroBuildState = {
-        talentProgression: state.talentProgression,
-        equipmentProgression: state.equipmentProgression,
-    };
-    const healedParty = state.party.map((hero) => {
-        const refreshed = recalculateEntity(cloneEntity(hero), state.metaUpgrades, state.prestigeUpgrades, buildState);
-        const heroTemplate = getHeroClassTemplate(hero.class);
-        refreshed.currentHp = refreshed.maxHp;
-        refreshed.currentResource = heroTemplate.resourceModel.startsFull ? refreshed.maxResource : new Decimal(0);
-        refreshed.guardStacks = 0;
-        refreshed.statusEffects = [];
-        refreshed.activeSkill = null;
-        refreshed.activeSkillTicks = 0;
-        refreshed.actionProgress = 0;
-        return refreshed;
-    });
-
-    return {
-        floor: 1,
-        gold: new Decimal(0),
-        party: healedParty,
-        enemies: createEncounter(1),
-        combatLog: prependCombatMessages(state.combatLog, "The party was wiped out! Resetting to Floor 1..."),
-        combatEvents: [],
-    };
-};
-
 const getHeroTemplateForEntity = (entity: Entity) => {
     if (entity.isEnemy || !isHeroClass(entity.class)) {
         return null;
     }
 
     return getHeroClassTemplate(entity.class);
-};
-
-const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
-
-const getEffectiveAccuracyRating = (entity: Entity) => {
-    return Math.max(0, entity.accuracyRating - getStatusPotency(entity, "blind"));
-};
-
-export const getPhysicalHitChance = (attacker: Entity, defender: Entity) =>
-    clampChance(
-        MIN_PHYSICAL_HIT_CHANCE,
-        MAX_PHYSICAL_HIT_CHANCE,
-        0.82 + ((getEffectiveAccuracyRating(attacker) - defender.evasionRating) * 0.002),
-    );
-
-export const getSpellHitChance = (attacker: Entity, defender: Entity) =>
-    clampChance(
-        MIN_SPELL_HIT_CHANCE,
-        MAX_SPELL_HIT_CHANCE,
-        0.82
-            + ((getEffectiveAccuracyRating(attacker) - defender.evasionRating) * 0.0016)
-            + ((attacker.attributes.int - defender.attributes.wis) * 0.0008),
-    );
-
-export const getParryChance = (attacker: Entity, defender: Entity) =>
-    clampChance(
-        0,
-        MAX_PARRY_CHANCE,
-        0.04 + ((defender.parryRating - (attacker.accuracyRating * 0.3)) * 0.0025),
-    );
-
-export const getPenetrationReduction = (penetration: number) => {
-    if (penetration <= 0) {
-        return 0;
-    }
-
-    return Math.min(MAX_PENETRATION_REDUCTION, penetration / (penetration + PENETRATION_SOFTCAP));
-};
-
-export const getEffectiveArmor = (armor: Decimal, armorPenetration: number) => {
-    return armor.times(1 - getPenetrationReduction(armorPenetration));
-};
-
-export const applyPhysicalMitigation = (rawDamage: Decimal, armor: Decimal, armorPenetration = 0) => {
-    const mitigatedArmor = getEffectiveArmor(armor, armorPenetration);
-    const mitigatedDamage = rawDamage.times(100).div(new Decimal(100).plus(mitigatedArmor.times(ARMOR_MITIGATION_SCALE)));
-    return Decimal.max(1, mitigatedDamage);
-};
-
-export const getEffectiveResistance = (resistance: number, elementalPenetration: number) => {
-    return resistance * (1 - getPenetrationReduction(elementalPenetration));
-};
-
-export const applyElementalMitigation = (rawDamage: Decimal, resistance: number, elementalPenetration = 0) => {
-    return Decimal.max(1, rawDamage.times(1 - getEffectiveResistance(resistance, elementalPenetration)));
-};
-
-export const getTenacityReduction = (tenacity: number) => {
-    if (tenacity <= 0) {
-        return 0;
-    }
-
-    return Math.min(MAX_TENACITY_REDUCTION, tenacity / (tenacity + TENACITY_SOFTCAP));
-};
-
-export const getEffectiveCritMultiplier = (critDamage: number, targetTenacity: number) => {
-    const critBonus = Math.max(0, critDamage - 1);
-    return 1 + (critBonus * (1 - getTenacityReduction(targetTenacity)));
-};
-
-export const getStatusApplicationChance = (attacker: Entity, defender: Entity, baseChance: number) =>
-    clampChance(
-        MIN_STATUS_APPLICATION_CHANCE,
-        MAX_STATUS_APPLICATION_CHANCE,
-        baseChance + ((attacker.elementalPenetration - defender.tenacity) * STATUS_APPLICATION_SCALE),
-    );
-
-const getStatusPotency = (entity: Entity, key: StatusEffectKey) => {
-    return entity.statusEffects
-        .filter((statusEffect) => statusEffect.key === key)
-        .reduce((highestPotency, statusEffect) => Math.max(highestPotency, statusEffect.potency), 0);
-};
-
-const getDamageOutputMultiplier = (entity: Entity) => {
-    return Math.max(0, 1 - getStatusPotency(entity, "weaken"));
-};
-
-const getAtbMultiplier = (entity: Entity) => {
-    return Math.max(0.1, 1 - getStatusPotency(entity, "slow"));
-};
-
-export const getActionProgressPerTick = (
-    entity: Entity,
-    prestigeUpgrades?: Pick<PrestigeUpgrades, "gameSpeed">,
-    buildState?: HeroBuildState,
-) => {
-    const hasteBonus = (prestigeUpgrades?.gameSpeed ?? 0) * 0.1;
-    const combatRatings = getCombatRatings(entity, buildState);
-    return (ATB_RATE + (combatRatings.haste * HASTE_ATB_RATE)) * (1 + hasteBonus) * getAtbMultiplier(entity);
-};
-
-/** Returns a multiplier (0–1) reducing incoming healing by the target's hex potency. */
-const getHealingMultiplier = (entity: Entity) => {
-    return Math.max(0, 1 - getStatusPotency(entity, "hex"));
-};
-
-const getStatusConfig = (key: StatusEffectKey): Omit<StatusEffect, "sourceId"> => {
-    switch (key) {
-        case "burn":
-            return {
-                key,
-                polarity: "debuff",
-                remainingTicks: BURN_DURATION_TICKS,
-                stacks: 1,
-                maxStacks: BURN_MAX_STACKS,
-                potency: BURN_TICK_DAMAGE_MULTIPLIER,
-            };
-        case "slow":
-            return {
-                key,
-                polarity: "debuff",
-                remainingTicks: SLOW_DURATION_TICKS,
-                stacks: 1,
-                maxStacks: 1,
-                potency: SLOW_ATB_REDUCTION,
-            };
-        case "weaken":
-            return {
-                key,
-                polarity: "debuff",
-                remainingTicks: WEAKEN_DURATION_TICKS,
-                stacks: 1,
-                maxStacks: 1,
-                potency: WEAKEN_DAMAGE_REDUCTION,
-            };
-        case "regen":
-            return {
-                key,
-                polarity: "buff",
-                remainingTicks: REGEN_DURATION_TICKS,
-                stacks: 1,
-                maxStacks: 1,
-                potency: REGEN_TICK_HEAL_MULTIPLIER,
-            };
-        case "hex":
-            return {
-                key,
-                polarity: "debuff",
-                remainingTicks: HEX_DURATION_TICKS,
-                stacks: 1,
-                maxStacks: 1,
-                potency: HEX_HEALING_REDUCTION,
-            };
-        case "blind":
-            return {
-                key,
-                polarity: "debuff",
-                remainingTicks: BLIND_DURATION_TICKS,
-                stacks: 1,
-                maxStacks: 1,
-                potency: BLIND_ACCURACY_REDUCTION,
-            };
-        default:
-            return {
-                key,
-                polarity: "debuff",
-                remainingTicks: GAME_TICK_RATE,
-                stacks: 1,
-                maxStacks: 1,
-                potency: 0,
-            };
-    }
-};
-
-const getStatusKeyForElement = (damageElement: DamageElement): StatusEffectKey | null => {
-    switch (damageElement) {
-        case "fire":
-            return "burn";
-        case "water":
-            return "slow";
-        case "earth":
-            return "weaken";
-        case "shadow":
-            return "hex";
-        case "light":
-            return "blind";
-        default:
-            return null;
-    }
-};
-
-const getStatusBaseChance = (statusKey: StatusEffectKey) => {
-    switch (statusKey) {
-        case "burn":
-            return BURN_BASE_CHANCE;
-        case "slow":
-            return SLOW_BASE_CHANCE;
-        case "weaken":
-            return WEAKEN_BASE_CHANCE;
-        case "hex":
-            return HEX_BASE_CHANCE;
-        case "blind":
-            return BLIND_BASE_CHANCE;
-        default:
-            return SLOW_BASE_CHANCE;
-    }
-};
-
-const createCombatEvent = (event: Omit<CombatEvent, "id">): CombatEvent => {
-    combatEventSequence += 1;
-
-    return {
-        ...event,
-        id: `combat-event-${combatEventSequence}`,
-    };
-};
-
-const decrementCombatEvents = (events: CombatEvent[]) => {
-    return events
-        .map((event) => ({ ...event, ttlTicks: event.ttlTicks - 1 }))
-        .filter((event) => event.ttlTicks > 0);
-};
-
-const getHpRatio = (entity: Entity) => entity.currentHp.div(entity.maxHp).toNumber();
-
-const getLowestHpRatioTarget = (entities: Entity[]) => {
-    return [...entities].sort((left, right) => getHpRatio(left) - getHpRatio(right))[0];
-};
-
-const getHighestCurrentHpTarget = (entities: Entity[]) => {
-    return [...entities].sort((left, right) => right.currentHp.minus(left.currentHp).toNumber())[0];
-};
-
-const getLowestCurrentHpTarget = (entities: Entity[]) => {
-    return [...entities].sort((left, right) => left.currentHp.minus(right.currentHp).toNumber())[0];
-};
-
-const getThreatRating = (entity: Entity) => entity.physicalDamage.plus(entity.magicDamage).toNumber();
-
-const getHighestThreatTarget = (entities: Entity[]) => {
-    return [...entities].sort((left, right) => getThreatRating(right) - getThreatRating(left))[0];
-};
-
-const getLowestResistanceTarget = (entities: Entity[], damageElement: DamageElement) => {
-    if (damageElement === "physical") {
-        return getLowestCurrentHpTarget(entities);
-    }
-
-    return [...entities].sort((left, right) => left.resistances[damageElement] - right.resistances[damageElement])[0];
-};
-
-const getEnemyDamageAction = (entity: Entity, archetype: EnemyArchetype): DamageAction => {
-    switch (archetype) {
-        case "Bruiser":
-            return {
-                name: "Crushing Blow",
-                damage: entity.physicalDamage.times(BRUISER_DAMAGE_MULTIPLIER),
-                damageElement: "physical",
-                deliveryType: "melee",
-                critChance: entity.critChance,
-                canDodge: true,
-                canParry: true,
-            };
-        case "Skirmisher":
-            return {
-                name: "Harrying Shot",
-                damage: entity.physicalDamage,
-                damageElement: "physical",
-                deliveryType: "ranged",
-                critChance: Math.min(1, entity.critChance + SKIRMISHER_CRIT_BONUS),
-                canDodge: true,
-                canParry: false,
-            };
-        case "Caster":
-            return {
-                name: `${entity.enemyElement ? `${entity.enemyElement[0].toUpperCase()}${entity.enemyElement.slice(1)} ` : ""}Bolt`,
-                damage: entity.magicDamage.times(CASTER_DAMAGE_MULTIPLIER),
-                damageElement: entity.enemyElement ?? "shadow",
-                deliveryType: "spell",
-                critChance: entity.critChance,
-                canDodge: true,
-                canParry: false,
-            };
-        case "Support":
-            return {
-                name: "Suppressing Hex",
-                damage: entity.magicDamage.times(SUPPORT_HEX_DAMAGE_MULTIPLIER),
-                damageElement: "shadow",
-                deliveryType: "spell",
-                critChance: entity.critChance,
-                canDodge: true,
-                canParry: false,
-            };
-        case "Boss":
-            if (getHpRatio(entity) <= BOSS_PHASE_SWITCH_THRESHOLD) {
-                return {
-                    name: "Ruin Bolt",
-                    damage: entity.magicDamage.times(BOSS_SPELL_DAMAGE_MULTIPLIER),
-                    damageElement: entity.enemyElement ?? "shadow",
-                    deliveryType: "spell",
-                    critChance: entity.critChance,
-                    canDodge: true,
-                    canParry: false,
-                };
-            }
-
-            return {
-                name: "Overlord Strike",
-                damage: entity.physicalDamage.times(BOSS_MELEE_DAMAGE_MULTIPLIER),
-                damageElement: "physical",
-                deliveryType: "melee",
-                critChance: entity.critChance,
-                canDodge: true,
-                canParry: true,
-            };
-        default:
-            return {
-                name: "Attack",
-                damage: entity.physicalDamage,
-                damageElement: "physical",
-                deliveryType: "melee",
-                critChance: entity.critChance,
-                canDodge: true,
-                canParry: true,
-            };
-    }
-};
-
-const getEnemySupportAction = (entity: Entity, allies: Entity[]): SupportAction | null => {
-    const healTarget = getLowestHpRatioTarget(allies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
-    if (healTarget && getHpRatio(healTarget) < SUPPORT_HEAL_THRESHOLD) {
-        return {
-            type: "heal",
-            name: "Mend Ally",
-            target: healTarget,
-        };
-    }
-
-    const protectTarget = getHighestThreatTarget(allies.filter((ally) => ally.id !== entity.id && ally.guardStacks <= 0));
-    if (protectTarget) {
-        return {
-            type: "guard",
-            name: "Ward Ally",
-            target: protectTarget,
-        };
-    }
-
-    return null;
-};
-
-const selectTarget = (entity: Entity, targets: Entity[], action: DamageAction, randomSource: SimulationRandomSource) => {
-    if (!entity.isEnemy) {
-        return targets[Math.floor(randomSource.next() * targets.length)];
-    }
-
-    switch (inferEnemyArchetype(entity)) {
-        case "Bruiser":
-            return getHighestCurrentHpTarget(targets) ?? targets[0];
-        case "Skirmisher":
-            return getLowestCurrentHpTarget(targets) ?? targets[0];
-        case "Caster":
-            return getLowestResistanceTarget(targets, action.damageElement) ?? targets[0];
-        case "Support":
-            return getHighestThreatTarget(targets) ?? targets[0];
-        case "Boss":
-            if (action.deliveryType === "spell") {
-                return getLowestResistanceTarget(targets, action.damageElement) ?? targets[0];
-            }
-
-            return getHighestCurrentHpTarget(targets) ?? targets[0];
-        default:
-            return targets[Math.floor(randomSource.next() * targets.length)];
-    }
-};
-
-const getDamageAction = (entity: Entity, buildState?: HeroBuildState): DamageAction => {
-    if (entity.isEnemy) {
-        return getEnemyDamageAction(entity, inferEnemyArchetype(entity) ?? "Bruiser");
-    }
-
-    const heroTemplate = getHeroClassTemplate(entity.class);
-    const buildProfile = getHeroBuildProfile(entity, buildState);
-    const basicAction = heroTemplate.combatProfile.basicAction;
-    let action: DamageAction = {
-        name: basicAction.name,
-        damage: basicAction.damageStat === "magicDamage" ? entity.magicDamage : entity.physicalDamage,
-        damageElement: basicAction.damageElement,
-        deliveryType: basicAction.deliveryType,
-        critChance: entity.critChance,
-        canDodge: true,
-        canParry: basicAction.canParry,
-    };
-
-    switch (heroTemplate.actionPackage.id) {
-        case "warrior": {
-            const specialAttack = heroTemplate.actionPackage.specialAttack;
-            const specialAttackCost = Math.max(0, (specialAttack?.cost ?? 0) + buildProfile.effects.specialAttackCostDelta);
-            if (specialAttack && entity.currentResource.gte(specialAttackCost)) {
-                entity.currentResource = entity.currentResource.minus(specialAttackCost);
-                action = {
-                    ...action,
-                    name: specialAttack.name,
-                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier + buildProfile.effects.specialAttackDamageMultiplierBonus),
-                    canParry: specialAttack.canParry,
-                };
-            }
-            break;
-        }
-        case "archer": {
-            const specialAttack = heroTemplate.actionPackage.specialAttack;
-            const specialAttackCost = Math.max(0, (specialAttack?.cost ?? 0) + buildProfile.effects.specialAttackCostDelta);
-            if (specialAttack && entity.currentResource.gte(specialAttackCost)) {
-                entity.currentResource = entity.currentResource.minus(specialAttackCost);
-                action = {
-                    ...action,
-                    name: specialAttack.name,
-                    damage: entity.physicalDamage.times(specialAttack.damageMultiplier + buildProfile.effects.specialAttackDamageMultiplierBonus),
-                    critChance: Math.min(
-                        1,
-                        entity.critChance
-                            + (specialAttack.critChanceBonus ?? 0)
-                            + buildProfile.effects.specialAttackCritChanceBonus,
-                    ),
-                    canParry: specialAttack.canParry,
-                };
-            }
-            break;
-        }
-        default:
-            break;
-    }
-
-    if (action.deliveryType === "ranged" && action.damageElement === "physical") {
-        action.canParry = false;
-    }
-
-    return action;
 };
 
 const grantResolvedAttackResource = (entity: Entity, buildState?: HeroBuildState) => {
@@ -901,6 +197,9 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
     let anyActionTaken = false;
     let anyVisualUpdate = false;
     const logMessages: string[] = [];
+    const addLogMessage = (message: string) => {
+        logMessages.push(message);
+    };
     const combatEvents: CombatEvent[] = decrementCombatEvents(draft.combatEvents);
     if (draft.combatEvents.length > 0) {
         anyVisualUpdate = true;
@@ -912,13 +211,19 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         anyVisualUpdate = true;
     };
 
-    const queueStatusEvent = (
-        target: Entity,
-        statusKey: StatusEffectKey,
-        statusPhase: "apply" | "tick" | "expire" | "cleanse",
-        text: string,
-        amount?: string,
-    ) => {
+    const queueStatusEvent = ({
+        target,
+        statusKey,
+        statusPhase,
+        text,
+        amount,
+    }: {
+        target: Entity;
+        statusKey: StatusEffectKey;
+        statusPhase: "apply" | "tick" | "expire" | "cleanse";
+        text: string;
+        amount?: string;
+    }) => {
         queueCombatEvent({
             targetId: target.id,
             kind: "status",
@@ -928,98 +233,6 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             statusPhase,
             ttlTicks: COMBAT_EVENT_TICKS,
         });
-    };
-
-    const getCleanseableStatusEffect = (target: Entity) => {
-        return target.statusEffects.find((statusEffect) => statusEffect.key === "hex")
-            ?? target.statusEffects.find((statusEffect) => statusEffect.polarity === "debuff");
-    };
-
-    const cleanseStatusEffect = (target: Entity, statusEffect: StatusEffect) => {
-        target.statusEffects = target.statusEffects.filter((activeStatus) => activeStatus !== statusEffect);
-        queueStatusEvent(target, statusEffect.key, "cleanse", `${getStatusEffectName(statusEffect.key)} cleansed`);
-        logMessages.push(`${target.name}'s ${getStatusEffectName(statusEffect.key)} is cleansed.`);
-    };
-
-    const applyStatusEffect = (source: Entity, target: Entity, statusKey: StatusEffectKey) => {
-        const applyChance = getStatusApplicationChance(source, target, getStatusBaseChance(statusKey));
-        if (randomSource.next() >= applyChance) {
-            return;
-        }
-
-        const existingEffect = target.statusEffects.find((statusEffect) => statusEffect.key === statusKey);
-        const nextStatusEffect: StatusEffect = {
-            ...getStatusConfig(statusKey),
-            sourceId: source.id,
-            potency: statusKey === "burn"
-                ? source.magicDamage.times(BURN_TICK_DAMAGE_MULTIPLIER).toNumber()
-                : getStatusConfig(statusKey).potency,
-        };
-
-        if (existingEffect) {
-            existingEffect.remainingTicks = nextStatusEffect.remainingTicks;
-            if (statusKey === "burn") {
-                const shouldAdoptSource = nextStatusEffect.potency >= existingEffect.potency;
-                existingEffect.stacks = Math.min(existingEffect.maxStacks, existingEffect.stacks + 1);
-                existingEffect.potency = Math.max(existingEffect.potency, nextStatusEffect.potency);
-                if (shouldAdoptSource) {
-                    existingEffect.sourceId = source.id;
-                }
-            } else {
-                if (nextStatusEffect.potency >= existingEffect.potency) {
-                    existingEffect.sourceId = source.id;
-                }
-                existingEffect.potency = Math.max(existingEffect.potency, nextStatusEffect.potency);
-            }
-
-            const statusLabel = existingEffect.key === "burn" && existingEffect.stacks > 1
-                ? `${getStatusEffectName(existingEffect.key)} x${existingEffect.stacks}`
-                : getStatusEffectName(existingEffect.key);
-            queueStatusEvent(target, statusKey, "apply", statusLabel);
-            logMessages.push(`${target.name} is afflicted with ${statusLabel}.`);
-            return;
-        }
-
-        target.statusEffects.push(nextStatusEffect);
-        queueStatusEvent(target, statusKey, "apply", getStatusEffectName(statusKey));
-        logMessages.push(`${target.name} is afflicted with ${getStatusEffectName(statusKey)}.`);
-    };
-
-    const processStatusEffects = (entity: Entity) => {
-        if (entity.currentHp.lte(0) || entity.statusEffects.length === 0) {
-            return;
-        }
-
-        entity.statusEffects = entity.statusEffects.flatMap((statusEffect) => {
-            const nextRemainingTicks = Math.max(0, statusEffect.remainingTicks - 1);
-            const nextStatusEffect = { ...statusEffect, remainingTicks: nextRemainingTicks };
-
-            if (statusEffect.key === "burn" && nextRemainingTicks % GAME_TICK_RATE === 0) {
-                const burnDamage = Decimal.max(1, new Decimal(nextStatusEffect.potency).times(nextStatusEffect.stacks)).floor();
-                entity.currentHp = Decimal.max(0, entity.currentHp.minus(burnDamage));
-                queueStatusEvent(entity, "burn", "tick", `${getStatusEffectName("burn")} -${burnDamage.toString()}`, burnDamage.toString());
-                logMessages.push(`${entity.name} suffers ${burnDamage.toString()} burn damage.`);
-            }
-
-            if (statusEffect.key === "regen" && nextRemainingTicks % GAME_TICK_RATE === 0) {
-                const healAmount = Decimal.max(1, nextStatusEffect.potency).floor();
-                entity.currentHp = Decimal.min(entity.maxHp, entity.currentHp.plus(healAmount));
-                queueStatusEvent(entity, "regen", "tick", `${getStatusEffectName("regen")} +${healAmount.toString()}`, healAmount.toString());
-                logMessages.push(`${entity.name} regenerates ${healAmount.toString()} HP.`);
-            }
-
-            if (nextRemainingTicks <= 0 || entity.currentHp.lte(0)) {
-                queueStatusEvent(entity, statusEffect.key, "expire", `${getStatusEffectName(statusEffect.key)} fades`);
-                logMessages.push(`${entity.name}'s ${getStatusEffectName(statusEffect.key)} fades.`);
-                return [];
-            }
-
-            return [nextStatusEffect];
-        });
-
-        if (entity.currentHp.lte(0)) {
-            handleDefeat(entity);
-        }
     };
 
     const handleDefeat = (target: Entity) => {
@@ -1036,7 +249,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         }
 
         const baseExp = new Decimal(draft.floor).times(10).plus(target.attributes.vit);
-        const xpBonus = getInsightXpMultiplier(draft.prestigeUpgrades.xpMultiplier); // +60% base EXP per level
+        const xpBonus = getInsightXpMultiplier(draft.prestigeUpgrades.xpMultiplier);
         const experienceReward = baseExp.times(xpBonus).floor();
         const goldReward = new Decimal(draft.floor).times(2).plus(5);
         draft.gold = draft.gold.plus(goldReward);
@@ -1124,8 +337,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         return { state: anyVisualUpdate ? draft : state, outcome: "paused" };
     }
 
-    draft.party.forEach(processStatusEffects);
-    draft.enemies.forEach(processStatusEffects);
+    draft.party.forEach((hero) => processStatusEffects(hero, queueStatusEvent, addLogMessage, handleDefeat));
+    draft.enemies.forEach((enemy) => processStatusEffects(enemy, queueStatusEvent, addLogMessage, handleDefeat));
 
     livingHeroes = draft.party.filter((hero) => hero.currentHp.gt(0));
     livingEnemies = draft.enemies.filter((enemy) => enemy.currentHp.gt(0));
@@ -1201,9 +414,8 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             }
 
             const blessDefinition = heroTemplate.actionPackage.bless;
-            // Bless targets other party members only; solo Clerics fall through to Smite
             const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && getCleanseableStatusEffect(ally))
-                ?? livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((se) => se.key === "regen"));
+                ?? livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((statusEffect) => statusEffect.key === "regen"));
             if (blessDefinition && blessTarget && entity.currentResource.gte(blessDefinition.cost)) {
                 const regenPotency = entity.magicDamage
                     .times(blessDefinition.regenMultiplier + heroBuildProfile.effects.blessRegenMultiplierBonus)
@@ -1213,7 +425,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                     sourceId: entity.id,
                     potency: regenPotency,
                 };
-                const existingRegen = blessTarget.statusEffects.find((se) => se.key === "regen");
+                const existingRegen = blessTarget.statusEffects.find((statusEffect) => statusEffect.key === "regen");
                 if (existingRegen) {
                     existingRegen.remainingTicks = regenEffect.remainingTicks;
                     existingRegen.potency = Math.max(existingRegen.potency, regenEffect.potency);
@@ -1223,17 +435,22 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
                 }
                 setActiveSkill(entity, blessDefinition.name);
                 entity.currentResource = entity.currentResource.minus(blessDefinition.cost);
-                queueStatusEvent(blessTarget, "regen", "apply", getStatusEffectName("regen"));
+                queueStatusEvent({
+                    target: blessTarget,
+                    statusKey: "regen",
+                    statusPhase: "apply",
+                    text: getStatusEffectName("regen"),
+                });
                 logMessages.push(`${entity.name} casts Bless on ${blessTarget.name}!`);
                 const cleansedStatus = getCleanseableStatusEffect(blessTarget);
                 if (cleansedStatus) {
-                    cleanseStatusEffect(blessTarget, cleansedStatus);
+                    cleanseStatusEffect(blessTarget, cleansedStatus, queueStatusEvent, addLogMessage);
                 }
                 return;
             }
         }
 
-        if (entity.isEnemy && inferEnemyArchetype(entity) === "Support") {
+        if (entity.isEnemy && entity.enemyArchetype === "Support") {
             const supportAction = getEnemySupportAction(entity, livingAllies);
 
             if (supportAction?.type === "heal") {
@@ -1329,16 +546,9 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
             });
         }
 
-        let finalDamage = damage;
-        if (action.damageElement === "physical") {
-            finalDamage = applyPhysicalMitigation(damage, target.armor, entity.armorPenetration);
-        } else {
-            finalDamage = applyElementalMitigation(
-                damage,
-                target.resistances[action.damageElement],
-                entity.elementalPenetration,
-            );
-        }
+        let finalDamage = action.damageElement === "physical"
+            ? applyPhysicalMitigation(damage, target.armor, entity.armorPenetration)
+            : applyElementalMitigation(damage, target.resistances[action.damageElement], entity.elementalPenetration);
 
         let damageSuffix = "";
         if (target.guardStacks > 0) {
@@ -1368,13 +578,12 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
 
         const statusKey = getStatusKeyForElement(action.damageElement);
         if (statusKey && target.currentHp.gt(0)) {
-            applyStatusEffect(entity, target, statusKey);
+            applyStatusEffect(entity, target, statusKey, randomSource, queueStatusEvent, addLogMessage);
         }
 
-        if (target.currentHp.gt(0)) {
-            return;
+        if (target.currentHp.lte(0)) {
+            handleDefeat(target);
         }
-        handleDefeat(target);
     };
 
     draft.party.forEach((hero) => {

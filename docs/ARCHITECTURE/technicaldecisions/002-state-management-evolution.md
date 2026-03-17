@@ -79,14 +79,14 @@ Implemented high-level actions:
 * `stepSimulation(deltaMs)`
 * `setActiveSection(section)`
 
-The `stepSimulation` action delegates combat math and rules to pure engine helpers in `src/game/engine/simulation.ts`, keeping the store orchestration-focused rather than turning it into a monolithic rules file.
+The `stepSimulation` action delegates combat math and rules to pure engine helpers in `src/game/engine/`, with tick orchestration in `simulation.ts` and focused modules such as `combatAi.ts`, `combatMath.ts`, `combatEvents.ts`, `encounter.ts`, and `statusEffects.ts` handling the extracted rule sets. This keeps the store orchestration-focused rather than turning it into a monolithic rules file.
 
 ## Recommended Module Boundaries
 
 The implementation is now split roughly as follows:
 
 * `src/game/entity.ts` — entity construction and stat derivation
-* `src/game/engine/` — pure combat helpers such as target selection, damage resolution, reward distribution, and tick stepping
+* `src/game/engine/` — pure combat helpers such as target selection, damage resolution, status processing, encounter setup, reward distribution, combat-event presentation, and tick stepping
 * `src/game/store/` — `zustand` store setup, slice-oriented state types, provider compatibility, and selectors (currently split into `hotSimulationSlice.ts`, `progressionSlice.ts`, and `uiSlice.ts`)
 * `src/components/` — UI that subscribes to narrow selectors instead of the whole game object
 

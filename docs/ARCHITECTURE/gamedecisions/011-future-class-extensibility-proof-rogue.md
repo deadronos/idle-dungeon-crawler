@@ -131,7 +131,7 @@ The proof exercise also exposed the remaining extension points that are still na
 
 ### 1. New action packages still need explicit runtime support
 
-`src/game/classTemplates.ts` restricts `HeroActionPackageId` to the shipped ids, and `src/game/engine/simulation.ts` still switches on those ids for non-basic actions.
+`src/game/classTemplates.ts` restricts `HeroActionPackageId` to the shipped ids, and `src/game/engine/combatAi.ts` still switches on those ids for non-basic actions.
 
 Implication:
 
