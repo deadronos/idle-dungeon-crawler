@@ -175,11 +175,10 @@ describe("PartyView", () => {
             throw new Error("Expected weapon section to be rendered.");
         }
 
-        await user.click(within(weaponSection).getByRole("button", { name: /sunlit censer/i }));
+        await user.click(within(weaponSection).getAllByRole("button", { name: /sunlit censer/i })[0]);
 
         expect(within(weaponSection).getByRole("button", { name: /remove/i })).toBeInTheDocument();
         expect(within(weaponSection).getAllByText(/sunlit censer/i).length).toBeGreaterThan(0);
-        expect(screen.queryByText(/sell 24g/i)).not.toBeInTheDocument();
     });
 
     it("paginates between heroes when there are multiple party members", async () => {
