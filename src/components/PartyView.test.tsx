@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -92,7 +92,7 @@ describe("PartyView", () => {
         await user.click(learnButtons[0]);
 
         expect(screen.getByText(/0 pts/i)).toBeInTheDocument();
-    expect(screen.getByText(/rank 1\/3/i)).toBeInTheDocument();
+        expect(screen.getByText(/rank 1\/3/i)).toBeInTheDocument();
     });
 
     it("switches to equipment panel and shows all four gear slots", async () => {
@@ -133,6 +133,53 @@ describe("PartyView", () => {
         expect(screen.getByText(/^armory$/i)).toBeInTheDocument();
         expect(screen.getByRole("button", { name: /expand stash/i })).toBeInTheDocument();
         expect(screen.getAllByRole("button", { name: /sell 24g/i }).length).toBeGreaterThan(0);
+    });
+
+    it("manages talents and stocked gear from PartyView", async () => {
+        const user = userEvent.setup();
+
+        render(
+            <GameProvider
+                initialState={{
+                    party: createStarterParty("Ayla", "Cleric"),
+                    talentProgression: {
+                        talentRanksByHeroId: {},
+                        talentPointsByHeroId: {
+                            hero_1: 1,
+                        },
+                    },
+                    equipmentProgression: createLegacyEquipmentProgression(["sunlit-censer"], {}),
+                }}
+            >
+                <PartyView />
+            </GameProvider>,
+        );
+
+        await user.click(screen.getByRole("button", { name: /talents/i }));
+
+        const sunfireCard = screen.getByText("Sunfire").closest<HTMLElement>("div.rounded-xl");
+        if (!sunfireCard) {
+            throw new Error("Expected Sunfire talent card to be rendered.");
+        }
+
+        await user.click(within(sunfireCard).getByRole("button", { name: /learn/i }));
+
+        expect(screen.getByText(/0 pts/i)).toBeInTheDocument();
+        expect(within(sunfireCard).getByText(/rank 1\/3/i)).toBeInTheDocument();
+        expect(within(sunfireCard).getByRole("button", { name: /upgrade/i })).toBeDisabled();
+
+        await user.click(screen.getByRole("button", { name: /equipment/i }));
+
+        const weaponSection = screen.getByText(/^weapon$/i).closest<HTMLElement>("div.rounded-xl");
+        if (!weaponSection) {
+            throw new Error("Expected weapon section to be rendered.");
+        }
+
+        await user.click(within(weaponSection).getByRole("button", { name: /sunlit censer/i }));
+
+        expect(within(weaponSection).getByRole("button", { name: /remove/i })).toBeInTheDocument();
+        expect(within(weaponSection).getAllByText(/sunlit censer/i).length).toBeGreaterThan(0);
+        expect(screen.queryByText(/sell 24g/i)).not.toBeInTheDocument();
     });
 
     it("paginates between heroes when there are multiple party members", async () => {
