@@ -1,26 +1,37 @@
 import React from "react";
 import { CircleDollarSign, FastForward, HeartPulse, Brain } from "lucide-react";
+import { useShallow } from "zustand/react/shallow";
 
-import { useGame } from "../game/store/gameStore";
+import { useGameStore } from "../game/store/gameStore";
 import { INSIGHT_XP_BONUS_PER_LEVEL } from "../game/progressionMath";
 import { formatNumber } from "../utils/format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
 export const PrestigeUpgradesPanel: React.FC = () => {
-    const { state, actions } = useGame();
-    const heroSouls = state.heroSouls;
-    const prestigeUpgrades = state.prestigeUpgrades;
+    const {
+        heroSouls,
+        prestigeUpgrades,
+        getPrestigeUpgradeCost,
+        buyPrestigeUpgrade,
+    } = useGameStore(
+        useShallow((store) => ({
+            heroSouls: store.heroSouls,
+            prestigeUpgrades: store.prestigeUpgrades,
+            getPrestigeUpgradeCost: store.getPrestigeUpgradeCost,
+            buyPrestigeUpgrade: store.buyPrestigeUpgrade,
+        })),
+    );
 
     const currentCostReducerLevel = prestigeUpgrades.costReducer;
     const currentHpLevel = prestigeUpgrades.hpMultiplier;
     const currentGameSpeedLevel = prestigeUpgrades.gameSpeed;
     const currentXpLevel = prestigeUpgrades.xpMultiplier;
 
-    const costReducerCost = actions.getPrestigeUpgradeCost("costReducer");
-    const hpMultiplierCost = actions.getPrestigeUpgradeCost("hpMultiplier");
-    const gameSpeedCost = actions.getPrestigeUpgradeCost("gameSpeed");
-    const xpMultiplierCost = actions.getPrestigeUpgradeCost("xpMultiplier");
+    const costReducerCost = getPrestigeUpgradeCost("costReducer");
+    const hpMultiplierCost = getPrestigeUpgradeCost("hpMultiplier");
+    const gameSpeedCost = getPrestigeUpgradeCost("gameSpeed");
+    const xpMultiplierCost = getPrestigeUpgradeCost("xpMultiplier");
 
     return (
         <Card className="w-full max-w-150 bg-slate-900/80 backdrop-blur-md border-fuchsia-700/50 shadow-xl mt-4 shrink-0 [box-shadow:0_0_15px_rgba(192,38,211,0.1)]">
@@ -50,7 +61,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     </div>
                     <Button 
                         disabled={heroSouls.lt(costReducerCost)}
-                        onClick={() => actions.buyPrestigeUpgrade("costReducer")}
+                        onClick={() => buyPrestigeUpgrade("costReducer")}
                         variant="prestige" 
                         className="w-full"
                     >
@@ -71,7 +82,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     </div>
                     <Button 
                         disabled={heroSouls.lt(hpMultiplierCost)}
-                        onClick={() => actions.buyPrestigeUpgrade("hpMultiplier")}
+                        onClick={() => buyPrestigeUpgrade("hpMultiplier")}
                         variant="prestige" 
                         className="w-full"
                     >
@@ -92,7 +103,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     </div>
                     <Button 
                         disabled={heroSouls.lt(gameSpeedCost)}
-                        onClick={() => actions.buyPrestigeUpgrade("gameSpeed")}
+                        onClick={() => buyPrestigeUpgrade("gameSpeed")}
                         variant="prestige" 
                         className="w-full"
                     >
@@ -113,7 +124,7 @@ export const PrestigeUpgradesPanel: React.FC = () => {
                     </div>
                     <Button 
                         disabled={heroSouls.lt(xpMultiplierCost)}
-                        onClick={() => actions.buyPrestigeUpgrade("xpMultiplier")}
+                        onClick={() => buyPrestigeUpgrade("xpMultiplier")}
                         variant="prestige" 
                         className="w-full"
                     >

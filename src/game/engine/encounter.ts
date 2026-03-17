@@ -23,8 +23,7 @@ import {
     createEmptyTalentProgressionState,
     type GameState,
 } from "../store/types";
-
-import { prependCombatMessages } from "./combatEvents";
+import { prependCombatMessages } from "../combatLog";
 
 export const POST_VICTORY_HP_RECOVERY_RATIO = 0.25;
 
