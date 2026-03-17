@@ -1,13 +1,27 @@
 import React from 'react';
 import { Skull } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 
-import { getHeroClassTemplate } from '../game/classTemplates';
 import { getHeroBuildProfile } from '../game/heroBuilds';
-import { getCombatRatings, getEnemyArchetypeLabel, getStatusEffectBadge, getStatusEffectName } from '../game/entity';
-import type { Entity, StatusEffect } from '../game/entity';
-import type { CombatEvent, EquipmentProgressionState, TalentProgressionState } from '../game/store/types';
-import { useGame, useGameStore } from '../game/store/gameStore';
+import { getEnemyArchetypeLabel, getStatusEffectBadge, getStatusEffectName } from '../game/entity';
+import type { Entity } from '../game/entity';
+import type { CombatEvent } from '../game/store/types';
+import { useGameStore } from '../game/store/gameStore';
+import { selectEntityRosterState } from '../game/store/selectors';
 import { formatNumber } from '../utils/format';
+import {
+  formatPercent,
+  formatRatioPercent,
+  getEntityHealthBarColorClass,
+  getEntityResourceBarColorClass,
+  ratioToClampedPercent,
+} from '@/components/game-ui/helpers';
+import { ProgressBar, RatingGrid, StatusChip } from '@/components/game-ui/primitives';
+import {
+  getCombatRatingStatItems,
+  getDerivedDetailStatItems,
+  getResistanceStatItems,
+} from '@/components/game-ui/viewModels';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   AlertDialog,
@@ -27,85 +41,6 @@ interface Props {
   alignRight?: boolean;
   className?: string;
 }
-
-interface TooltipStat {
-  label: string;
-  value: string;
-}
-
-const hpColorFor = (entity: Entity) => {
-  const ratio = entity.currentHp.dividedBy(entity.maxHp).toNumber();
-  if (ratio <= 0.2) return 'bg-red-500';
-  if (ratio <= 0.5) return 'bg-amber-500';
-  return 'bg-emerald-500';
-};
-
-const resourceColorFor = (entity: Entity) => {
-  if (!entity.isEnemy) return getHeroClassTemplate(entity.class).resourceModel.barColorClass;
-  return 'bg-purple-500';
-};
-
-const formatTooltipValue = (value?: number) => {
-  if (typeof value !== "number" || Number.isNaN(value)) {
-    return "0";
-  }
-
-  if (Number.isInteger(value)) {
-    return value.toString();
-  }
-
-  return value.toFixed(1).replace(/\.0$/, "");
-};
-
-const attributeStatsFor = (entity: Entity): TooltipStat[] => [
-  { label: "VIT", value: formatTooltipValue(entity.attributes.vit) },
-  { label: "STR", value: formatTooltipValue(entity.attributes.str) },
-  { label: "DEX", value: formatTooltipValue(entity.attributes.dex) },
-  { label: "INT", value: formatTooltipValue(entity.attributes.int) },
-  { label: "WIS", value: formatTooltipValue(entity.attributes.wis) },
-  { label: "ACC", value: Math.round(entity.accuracyRating).toString() },
-  { label: "EVA", value: Math.round(entity.evasionRating).toString() },
-  { label: "PAR", value: Math.round(entity.parryRating).toString() },
-  { label: "APEN", value: formatTooltipValue(entity.armorPenetration) },
-  { label: "EPEN", value: formatTooltipValue(entity.elementalPenetration) },
-  { label: "TEN", value: formatTooltipValue(entity.tenacity) },
-];
-
-const resistanceStatsFor = (entity: Entity): TooltipStat[] => [
-  { label: "Fire", value: `${Math.round(entity.resistances.fire * 100)}%` },
-  { label: "Water", value: `${Math.round(entity.resistances.water * 100)}%` },
-  { label: "Earth", value: `${Math.round(entity.resistances.earth * 100)}%` },
-  { label: "Air", value: `${Math.round(entity.resistances.air * 100)}%` },
-  { label: "Light", value: `${Math.round(entity.resistances.light * 100)}%` },
-  { label: "Shadow", value: `${Math.round(entity.resistances.shadow * 100)}%` },
-];
-
-const combatRatingStatsFor = (
-  entity: Entity,
-  buildState: {
-    talentProgression: TalentProgressionState,
-    equipmentProgression: EquipmentProgressionState,
-  },
-): TooltipStat[] => {
-  const ratings = getCombatRatings(entity, buildState);
-
-  return [
-    { label: 'Power', value: formatTooltipValue(ratings.power) },
-    { label: 'Spell', value: formatTooltipValue(ratings.spellPower) },
-    { label: 'Precision', value: formatTooltipValue(ratings.precision) },
-    { label: 'Haste', value: formatTooltipValue(ratings.haste) },
-    { label: 'Guard', value: formatTooltipValue(ratings.guard) },
-    { label: 'Resolve', value: formatTooltipValue(ratings.resolve) },
-    { label: 'Potency', value: formatTooltipValue(ratings.potency) },
-    { label: 'Crit', value: formatTooltipValue(ratings.crit) },
-  ];
-};
-
-const statusChipClassName = (statusEffect: Pick<StatusEffect, 'polarity'>) => {
-  return statusEffect.polarity === 'buff'
-    ? 'border-emerald-400/40 bg-emerald-500/15 text-emerald-100'
-    : 'border-red-400/30 bg-red-500/10 text-red-100';
-};
 
 const combatEventClassName = (event: CombatEvent) => {
   switch (event.kind) {
@@ -140,10 +75,9 @@ const combatEventClassName = (event: CombatEvent) => {
 };
 
 export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, className }) => {
-  const { actions } = useGame();
-  const combatEvents = useGameStore((state) => state.combatEvents);
-  const talentProgression = useGameStore((state) => state.talentProgression);
-  const equipmentProgression = useGameStore((state) => state.equipmentProgression);
+  const { combatEvents, talentProgression, equipmentProgression, retireHero } = useGameStore(
+    useShallow(selectEntityRosterState),
+  );
   const buildState = { talentProgression, equipmentProgression };
 
   const sortedEntities = [...entities].sort((a, b) => Number(b.currentHp.gt(0)) - Number(a.currentHp.gt(0)));
@@ -158,6 +92,9 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
       <CardContent className="flex-1 min-h-0 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 custom-scrollbar snap-y snap-proximity">
         {sortedEntities.map(entity => {
           const buildProfile = getHeroBuildProfile(entity, buildState);
+          const hpRatio = entity.maxHp.lte(0) ? 0 : entity.currentHp.dividedBy(entity.maxHp).toNumber();
+          const resourceRatio = entity.maxResource.lte(0) ? 0 : entity.currentResource.dividedBy(entity.maxResource).toNumber();
+          const expRatio = entity.expToNext.gt(0) ? entity.exp.dividedBy(entity.expToNext).toNumber() : 0;
 
           return (
           <Card key={entity.id} className={`shrink-0 snap-start overflow-visible border-slate-700/60 bg-slate-800/40 transition-all ${entity.currentHp.lte(0) ? 'opacity-50 grayscale' : 'hover:border-slate-500 shadow-md'}`}>
@@ -199,7 +136,7 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                         <AlertDialogFooter className="mt-4 gap-2 sm:gap-0">
                           <AlertDialogCancel className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700 hover:text-slate-100">Cancel</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => actions.retireHero(entity.id)}
+                            onClick={() => retireHero(entity.id)}
                             className="bg-red-600 hover:bg-red-700 text-white font-bold tracking-wider"
                           >
                             Retire Hero
@@ -235,12 +172,11 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                     className="pointer-events-none absolute left-0 top-0 z-10 flex max-w-[45%] flex-wrap gap-1"
                   >
                     {entity.statusEffects.map((statusEffect) => (
-                      <span
+                      <StatusChip
                         key={`${entity.id}-${statusEffect.key}`}
-                        className={`rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.18em] shadow-md backdrop-blur-sm ${statusChipClassName(statusEffect)}`}
-                      >
-                        {getStatusEffectBadge(statusEffect)}
-                      </span>
+                        polarity={statusEffect.polarity}
+                        label={getStatusEffectBadge(statusEffect)}
+                      />
                     ))}
                   </div>
                 )}
@@ -270,25 +206,21 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                   <div className="space-y-2">
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.28em] text-violet-200/85">Combat Ratings</p>
-                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                        {combatRatingStatsFor(entity, buildState).map((stat) => (
-                          <div key={stat.label} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
-                            <dt className="text-slate-400">{stat.label}</dt>
-                            <dd className="font-mono font-bold text-slate-50">{stat.value}</dd>
-                          </div>
-                        ))}
-                      </dl>
+                      <RatingGrid
+                        items={getCombatRatingStatItems(entity, buildState)}
+                        columns={2}
+                        className="mt-2"
+                        itemClassName="rounded-md bg-slate-900/70 px-2 py-1"
+                      />
                     </div>
                     <div>
                       <p className="text-[9px] font-black uppercase tracking-[0.28em] text-amber-200/85">Derived Detail</p>
-                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                        {attributeStatsFor(entity).map((stat) => (
-                          <div key={stat.label} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
-                            <dt className="text-slate-400">{stat.label}</dt>
-                            <dd className="font-mono font-bold text-slate-50">{stat.value}</dd>
-                          </div>
-                        ))}
-                      </dl>
+                      <RatingGrid
+                        items={getDerivedDetailStatItems(entity)}
+                        columns={2}
+                        className="mt-2"
+                        itemClassName="rounded-md bg-slate-900/70 px-2 py-1"
+                      />
                     </div>
                     {!entity.isEnemy && buildProfile.passive ? (
                       <div className="border-t border-slate-800/80 pt-2">
@@ -320,14 +252,12 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
                     ) : null}
                     <div className="border-t border-slate-800/80 pt-2">
                       <p className="text-[9px] font-black uppercase tracking-[0.28em] text-cyan-200/80">Resistances</p>
-                      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
-                        {resistanceStatsFor(entity).map((stat) => (
-                          <div key={stat.label} className="flex items-center justify-between gap-2 rounded-md bg-slate-900/70 px-2 py-1">
-                            <dt className="text-slate-400">{stat.label}</dt>
-                            <dd className="font-mono font-bold text-slate-50">{stat.value}</dd>
-                          </div>
-                        ))}
-                      </dl>
+                      <RatingGrid
+                        items={getResistanceStatItems(entity)}
+                        columns={2}
+                        className="mt-2"
+                        itemClassName="rounded-md bg-slate-900/70 px-2 py-1"
+                      />
                     </div>
                     {entity.statusEffects.length > 0 && (
                       <div className="border-t border-slate-800/80 pt-2">
@@ -356,51 +286,50 @@ export const EntityRoster: React.FC<Props> = ({ title, entities, alignRight, cla
               </div>
 
               <div className="space-y-2">
-                <div className="relative h-4 min-h-4 bg-slate-950/60 rounded overflow-hidden border border-slate-900">
-                  <div
-                    className={`absolute inset-y-0 left-0 transition-all duration-200 ease-out ${hpColorFor(entity)}`}
-                    style={{ width: `${Math.max(0, Math.min(100, entity.currentHp.dividedBy(entity.maxHp).times(100).toNumber()))}%` }}
-                  />
-                  <span className="absolute inset-0 flex items-center justify-between px-2 text-[10px] sm:text-xs font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] z-10">
-                    <span>HP</span>
-                    <span>{formatNumber(entity.currentHp)} / {formatNumber(entity.maxHp)}</span>
-                  </span>
-                </div>
+                <ProgressBar
+                  label="HP"
+                  value={`${formatNumber(entity.currentHp)} / ${formatNumber(entity.maxHp)}`}
+                  percent={ratioToClampedPercent(hpRatio)}
+                  colorClassName={getEntityHealthBarColorClass(entity)}
+                  captionPosition="overlay"
+                  barClassName="h-4 min-h-4 rounded border border-slate-900 bg-slate-950/60"
+                  captionClassName="text-[10px] sm:text-xs"
+                  fillClassName="absolute inset-y-0 left-0 duration-200 ease-out"
+                />
 
-                <div className="relative h-3.5 min-h-3.5 bg-slate-950/60 rounded overflow-hidden border border-slate-900">
-                  <div
-                    className={`absolute inset-y-0 left-0 transition-all duration-200 ease-out ${resourceColorFor(entity)}`}
-                    style={{ width: `${Math.max(0, Math.min(100, entity.currentResource.dividedBy(entity.maxResource).times(100).toNumber()))}%` }}
-                  />
-                  <span className="absolute inset-0 flex items-center justify-between px-2 text-[9px] sm:text-[10px] font-bold text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.8)] z-10">
-                    <span>Resource</span>
-                    <span>{formatNumber(entity.currentResource)} / {formatNumber(entity.maxResource)}</span>
-                  </span>
-                </div>
+                <ProgressBar
+                  label="Resource"
+                  value={`${formatNumber(entity.currentResource)} / ${formatNumber(entity.maxResource)}`}
+                  percent={ratioToClampedPercent(resourceRatio)}
+                  colorClassName={getEntityResourceBarColorClass(entity)}
+                  captionPosition="overlay"
+                  barClassName="h-3.5 min-h-3.5 rounded border border-slate-900 bg-slate-950/60"
+                  captionClassName="text-[9px] sm:text-[10px]"
+                  fillClassName="absolute inset-y-0 left-0 duration-200 ease-out"
+                />
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-wider font-semibold">
-                    <span>Action Readiness</span>
-                    <span>{Math.floor(entity.actionProgress)}%</span>
-                  </div>
-                  <div className="relative h-1.5 min-h-1.5 bg-slate-900 border border-slate-800 rounded overflow-hidden">
-                    <div
-                      className="absolute inset-y-0 left-0 bg-amber-400 transition-all duration-75 ease-linear"
-                      style={{ width: `${Math.min(100, entity.actionProgress)}%` }}
-                    />
-                  </div>
-                </div>
+                <ProgressBar
+                  label="Action Readiness"
+                  value={formatPercent(Math.floor(entity.actionProgress))}
+                  percent={entity.actionProgress}
+                  colorClassName="bg-amber-400"
+                  barClassName="h-1.5 min-h-1.5 rounded border border-slate-800 bg-slate-900"
+                  captionClassName="text-[9px] text-slate-400 font-semibold"
+                  fillClassName="absolute inset-y-0 left-0 duration-75 ease-linear"
+                />
               </div>
 
               {!entity.isEnemy && (
                 <div className="pt-1 border-t border-slate-700/50">
-                  <div className="flex items-center justify-between text-[9px] text-slate-400 uppercase tracking-wider font-semibold mb-1">
-                    <span>Experience</span>
-                    <span>{Math.floor(entity.exp.dividedBy(entity.expToNext).times(100).toNumber())}%</span>
-                  </div>
-                  <div className="h-1.5 w-full bg-slate-900 rounded overflow-hidden">
-                    <div className="h-full bg-indigo-500" style={{ width: `${Math.min(100, entity.exp.dividedBy(entity.expToNext).times(100).toNumber())}%` }} />
-                  </div>
+                  <ProgressBar
+                    label="Experience"
+                    value={formatRatioPercent(expRatio)}
+                    percent={ratioToClampedPercent(expRatio)}
+                    colorClassName="bg-indigo-500"
+                    barClassName="h-1.5 w-full"
+                    trackClassName="bg-slate-900"
+                    captionClassName="mb-1 text-[9px] text-slate-400 font-semibold"
+                  />
                 </div>
               )}
             </div>

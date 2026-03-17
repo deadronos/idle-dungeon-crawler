@@ -33,16 +33,36 @@ import {
     getEquipmentAffinitySummary,
     getNextInventoryCapacityUpgrade,
 } from "../game/equipmentProgression";
+import {
+    selectPartyHeroes,
+    selectPartyViewState,
+} from "../game/store/selectors";
 import type {
     EquipmentProgressionState,
     TalentProgressionState,
 } from "../game/store/types";
-import { getCombatRatings } from "../game/entity";
 import type { Entity, HeroClass } from "../game/entity";
 import { useGameStore } from "../game/store/gameStore";
 import { formatNumber } from "../utils/format";
+import {
+    formatRatioPercent,
+    formatUiStat,
+    getHealthBarColorClass,
+    ratioToClampedPercent,
+} from "@/components/game-ui/helpers";
+import {
+    ProgressBar,
+    RatingGrid,
+    StatRow,
+} from "@/components/game-ui/primitives";
+import {
+    getBaseAttributeStatItems,
+    getCombatRatingStatItems,
+    getResistanceStatItems,
+} from "@/components/game-ui/viewModels";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { useShallow } from "zustand/react/shallow";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -63,40 +83,12 @@ const CLASS_BADGE: Record<HeroClass, string> = {
     Archer: "text-emerald-300 border-emerald-400/30 bg-emerald-500/10",
 };
 
-const fmtStat = (v: number): string => {
-    if (Number.isNaN(v)) return "0";
-    if (Number.isInteger(v)) return String(v);
-    return v.toFixed(1).replace(/\.0$/, "");
-};
-
-// ─── StatRow ─────────────────────────────────────────────────────────────────
-
-const StatRow: React.FC<{ label: string; value: string; accent?: boolean }> = ({
-    label,
-    value,
-    accent,
-}) => (
-    <div
-        className={`flex items-center justify-between rounded-lg px-3 py-2 ${
-            accent
-                ? "border border-slate-600/50 bg-slate-800/70"
-                : "border border-slate-700/30 bg-slate-900/40"
-        }`}
-    >
-        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            {label}
-        </span>
-        <span className="text-sm font-black text-slate-100">{value}</span>
-    </div>
-);
-
 // ─── BasicStatsPanel ─────────────────────────────────────────────────────────
 
 const BasicStatsPanel: React.FC<{ hero: Entity; resourceLabel: string }> = ({
     hero,
     resourceLabel,
 }) => {
-    const { vit, str, dex, int: intel, wis } = hero.attributes;
     return (
         <div className="space-y-5">
             <section className="space-y-2">
@@ -122,27 +114,7 @@ const BasicStatsPanel: React.FC<{ hero: Entity; resourceLabel: string }> = ({
                 <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
                     Attributes
                 </h5>
-                <div className="grid grid-cols-5 gap-1.5">
-                    {(
-                        [
-                            ["VIT", vit],
-                            ["STR", str],
-                            ["DEX", dex],
-                            ["INT", intel],
-                            ["WIS", wis],
-                        ] as [string, number][]
-                    ).map(([label, val]) => (
-                        <div
-                            key={label}
-                            className="flex flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/80 py-2 px-1"
-                        >
-                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
-                                {label}
-                            </span>
-                            <span className="mt-0.5 text-sm font-black text-slate-100">{val}</span>
-                        </div>
-                    ))}
-                </div>
+                <RatingGrid items={getBaseAttributeStatItems(hero)} columns={5} />
             </section>
         </div>
     );
@@ -154,82 +126,48 @@ const SecondaryStatsPanel: React.FC<{
     hero: Entity;
     buildState: { talentProgression: TalentProgressionState; equipmentProgression: EquipmentProgressionState };
 }> = ({ hero, buildState }) => {
-    const ratings = getCombatRatings(hero, buildState);
-    const RATING_LABELS: Record<string, string> = {
-        power: "POW",
-        spellPower: "SP",
-        precision: "PRE",
-        haste: "HST",
-        guard: "GRD",
-        resolve: "RES",
-        potency: "POT",
-        crit: "CRT",
-    };
-
     return (
         <div className="space-y-5">
             <section className="space-y-2">
                 <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
                     Derived Stats
                 </h5>
-                <StatRow label="Accuracy" value={fmtStat(hero.accuracyRating)} />
-                <StatRow label="Evasion" value={fmtStat(hero.evasionRating)} />
-                <StatRow label="Parry" value={fmtStat(hero.parryRating)} />
+                <StatRow label="Accuracy" value={formatUiStat(hero.accuracyRating)} />
+                <StatRow label="Evasion" value={formatUiStat(hero.evasionRating)} />
+                <StatRow label="Parry" value={formatUiStat(hero.parryRating)} />
                 <StatRow
                     label="Crit Chance"
-                    value={`${(hero.critChance * 100).toFixed(1)}%`}
+                    value={formatRatioPercent(hero.critChance, 1)}
                 />
                 <StatRow
                     label="Crit Damage"
-                    value={`${(hero.critDamage * 100).toFixed(0)}%`}
+                    value={formatRatioPercent(hero.critDamage)}
                 />
-                <StatRow label="Armor Pen" value={fmtStat(hero.armorPenetration)} />
-                <StatRow label="Elemental Pen" value={fmtStat(hero.elementalPenetration)} />
-                <StatRow label="Tenacity" value={fmtStat(hero.tenacity)} />
+                <StatRow label="Armor Pen" value={formatUiStat(hero.armorPenetration)} />
+                <StatRow label="Elemental Pen" value={formatUiStat(hero.elementalPenetration)} />
+                <StatRow label="Tenacity" value={formatUiStat(hero.tenacity)} />
             </section>
 
             <section className="space-y-2">
                 <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
                     Combat Ratings
                 </h5>
-                <div className="grid grid-cols-4 gap-1.5">
-                    {(Object.entries(ratings) as [string, number][]).map(([key, val]) => (
-                        <div
-                            key={key}
-                            className="flex flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/80 py-2 px-1"
-                        >
-                            <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
-                                {RATING_LABELS[key] ?? key.slice(0, 3).toUpperCase()}
-                            </span>
-                            <span className="mt-0.5 text-sm font-black text-slate-100">
-                                {Math.round(val)}
-                            </span>
-                        </div>
-                    ))}
-                </div>
+                <RatingGrid
+                    items={getCombatRatingStatItems(hero, buildState, {
+                        shortLabels: true,
+                        roundValues: true,
+                    })}
+                />
             </section>
 
             <section className="space-y-2">
                 <h5 className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">
                     Resistances
                 </h5>
-                <div className="grid grid-cols-3 gap-1.5">
-                    {(Object.entries(hero.resistances) as [string, number][]).map(
-                        ([element, value]) => (
-                            <div
-                                key={element}
-                                className="flex flex-col items-center rounded-xl border border-slate-700/50 bg-slate-800/80 py-2 px-1"
-                            >
-                                <span className="text-[9px] font-black uppercase tracking-wider text-slate-500">
-                                    {element.slice(0, 3)}
-                                </span>
-                                <span className="mt-0.5 text-sm font-black text-slate-100">
-                                    {Math.round(value * 100)}%
-                                </span>
-                            </div>
-                        ),
-                    )}
-                </div>
+                <RatingGrid
+                    items={getResistanceStatItems(hero, { shortLabels: true })}
+                    columns={3}
+                />
             </section>
         </div>
     );
@@ -527,23 +465,24 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({
 }) => {
     const [activeTab, setActiveTab] = useState<CharacterSheetTab>("basic");
 
-    const talentProgression = useGameStore((s) => s.talentProgression);
-    const equipmentProgression = useGameStore((s) => s.equipmentProgression);
-    const unlockTalent = useGameStore((s) => s.unlockTalent);
-    const equipItem = useGameStore((s) => s.equipItem);
-    const unequipItem = useGameStore((s) => s.unequipItem);
-    const sellInventoryItem = useGameStore((s) => s.sellInventoryItem);
-    const buyInventoryCapacityUpgrade = useGameStore((s) => s.buyInventoryCapacityUpgrade);
-    const highestFloorCleared = useGameStore((s) => s.highestFloorCleared);
-    const gold = useGameStore((s) => s.gold);
+    const {
+        talentProgression,
+        equipmentProgression,
+        unlockTalent,
+        equipItem,
+        unequipItem,
+        sellInventoryItem,
+        buyInventoryCapacityUpgrade,
+        highestFloorCleared,
+        gold,
+    } = useGameStore(useShallow(selectPartyViewState));
 
     const template = getHeroClassTemplate(hero.class);
     const heroClass = hero.class as HeroClass;
     const badgeClass = CLASS_BADGE[heroClass] ?? "text-slate-300 border-slate-600/30 bg-slate-700/20";
+    const buildState = { talentProgression, equipmentProgression };
 
     const hpRatio = hero.currentHp.dividedBy(hero.maxHp).toNumber();
-    const hpColor =
-        hpRatio <= 0.2 ? "bg-red-500" : hpRatio <= 0.5 ? "bg-amber-500" : "bg-emerald-500";
 
     const expRatio = hero.expToNext.gt(0)
         ? hero.exp.dividedBy(hero.expToNext).clamp(0, 1).toNumber()
@@ -615,35 +554,21 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({
                             </div>
                         </div>
 
-                        {/* HP bar */}
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                <span>HP</span>
-                                <span>
-                                    {formatNumber(hero.currentHp)} / {formatNumber(hero.maxHp)}
-                                </span>
-                            </div>
-                            <div className="h-2 rounded-full bg-slate-700/60 overflow-hidden">
-                                <div
-                                    className={`h-full rounded-full transition-all ${hpColor}`}
-                                    style={{ width: `${Math.max(0, Math.min(100, hpRatio * 100))}%` }}
-                                />
-                            </div>
-                        </div>
+                        <ProgressBar
+                            label="HP"
+                            value={`${formatNumber(hero.currentHp)} / ${formatNumber(hero.maxHp)}`}
+                            percent={ratioToClampedPercent(hpRatio)}
+                            colorClassName={getHealthBarColorClass(hpRatio)}
+                            barClassName="h-2"
+                        />
 
-                        {/* EXP bar */}
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                                <span>EXP</span>
-                                <span>{Math.round(expRatio * 100)}%</span>
-                            </div>
-                            <div className="h-1.5 rounded-full bg-slate-700/60 overflow-hidden">
-                                <div
-                                    className="h-full rounded-full bg-violet-500 transition-all"
-                                    style={{ width: `${expRatio * 100}%` }}
-                                />
-                            </div>
-                        </div>
+                        <ProgressBar
+                            label="EXP"
+                            value={formatRatioPercent(expRatio)}
+                            percent={ratioToClampedPercent(expRatio)}
+                            colorClassName="bg-violet-500"
+                            barClassName="h-1.5"
+                        />
 
                         {/* Class description */}
                         <p className="text-center text-xs text-slate-500 italic leading-relaxed">
@@ -687,7 +612,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({
                     {activeTab === "secondary" && (
                         <SecondaryStatsPanel
                             hero={hero}
-                            buildState={{ talentProgression, equipmentProgression }}
+                            buildState={buildState}
                         />
                     )}
                     {activeTab === "talents" && (
@@ -719,8 +644,7 @@ const CharacterSheet: React.FC<CharacterSheetProps> = ({
 // ─── PartyView ────────────────────────────────────────────────────────────────
 
 export const PartyView: React.FC = () => {
-    const allParty = useGameStore((s) => s.party);
-    const party = allParty.filter((e) => !e.isEnemy);
+    const party = useGameStore(useShallow(selectPartyHeroes));
     const [heroIndex, setHeroIndex] = useState(0);
 
     const clampedIndex = Math.min(heroIndex, Math.max(0, party.length - 1));
