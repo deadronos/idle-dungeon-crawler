@@ -1,8 +1,11 @@
 # 006 - Hero Retirement & Prestige Mechanics
 
+**Date:** 2026-03-10
+**Status:** Accepted
+
 ## Context
 
-As the player progresses deeper into the dungeon and recruits more heroes, the primary currency (Gold) scales exponentially for permanent upgrades (`Battle Drills`, `Fortification`, and Recruitment limits). To provide a deeper, long-term progression system without resetting the entire game state (a "soft wipe"), we introduced the **Hero Retirement** mechanic.
+As the player progresses deeper into the dungeon and recruits more heroes, Gold remains the short- and mid-run currency for repeatable upgrades such as `Battle Drills` and `Fortification`, plus roster-growth purchases in the shop. To provide a deeper, long-term progression system without resetting the entire game state (a "soft wipe"), we introduced the **Hero Retirement** mechanic.
 
 ## Decision
 
@@ -20,8 +23,8 @@ Players can now permanently retire recruited heroes in exchange for a premium cu
 The Altar provides upgrades that alter fundamental game mechanics, not just flat stat boosts (which gold already covers).
 
 1. **Greed (Gold Cost Reducer)**
-   - *Effect:* Reduces the exponential growth rate of all Gold-based upgrades (`Battle Drills`, `Fortification`).
-   - *Mechanic:* The cost formula dynamically subtracts `(level * 0.01)` from each upgrade's distinct base growth rate, down to a minimum rate of `1.05`. Each level of Greed makes exponential upgrades significantly cheaper over time.
+   - *Effect:* Reduces the exponential growth rate of the repeatable Gold-based stat upgrades (`Battle Drills`, `Fortification`).
+   - *Mechanic:* The cost formula dynamically subtracts `(level * 0.01)` from each upgrade's distinct base growth rate, down to a minimum rate of `1.05`. Each level of Greed makes those upgrades significantly cheaper over time.
 
 2. **Vitality (HP Multiplier)**
    - *Effect:* Increases the base HP scaling per point of VIT.

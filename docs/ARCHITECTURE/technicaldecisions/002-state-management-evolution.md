@@ -42,9 +42,10 @@ State that changes on combat ticks and should be subscribed to selectively:
 * `enemies`
 * `floor`
 * `gold`
-* `autoProgress`
+* `autoFight`
+* `autoAdvance`
 * `combatLog`
-* lightweight combat metadata such as `inCombat`, `bossFloor`, or `tickCount`
+* `combatEvents`
 
 ### Progression and meta slice
 
@@ -70,7 +71,8 @@ The store exposes small, explicit actions rather than one giant reducer-shaped A
 
 Implemented high-level actions:
 
-* `initializeParty(hero)`
+* `initializeParty(party)`
+* `toggleAutoFight()`
 * `toggleAutoAdvance()`
 * `nextFloor()`
 * `previousFloor()`
@@ -78,6 +80,7 @@ Implemented high-level actions:
 * `appendCombatLog(message)`
 * `stepSimulation(deltaMs)`
 * `setActiveSection(section)`
+* `reset(overrides?)`
 
 The `stepSimulation` action delegates combat math and rules to pure engine helpers in `src/game/engine/`, with tick orchestration and multi-tick victory/wipe resolution in `simulation.ts` and focused modules such as `combatAi.ts`, `combatMath.ts`, `combatEvents.ts`, `encounter.ts`, and `statusEffects.ts` handling the extracted rule sets. Progression actions likewise delegate purchase, recruitment, retirement, talent, equipment, inventory, and prestige rules to pure helpers in `src/game/progressionRules.ts`. This keeps the store orchestration-focused rather than turning it into a monolithic rules file.
 
@@ -101,7 +104,7 @@ The migration landed with a compatibility path:
 * Browser-only persistence now hangs off the provider lifecycle: when no explicit `initialState` is supplied, the provider restores the latest autosave from `localStorage` and writes a fresh JSON save every 10 seconds.
 * Save export/import now flows through an explicit versioned migration layer before runtime hydration. Older payloads are normalized into the current schema first, then handed to `reset(...)`, which keeps future additive progression systems from requiring one-off compatibility hacks in unrelated store code.
 
-The first concrete UI slice stores section navigation (`dungeon` vs `shop`) separately from combat state, which keeps presentational concerns out of the simulation loop.
+The first concrete UI slice stores section navigation (`dungeon`, `shop`, and `party`) separately from combat state, which keeps presentational concerns out of the simulation loop.
 Save management stays outside the hot combat loop as well: export/import controls serialize the current playable `GameState` to a JSON file and feed imported saves back through `reset(...)`, so the store remains the single source of truth after deserialization.
 
 ## Consequences
