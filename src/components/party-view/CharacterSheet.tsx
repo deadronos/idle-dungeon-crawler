@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
     BarChart2,
     ChevronLeft,
@@ -11,6 +11,7 @@ import { useShallow } from "zustand/react/shallow";
 
 import { getHeroClassTemplate } from "@/game/classTemplates";
 import type { Entity, HeroClass } from "@/game/entity";
+import type { HeroBuildState } from "@/game/heroBuilds";
 import { selectPartyViewState } from "@/game/store/selectors";
 import { useGameStore } from "@/game/store/gameStore";
 import { formatNumber } from "@/utils/format";
@@ -27,6 +28,13 @@ import { SecondaryStatsPanel } from "@/components/party-view/SecondaryStatsPanel
 import { TalentsPanel } from "@/components/party-view/TalentsPanel";
 import { EquipmentPanel } from "@/components/party-view/EquipmentPanel";
 import { CLASS_BADGE, type CharacterSheetTab } from "@/components/party-view/constants";
+
+const CHARACTER_SHEET_TABS: Array<{ id: CharacterSheetTab; label: string; Icon: React.ComponentType<{ className?: string }> }> = [
+    { id: "basic", label: "Basic Stats", Icon: BarChart2 },
+    { id: "secondary", label: "Secondary", Icon: Layers },
+    { id: "talents", label: "Talents", Icon: Star },
+    { id: "equipment", label: "Equipment", Icon: Package },
+];
 
 interface CharacterSheetProps {
     hero: Entity;
@@ -60,19 +68,15 @@ export const CharacterSheet: React.FC<CharacterSheetProps> = ({
     const template = getHeroClassTemplate(hero.class);
     const heroClass = hero.class as HeroClass;
     const badgeClass = CLASS_BADGE[heroClass] ?? "text-slate-300 border-slate-600/30 bg-slate-700/20";
-    const buildState = { talentProgression, equipmentProgression };
+    const buildState = useMemo<HeroBuildState>(() => ({
+        talentProgression,
+        equipmentProgression,
+    }), [talentProgression, equipmentProgression]);
 
     const hpRatio = hero.currentHp.dividedBy(hero.maxHp).toNumber();
     const expRatio = hero.expToNext.gt(0)
         ? hero.exp.dividedBy(hero.expToNext).clamp(0, 1).toNumber()
         : 0;
-
-    const tabs: Array<{ id: CharacterSheetTab; label: string; icon: React.ReactNode }> = [
-        { id: "basic", label: "Basic Stats", icon: <BarChart2 className="size-3.5" /> },
-        { id: "secondary", label: "Secondary", icon: <Layers className="size-3.5" /> },
-        { id: "talents", label: "Talents", icon: <Star className="size-3.5" /> },
-        { id: "equipment", label: "Equipment", icon: <Package className="size-3.5" /> },
-    ];
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6 w-full max-w-5xl mx-auto">
@@ -152,7 +156,7 @@ export const CharacterSheet: React.FC<CharacterSheetProps> = ({
 
                 <Card className="bg-slate-900/80 border-slate-700/50 shadow-xl">
                     <CardContent className="p-3 space-y-1">
-                        {tabs.map((tab) => {
+                        {CHARACTER_SHEET_TABS.map((tab) => {
                             const isActive = activeTab === tab.id;
 
                             return (
@@ -166,7 +170,7 @@ export const CharacterSheet: React.FC<CharacterSheetProps> = ({
                                             : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-200"
                                     }`}
                                 >
-                                    {tab.icon}
+                                    <tab.Icon className="size-3.5" />
                                     {tab.label}
                                 </button>
                             );

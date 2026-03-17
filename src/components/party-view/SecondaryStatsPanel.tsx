@@ -1,7 +1,7 @@
 import type React from "react";
 
 import type { Entity } from "@/game/entity";
-import type { EquipmentProgressionState, TalentProgressionState } from "@/game/store/types";
+import type { HeroBuildState } from "@/game/heroBuilds";
 import { formatRatioPercent, formatUiStat } from "@/components/game-ui/helpers";
 import { RatingGrid, StatRow } from "@/components/game-ui/primitives";
 import {
@@ -11,7 +11,7 @@ import {
 
 export const SecondaryStatsPanel: React.FC<{
     hero: Entity;
-    buildState: { talentProgression: TalentProgressionState; equipmentProgression: EquipmentProgressionState };
+    buildState: HeroBuildState;
 }> = ({ hero, buildState }) => {
     return (
         <div className="space-y-5">

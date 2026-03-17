@@ -1,7 +1,6 @@
 import type { SaveEnvelope, SaveMigration } from "./persistence.types";
 import {
     DEFAULT_SAVE_TIMESTAMP,
-    GAME_STATE_EXPORT_VERSION,
     LEGACY_UNVERSIONED_SAVE_VERSION,
 } from "./persistence.types";
 import {
@@ -13,29 +12,31 @@ import {
     sanitizeTalentProgression,
 } from "./persistence.validation";
 
-export const SAVE_MIGRATIONS: Record<number, SaveMigration> = {
-    0: (state) => ({ ...state }),
-    1: (state) => ({
+export const SAVE_MIGRATIONS = [
+    ((state) => ({ ...state })) satisfies SaveMigration,
+    ((state) => ({
         ...state,
         party: sanitizeEntityArray(state.party),
         enemies: sanitizeEntityArray(state.enemies),
         combatEvents: [],
         talentProgression: sanitizeTalentProgression(state.talentProgression),
         equipmentProgression: sanitizeEquipmentProgression(state.equipmentProgression),
-    }),
-    2: (state) => ({
+    })) satisfies SaveMigration,
+    ((state) => ({
         ...state,
         equipmentProgression: sanitizeEquipmentProgression(state.equipmentProgression),
-    }),
-    3: (state) => ({
+    })) satisfies SaveMigration,
+    ((state) => ({
         ...state,
         talentProgression: sanitizeTalentProgression(state.talentProgression),
-    }),
-    4: (state) => ({
+    })) satisfies SaveMigration,
+    ((state) => ({
         ...state,
         party: Array.isArray(state.party) ? state.party.map(normalizeHeroProgressionToCurrentCurve) : state.party,
-    }),
-};
+    })) satisfies SaveMigration,
+] as const;
+
+export const GAME_STATE_EXPORT_VERSION = LEGACY_UNVERSIONED_SAVE_VERSION + SAVE_MIGRATIONS.length;
 
 export const normalizeSaveEnvelope = (value: unknown): SaveEnvelope => {
     if (!isRecord(value)) {

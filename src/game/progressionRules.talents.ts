@@ -1,4 +1,4 @@
-import { prependCombatMessages } from "./engine/simulation";
+import { prependCombatMessages } from "./combatLog";
 import { getTalentDefinition, synchronizeTalentProgression } from "./heroBuilds";
 import { getRecalculatedParty } from "./progressionRules.shared";
 import type { GameState } from "./store/types";

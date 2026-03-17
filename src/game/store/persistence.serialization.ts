@@ -1,9 +1,8 @@
 import { createInitialGameState } from "../engine/simulation";
 import {
-    GAME_STATE_EXPORT_VERSION,
     GAME_STATE_STORAGE_KEY,
 } from "./persistence.types";
-import { migrateSaveEnvelope, normalizeSaveEnvelope } from "./persistence.migrations";
+import { GAME_STATE_EXPORT_VERSION, migrateSaveEnvelope, normalizeSaveEnvelope } from "./persistence.migrations";
 import { normalizeHeroProgressionToCurrentCurve, toPartialGameState } from "./persistence.validation";
 import type { GameState } from "./types";
 

@@ -82,14 +82,15 @@ Implemented high-level actions:
 * `setActiveSection(section)`
 * `reset(overrides?)`
 
-The `stepSimulation` action delegates combat math and rules to pure engine helpers in `src/game/engine/`, with tick orchestration and multi-tick victory/wipe resolution in `simulation.ts` and focused modules such as `combatAi.ts`, `combatMath.ts`, `combatEvents.ts`, `encounter.ts`, `statusEffects.ts`, and `turnResolution.ts` handling the extracted rule sets. Progression actions likewise delegate purchase, recruitment, retirement, talent, equipment, inventory, and prestige rules to focused helpers re-exported through `src/game/progressionRules.ts`. This keeps the store orchestration-focused rather than turning it into a monolithic rules file.
+The `stepSimulation` action delegates combat math and rules to pure engine helpers in `src/game/engine/`, with tick orchestration and multi-tick victory/wipe resolution in `simulation.ts` and focused modules such as `combatAi.ts`, `combatMath.ts`, `combatEvents.ts`, `encounter.ts`, `simulationDraft.ts`, `simulationProgression.ts`, `statusEffects.ts`, and `turnResolution.ts` handling the extracted rule sets. Progression actions likewise delegate purchase, recruitment, retirement, talent, equipment, inventory, and prestige rules to focused helpers re-exported through `src/game/progressionRules.ts`. Generic combat-log formatting now lives in `src/game/combatLog.ts` so progression and store code no longer depend on the simulation orchestrator just to prepend messages. This keeps the store orchestration-focused rather than turning it into a monolithic rules file.
 
 ## Recommended Module Boundaries
 
 The implementation is now split roughly as follows:
 
 * `src/game/entity.ts` — compatibility barrel over focused entity modules (`entity.types.ts`, `entity.status.ts`, `entity.enemies.ts`, `entity.combat.ts`, and `entity.factories.ts`)
-* `src/game/engine/` — pure combat helpers such as target selection, damage resolution, status processing, encounter setup, reward distribution, combat-event presentation, per-actor turn resolution, and tick stepping
+* `src/game/combatLog.ts` — neutral combat-log formatting helpers shared by engine, progression, and store modules
+* `src/game/engine/` — pure combat helpers such as target selection, damage resolution, status processing, encounter setup, reward distribution, combat-event presentation, per-actor turn resolution, simulation draft cloning, and tick stepping
 * `src/game/progressionRules.ts` — compatibility barrel over focused progression/meta transitions for upgrades, hero management, talents, equipment, inventory, and prestige
 * `src/game/store/` — `zustand` store setup, slice-oriented state types, provider compatibility, selectors, and persistence split into validation, migration, serialization, and typed constants modules
 * `src/components/` — UI that subscribes to narrow selectors instead of the whole game object, with large panels such as `PartyView` decomposed into focused subcomponents under `src/components/party-view/`
@@ -102,7 +103,7 @@ The migration landed with a compatibility path:
 * `useGame` is retained as a compatibility hook for tests and any remaining legacy callers, but production UI should prefer `useGameStore(selector)`.
 * New and migrated UI components subscribe through `useGameStore(selector)` so unrelated panels do not rerender on every ATB tick.
 * Browser-only persistence now hangs off the provider lifecycle: when no explicit `initialState` is supplied, the provider restores the latest autosave from `localStorage` and writes a fresh JSON save every 10 seconds.
-* Save export/import now flows through an explicit versioned migration layer before runtime hydration. Older payloads are normalized into the current schema first, then handed to `reset(...)`, which keeps future additive progression systems from requiring one-off compatibility hacks in unrelated store code.
+* Save export/import now flows through an explicit versioned migration layer before runtime hydration. Older payloads are normalized into the current schema first, then handed to `reset(...)`, which keeps future additive progression systems from requiring one-off compatibility hacks in unrelated store code. The exported save version is derived from the migration plan itself so serializer and migrator stay aligned as the schema evolves.
 * Large public modules that still serve as import anchors (`entity.ts`, `heroBuilds.ts`, `progressionRules.ts`, `persistence.ts`) now act as facades over narrower internal files so call sites can stay stable while implementation details remain easier to review and test.
 
 The first concrete UI slice stores section navigation (`dungeon`, `shop`, and `party`) separately from combat state, which keeps presentational concerns out of the simulation loop.

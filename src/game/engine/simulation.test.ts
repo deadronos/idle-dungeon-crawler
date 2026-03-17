@@ -961,6 +961,53 @@ describe("simulation engine", () => {
         expect(result.outcome).toBe("paused");
     });
 
+    it("returns the original state reference for fully idle paused ticks", () => {
+        const state = createInitialGameState({
+            autoFight: false,
+            party: [createHero("hero_1", "Brom", "Warrior")],
+            enemies: [createEnemy(1, "enemy_1")],
+            combatLog: [],
+        });
+
+        const result = simulateTick(state, createSequenceRandomSource(0));
+
+        expect(result.outcome).toBe("paused");
+        expect(result.state).toBe(state);
+    });
+
+    it("still processes paused transient visuals when skill banners are active", () => {
+        const hero = createHero("hero_1", "Brom", "Warrior");
+        hero.activeSkill = "Casting Test";
+        hero.activeSkillTicks = 1;
+
+        const state = createInitialGameState({
+            autoFight: false,
+            party: [hero],
+            enemies: [createEnemy(1, "enemy_1")],
+            combatLog: [],
+        });
+
+        const result = simulateTick(state, createSequenceRandomSource(0));
+
+        expect(result.outcome).toBe("paused");
+        expect(result.state).not.toBe(state);
+        expect(result.state.party[0]?.activeSkill).toBeNull();
+        expect(result.state.party[0]?.activeSkillTicks).toBe(0);
+    });
+
+    it("returns the original state reference for fully idle victory ticks", () => {
+        const state = createInitialGameState({
+            party: [createHero("hero_1", "Brom", "Warrior")],
+            enemies: [],
+            combatLog: [],
+        });
+
+        const result = simulateTick(state, createSequenceRandomSource(0));
+
+        expect(result.outcome).toBe("victory");
+        expect(result.state).toBe(state);
+    });
+
     it("awards the updated base gold bonus when an enemy is defeated", () => {
         const warrior = createHero("hero_1", "Brom", "Warrior");
         warrior.actionProgress = 99;

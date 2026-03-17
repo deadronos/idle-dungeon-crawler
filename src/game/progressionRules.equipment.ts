@@ -1,5 +1,5 @@
 import { canSellInventoryItem, getNextInventoryCapacityUpgrade } from "./equipmentProgression";
-import { prependCombatMessages } from "./engine/simulation";
+import { prependCombatMessages } from "./combatLog";
 import {
     findEquipableInventoryItem,
     getEquipmentInstance,

@@ -1,5 +1,5 @@
 import { createRecruitHero, type HeroClass } from "./entity";
-import { prependCombatMessages } from "./engine/simulation";
+import { prependCombatMessages } from "./combatLog";
 import { canUnlockPartySlot, getNextPartySlotUnlock, getRecruitCost as calculateRecruitCost } from "./partyProgression";
 import { synchronizeEquipmentProgression, synchronizeTalentProgression } from "./heroBuilds";
 import { getRecalculatedParty } from "./progressionRules.shared";

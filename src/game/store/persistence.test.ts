@@ -6,7 +6,13 @@ import { createLegacyEquipmentProgression } from "@/game/equipmentProgression";
 import { createInitialGameState } from "@/game/engine/simulation";
 import { getExpRequirement } from "@/game/entity";
 
-import { deserializeGameState, GAME_STATE_EXPORT_VERSION, serializeGameState } from "./persistence";
+import {
+    deserializeGameState,
+    GAME_STATE_EXPORT_VERSION,
+    LEGACY_UNVERSIONED_SAVE_VERSION,
+    SAVE_MIGRATIONS,
+    serializeGameState,
+} from "./persistence";
 
 describe("game-state persistence", () => {
     it("roundtrips the playable game state through JSON export and import", () => {
@@ -218,6 +224,24 @@ describe("game-state persistence", () => {
 
     it("rejects malformed save payloads", () => {
         expect(() => deserializeGameState("[]")).toThrow(/json object/i);
+    });
+
+    it("derives the current export version from the migration plan", () => {
+        expect(GAME_STATE_EXPORT_VERSION).toBe(LEGACY_UNVERSIONED_SAVE_VERSION + SAVE_MIGRATIONS.length);
+    });
+
+    it("rejects invalid save versions before migration", () => {
+        expect(() => deserializeGameState(JSON.stringify({
+            version: 1.5,
+            savedAt: new Date().toISOString(),
+            state: {},
+        }))).toThrow(/version is invalid/i);
+
+        expect(() => deserializeGameState(JSON.stringify({
+            version: -1,
+            savedAt: new Date().toISOString(),
+            state: {},
+        }))).toThrow(/version is invalid/i);
     });
 
     it("migrates legacy learned-talent arrays into rank-1 talent maps", () => {

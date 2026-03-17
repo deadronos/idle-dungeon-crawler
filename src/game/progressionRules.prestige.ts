@@ -1,4 +1,4 @@
-import { prependCombatMessages } from "./engine/simulation";
+import { prependCombatMessages } from "./combatLog";
 import { getRecalculatedParty } from "./progressionRules.shared";
 import type { GameState, PrestigeUpgrades } from "./store/types";
 
