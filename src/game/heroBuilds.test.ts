@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 
 import { createStarterParty, getCombatRatings, recalculateEntity } from "@/game/entity";
+import { createEmptyEquipmentProgressionState } from "@/game/store/types";
 
 import {
+    createEquipmentItemInstance,
     getEarnedTalentPointTotal,
+    getHeroBuildProfile,
     getSpentTalentRanksForHero,
+    synchronizeEquipmentProgression,
     synchronizeTalentProgression,
 } from "./heroBuilds";
 
@@ -117,5 +121,45 @@ describe("hero build helpers", () => {
         expect(rankOneRatings.spellPower).toBeGreaterThan(baselineRatings.spellPower);
         expect(rankThreeRatings.spellPower).toBeGreaterThan(rankOneRatings.spellPower);
         expect(rankThreeRatings.potency).toBeGreaterThan(rankOneRatings.potency);
+    });
+
+    it("aggregates passive, talent, and equipment effects through the compatibility exports", () => {
+        const [cleric] = createStarterParty("Ayla", "Cleric");
+        cleric.level = 6;
+
+        const item = createEquipmentItemInstance("sunlit-censer", { instanceId: "censer-1" });
+        expect(item).not.toBeNull();
+        if (!item) {
+            return;
+        }
+
+        const talentProgression = synchronizeTalentProgression([cleric], {
+            talentRanksByHeroId: {
+                hero_1: {
+                    "cleric-sunfire": 2,
+                },
+            },
+            talentPointsByHeroId: {
+                hero_1: 0,
+            },
+        });
+        const equipmentProgression = synchronizeEquipmentProgression([cleric], {
+            ...createEmptyEquipmentProgressionState(),
+            inventoryItems: [item],
+            equippedItemInstanceIdsByHeroId: {
+                hero_1: [item.instanceId],
+            },
+        });
+
+        const profile = getHeroBuildProfile(cleric, {
+            talentProgression,
+            equipmentProgression,
+        });
+
+        expect(profile.passive?.id).toBe("cleric-sanctified-reserves");
+        expect(profile.talents.map((talent) => `${talent.id}:${talent.currentRank}`)).toEqual(["cleric-sunfire:2"]);
+        expect(profile.equippedItems.map((equippedItem) => equippedItem.definitionId)).toEqual(["sunlit-censer"]);
+        expect(profile.effects.ratingBonuses.spellPower ?? 0).toBeGreaterThan(0);
+        expect(profile.effects.blessRegenMultiplierBonus).toBeGreaterThan(0);
     });
 });
