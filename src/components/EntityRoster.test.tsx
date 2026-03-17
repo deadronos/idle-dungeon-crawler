@@ -188,6 +188,25 @@ describe("EntityRoster", () => {
         expect(screen.getByTestId(`status-badges-${overlayEntity.id}`)).toHaveClass("absolute", "left-0", "top-0");
     });
 
+    it("keeps retirement controls scoped to non-starter heroes", () => {
+        const starterHero = heroEntity;
+        const recruitHero = {
+            ...heroEntity,
+            id: "hero_2",
+            name: "Bram",
+            level: 10,
+        };
+
+        render(
+            <GameProvider initialState={{ party: [starterHero, recruitHero] }}>
+                <EntityRoster title="Party" entities={[starterHero, recruitHero]} />
+            </GameProvider>,
+        );
+
+        expect(screen.queryByTitle(/retire hero for 0 souls/i)).not.toBeInTheDocument();
+        expect(screen.getByTitle(/retire hero for 20 souls/i)).toBeInTheDocument();
+    });
+
     it("keeps roster cards at full height inside the scrollable panel when the list grows", () => {
         const roster = Array.from({ length: 5 }, (_, index) => ({
             ...heroEntity,
