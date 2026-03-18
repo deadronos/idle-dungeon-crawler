@@ -2,7 +2,7 @@ import { createRecruitHero, type HeroClass } from "./entity";
 import { prependCombatMessages } from "./combatLog";
 import { canUnlockPartySlot, getNextPartySlotUnlock, getRecruitCost as calculateRecruitCost } from "./partyProgression";
 import { synchronizeEquipmentProgression, synchronizeTalentProgression } from "./heroBuilds";
-import { buildRecalculatedProgressionState } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState, findHeroById } from "./progressionRules.shared";
 import type { GameState } from "./store/types";
 
 export const getPartySlotUnlockState = (state: GameState): Partial<GameState> | null => {
@@ -44,12 +44,12 @@ export const getRecruitHeroState = (state: GameState, heroClass: HeroClass): Par
 };
 
 export const getRetireHeroState = (state: GameState, heroId: string): Partial<GameState> | null => {
-    const heroIndex = state.party.findIndex((hero) => hero.id === heroId);
-    if (heroIndex === -1 || heroId === "hero_1") {
+    const hero = findHeroById(state.party, heroId);
+    if (!hero || heroId === "hero_1") {
         return null;
     }
 
-    const hero = state.party[heroIndex];
+    const heroIndex = state.party.findIndex((h) => h.id === heroId);
     const heroSoulsAwarded = Math.floor(hero.level / 5) * 10;
     const party = [...state.party];
     party.splice(heroIndex, 1);
