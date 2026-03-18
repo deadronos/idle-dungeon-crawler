@@ -1,6 +1,18 @@
 import { recalculateParty } from "./engine/simulation";
 import { prependCombatMessages } from "./combatLog";
+import type { Entity } from "./entity";
 import type { GameState } from "./store/types";
+
+const heroLookupCache = new WeakMap<Entity[], Map<string, Entity>>();
+
+export const findHeroById = (party: Entity[], heroId: string): Entity | null => {
+    let lookup = heroLookupCache.get(party);
+    if (!lookup) {
+        lookup = new Map(party.map((hero) => [hero.id, hero]));
+        heroLookupCache.set(party, lookup);
+    }
+    return lookup.get(heroId) ?? null;
+};
 
 export const getRecalculatedParty = ({
     state,
