@@ -51,13 +51,20 @@ export const createEquipmentInstancesFromDefinitionIds = (definitionIds: string[
         )
         .filter((item): item is EquipmentItemInstance => Boolean(item));
 
+const itemResolutionCache = new WeakMap<EquipmentItemInstance, ResolvedEquipmentItem>();
+
 export const resolveEquipmentItem = (item: EquipmentItemInstance): ResolvedEquipmentItem | null => {
+    const cached = itemResolutionCache.get(item);
+    if (cached) {
+        return cached;
+    }
+
     const definition = getEquipmentDefinition(item.definitionId);
     if (!definition) {
         return null;
     }
 
-    return {
+    const resolved: ResolvedEquipmentItem = {
         ...item,
         id: item.instanceId,
         name: definition.name,
@@ -65,6 +72,9 @@ export const resolveEquipmentItem = (item: EquipmentItemInstance): ResolvedEquip
         heroClasses: definition.heroClasses,
         effects: resolveEquipmentItemEffects(definition, item.tier, item.rank),
     };
+
+    itemResolutionCache.set(item, resolved);
+    return resolved;
 };
 
 export const canHeroEquipItem = (

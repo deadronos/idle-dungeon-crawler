@@ -6,16 +6,26 @@ import type { ResolvedEquipmentItem } from "./shared";
 import type { EquipmentSlot } from "./shared";
 
 const equipmentOwnerCache = new WeakMap<Record<string, string[]>, Map<string, string>>();
+const inventoryCache = new WeakMap<EquipmentItemInstance[], ResolvedEquipmentItem[]>();
 const isResolvedEquipmentItem = (item: ResolvedEquipmentItem | null): item is ResolvedEquipmentItem => Boolean(item);
 const isEquipmentItemInstance = (item: EquipmentItemInstance | null): item is EquipmentItemInstance => Boolean(item);
 
 export const getEquipmentInstance = (itemId: string, equipmentProgression: EquipmentProgressionState) =>
     equipmentProgression.inventoryItems.find((item) => item.instanceId === itemId) ?? null;
 
-export const getInventoryItems = (equipmentProgression: EquipmentProgressionState) =>
-    equipmentProgression.inventoryItems
-        .map((item) => resolveEquipmentItem(item))
-        .filter(isResolvedEquipmentItem);
+export const getInventoryItems = (equipmentProgression: EquipmentProgressionState) => {
+    const items = equipmentProgression.inventoryItems;
+    let resolved = inventoryCache.get(items);
+
+    if (!resolved) {
+        resolved = items
+            .map((item) => resolveEquipmentItem(item))
+            .filter(isResolvedEquipmentItem);
+        inventoryCache.set(items, resolved);
+    }
+
+    return resolved;
+};
 
 export const findEquipableInventoryItem = (
     itemIdentifier: string,
