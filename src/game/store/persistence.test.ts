@@ -228,8 +228,13 @@ describe("game-state persistence", () => {
     });
 
     it("rejects save payloads that exceed the size limit", () => {
-        const largePayload = "a".repeat(MAX_SAVE_SIZE_BYTES + 1);
-        expect(() => deserializeGameState(largePayload)).toThrow(/too large/i);
+        // Use multi-byte characters so the string's code-unit length stays below the
+        // limit while the UTF-8 byte length exceeds it.
+        const payload = "😊".repeat(Math.floor(MAX_SAVE_SIZE_BYTES / 4) + 1);
+        expect(new TextEncoder().encode(payload).length).toBeGreaterThan(MAX_SAVE_SIZE_BYTES);
+        expect(payload.length).toBeLessThanOrEqual(MAX_SAVE_SIZE_BYTES);
+
+        expect(() => deserializeGameState(payload)).toThrow(/too large/i);
     });
 
     it("derives the current export version from the migration plan", () => {

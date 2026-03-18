@@ -27,7 +27,8 @@ export const serializeGameState = (state: GameState) =>
     );
 
 export const deserializeGameState = (serializedState: string): GameState => {
-    if (serializedState.length > MAX_SAVE_SIZE_BYTES) {
+    const serializedByteLength = new TextEncoder().encode(serializedState).length;
+    if (serializedByteLength > MAX_SAVE_SIZE_BYTES) {
         throw new Error("Save file is too large.");
     }
 
