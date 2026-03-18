@@ -51,7 +51,11 @@ export const createEquipmentInstancesFromDefinitionIds = (definitionIds: string[
         )
         .filter((item): item is EquipmentItemInstance => Boolean(item));
 
-const itemResolutionCache = new WeakMap<EquipmentItemInstance, ResolvedEquipmentItem>();
+let itemResolutionCache = new WeakMap<EquipmentItemInstance, ResolvedEquipmentItem>();
+
+export const __resetResolveEquipmentItemCache = () => {
+    itemResolutionCache = new WeakMap();
+};
 
 export const resolveEquipmentItem = (item: EquipmentItemInstance): ResolvedEquipmentItem | null => {
     const cached = itemResolutionCache.get(item);

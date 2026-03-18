@@ -5,13 +5,34 @@ import { canHeroEquipItem, isHeroEligibleForEquipment, resolveEquipmentItem } fr
 import type { ResolvedEquipmentItem } from "./shared";
 import type { EquipmentSlot } from "./shared";
 
-const equipmentOwnerCache = new WeakMap<Record<string, string[]>, Map<string, string>>();
-const inventoryCache = new WeakMap<EquipmentItemInstance[], ResolvedEquipmentItem[]>();
+let equipmentOwnerCache = new WeakMap<Record<string, string[]>, Map<string, string>>();
+let inventoryCache = new WeakMap<EquipmentItemInstance[], ResolvedEquipmentItem[]>();
+let equipmentInstanceCache = new WeakMap<EquipmentItemInstance[], Map<string, EquipmentItemInstance | null>>();
 const isResolvedEquipmentItem = (item: ResolvedEquipmentItem | null): item is ResolvedEquipmentItem => Boolean(item);
 const isEquipmentItemInstance = (item: EquipmentItemInstance | null): item is EquipmentItemInstance => Boolean(item);
 
-export const getEquipmentInstance = (itemId: string, equipmentProgression: EquipmentProgressionState) =>
-    equipmentProgression.inventoryItems.find((item) => item.instanceId === itemId) ?? null;
+export const __resetEquipmentMemoizationCaches = () => {
+    equipmentOwnerCache = new WeakMap();
+    inventoryCache = new WeakMap();
+    equipmentInstanceCache = new WeakMap();
+};
+
+export const getEquipmentInstance = (itemId: string, equipmentProgression: EquipmentProgressionState) => {
+    const items = equipmentProgression.inventoryItems;
+    let map = equipmentInstanceCache.get(items);
+    if (!map) {
+        map = new Map<string, EquipmentItemInstance | null>();
+        equipmentInstanceCache.set(items, map);
+    }
+
+    if (map.has(itemId)) {
+        return map.get(itemId) ?? null;
+    }
+
+    const found = items.find((item) => item.instanceId === itemId) ?? null;
+    map.set(itemId, found);
+    return found;
+};
 
 export const getInventoryItems = (equipmentProgression: EquipmentProgressionState) => {
     const items = equipmentProgression.inventoryItems;

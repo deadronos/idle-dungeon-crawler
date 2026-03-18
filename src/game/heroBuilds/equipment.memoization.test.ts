@@ -1,10 +1,15 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, beforeEach, vi } from "vitest";
 import { EquipmentItemInstance, EquipmentProgressionState } from "../store/types";
-import { getInventoryItems } from "./equipment.queries";
-import { createEquipmentItemInstance, resolveEquipmentItem } from "./equipment.instances";
+import { getInventoryItems, getEquipmentInstance, __resetEquipmentMemoizationCaches } from "./equipment.queries";
+import { createEquipmentItemInstance, resolveEquipmentItem, __resetResolveEquipmentItemCache } from "./equipment.instances";
 import * as catalog from "./equipment.catalog";
 
 describe("equipment memoization", () => {
+    beforeEach(() => {
+        __resetEquipmentMemoizationCaches();
+        __resetResolveEquipmentItemCache();
+    });
+
     it("memoizes getInventoryItems based on inventoryItems array reference", () => {
         const item1 = createEquipmentItemInstance("greatblade-of-embers", { instanceId: "item1" })!;
         const items = [item1];
@@ -41,6 +46,37 @@ describe("equipment memoization", () => {
         expect(result1).toBe(result2);
         // resolveEquipmentItemEffects should only be called once because of memoization
         expect(spy).toHaveBeenCalledTimes(1);
+
+        spy.mockRestore();
+    });
+
+    it("memoizes getEquipmentInstance based on inventoryItems array reference", () => {
+        const item = createEquipmentItemInstance("greatblade-of-embers", { instanceId: "item1" })!;
+        const items = [item];
+
+        const spy = vi.spyOn(Array.prototype, "find");
+
+        const state: EquipmentProgressionState = {
+            inventoryItems: items,
+            equippedItemInstanceIdsByHeroId: {},
+            highestUnlockedEquipmentTier: 1,
+            inventoryCapacityLevel: 0,
+            inventoryCapacity: 10,
+            nextInstanceSequence: 2,
+        };
+
+        const result1 = getEquipmentInstance(item.instanceId, state);
+        const result2 = getEquipmentInstance(item.instanceId, state);
+
+        expect(result1).toBe(result2);
+        expect(spy).toHaveBeenCalledTimes(1);
+
+        // Changing the array reference should force a cache miss and re-run find
+        const state2 = { ...state, inventoryItems: [...items] };
+        const result3 = getEquipmentInstance(item.instanceId, state2);
+
+        expect(result3).toBe(result1); // same underlying item reference
+        expect(spy).toHaveBeenCalledTimes(2);
 
         spy.mockRestore();
     });
