@@ -1,5 +1,4 @@
 import { bench, describe } from "vitest";
-import Decimal from "decimal.js";
 import { createStarterParty, createRecruitHero } from "./entity";
 import { createLegacyEquipmentProgression } from "./equipmentProgression";
 import { getEquipItemState, getUnequipItemState } from "./progressionRules.equipment";
