@@ -1,9 +1,9 @@
 import { getTalentDefinition, synchronizeTalentProgression } from "./heroBuilds";
-import { buildRecalculatedProgressionState } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState, findHeroById } from "./progressionRules.shared";
 import type { GameState } from "./store/types";
 
 export const getTalentUnlockState = (state: GameState, heroId: string, talentId: string): Partial<GameState> | null => {
-    const hero = state.party.find((partyMember) => partyMember.id === heroId);
+    const hero = findHeroById(state.party, heroId);
     const talentDefinition = getTalentDefinition(talentId);
 
     if (!hero || !talentDefinition || talentDefinition.heroClass !== hero.class) {

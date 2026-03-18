@@ -7,13 +7,13 @@ import {
     resolveEquipmentItem,
     synchronizeEquipmentProgression,
 } from "./heroBuilds";
-import { buildRecalculatedProgressionState } from "./progressionRules.shared";
+import { buildRecalculatedProgressionState, findHeroById } from "./progressionRules.shared";
 import type { HeroClass } from "./entity";
 import type { EquipmentSlot } from "./heroBuilds";
 import type { GameState } from "./store/types";
 
 export const getEquipItemState = (state: GameState, heroId: string, itemId: string): Partial<GameState> | null => {
-    const hero = state.party.find((partyMember) => partyMember.id === heroId);
+    const hero = findHeroById(state.party, heroId);
     if (!hero || hero.isEnemy) {
         return null;
     }
@@ -52,7 +52,7 @@ export const getEquipItemState = (state: GameState, heroId: string, itemId: stri
 };
 
 export const getUnequipItemState = (state: GameState, heroId: string, slot: EquipmentSlot): Partial<GameState> | null => {
-    const hero = state.party.find((partyMember) => partyMember.id === heroId);
+    const hero = findHeroById(state.party, heroId);
     if (!hero) {
         return null;
     }
