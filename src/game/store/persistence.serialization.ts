@@ -1,6 +1,7 @@
 import { createInitialGameState } from "../engine/simulation";
 import {
     GAME_STATE_STORAGE_KEY,
+    MAX_SAVE_SIZE_BYTES,
 } from "./persistence.types";
 import { GAME_STATE_EXPORT_VERSION, migrateSaveEnvelope, normalizeSaveEnvelope } from "./persistence.migrations";
 import { normalizeHeroProgressionToCurrentCurve, toPartialGameState } from "./persistence.validation";
@@ -26,6 +27,11 @@ export const serializeGameState = (state: GameState) =>
     );
 
 export const deserializeGameState = (serializedState: string): GameState => {
+    const serializedByteLength = new TextEncoder().encode(serializedState).length;
+    if (serializedByteLength > MAX_SAVE_SIZE_BYTES) {
+        throw new Error("Save file is too large.");
+    }
+
     let parsed: unknown;
 
     try {

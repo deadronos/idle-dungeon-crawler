@@ -3,7 +3,13 @@ import React, { useEffect, useId, useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
 
 import { useGameStore, useGameStoreApi } from "@/game/store/gameStore";
-import { deserializeGameState, getGameStateSnapshot, saveGameStateToStorage, serializeGameState } from "@/game/store/persistence";
+import {
+    deserializeGameState,
+    getGameStateSnapshot,
+    MAX_SAVE_SIZE_BYTES,
+    saveGameStateToStorage,
+    serializeGameState,
+} from "@/game/store/persistence";
 
 import { Button } from "./ui/button";
 
@@ -63,6 +69,10 @@ export const SaveControls: React.FC = () => {
         }
 
         try {
+            if (file.size > MAX_SAVE_SIZE_BYTES) {
+                throw new Error("Save file is too large.");
+            }
+
             const importedState = deserializeGameState(await file.text());
 
             store.getState().reset(importedState);

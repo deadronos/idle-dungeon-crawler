@@ -10,6 +10,7 @@ import {
     deserializeGameState,
     GAME_STATE_EXPORT_VERSION,
     LEGACY_UNVERSIONED_SAVE_VERSION,
+    MAX_SAVE_SIZE_BYTES,
     SAVE_MIGRATIONS,
     serializeGameState,
 } from "./persistence";
@@ -224,6 +225,16 @@ describe("game-state persistence", () => {
 
     it("rejects malformed save payloads", () => {
         expect(() => deserializeGameState("[]")).toThrow(/json object/i);
+    });
+
+    it("rejects save payloads that exceed the size limit", () => {
+        // Use multi-byte characters so the string's code-unit length stays below the
+        // limit while the UTF-8 byte length exceeds it.
+        const payload = "😊".repeat(Math.floor(MAX_SAVE_SIZE_BYTES / 4) + 1);
+        expect(new TextEncoder().encode(payload).length).toBeGreaterThan(MAX_SAVE_SIZE_BYTES);
+        expect(payload.length).toBeLessThanOrEqual(MAX_SAVE_SIZE_BYTES);
+
+        expect(() => deserializeGameState(payload)).toThrow(/too large/i);
     });
 
     it("derives the current export version from the migration plan", () => {
