@@ -130,136 +130,126 @@ export const applyActiveSkill = (
     });
 };
 
-export const resolveCombatTurn = ({
+const applyHealing = ({
     entity,
-    allies,
-    targets,
-    prestigeUpgrades,
-    buildState,
-    randomSource,
-    setActiveSkill,
+    target,
+    amount,
+    skillName,
     queueCombatEvent,
-    queueStatusEvent,
     addLogMessage,
-    handleDefeat,
-}: ResolveCombatTurnParams) => {
-    if (entity.currentHp.lte(0)) {
-        return false;
+}: {
+    entity: Entity;
+    target: Entity;
+    amount: Decimal;
+    skillName: string;
+    queueCombatEvent: (event: Omit<CombatEvent, "id">) => void;
+    addLogMessage: (message: string) => void;
+}) => {
+    const healAmount = amount.times(getHealingMultiplier(target));
+    target.currentHp = Decimal.min(target.maxHp, target.currentHp.plus(healAmount));
+    queueCombatEvent({
+        sourceId: entity.id,
+        targetId: target.id,
+        kind: "heal",
+        text: `+${healAmount.floor().toString()}`,
+        amount: healAmount.floor().toString(),
+        ttlTicks: COMBAT_EVENT_TICKS,
+    });
+    addLogMessage(`${entity.name} casts ${skillName} on ${target.name} for ${healAmount.floor().toString()}!`);
+};
+
+const handleHeroTurn = (
+    entity: Entity,
+    livingAllies: Entity[],
+    heroTemplate: any,
+    heroBuildProfile: any,
+    setActiveSkill: any,
+    queueCombatEvent: any,
+    queueStatusEvent: any,
+    addLogMessage: any,
+) => {
+    const healDefinition = heroTemplate.actionPackage.heal;
+    const healTarget = getLowestHpRatioTarget(livingAllies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
+
+    if (healDefinition && healTarget && entity.currentResource.gte(healDefinition.cost) && getHpRatio(healTarget) < healDefinition.hpThreshold) {
+        const rawHealAmount = entity.magicDamage.times(healDefinition.healMultiplier + heroBuildProfile.effects.healMultiplierBonus);
+        setActiveSkill(entity, healDefinition.name);
+        entity.currentResource = entity.currentResource.minus(healDefinition.cost);
+        applyHealing({
+            entity,
+            target: healTarget,
+            amount: rawHealAmount,
+            skillName: healDefinition.name,
+            queueCombatEvent,
+            addLogMessage,
+        });
+        return true;
     }
 
-    entity.actionProgress += getActionProgressPerTick(entity, prestigeUpgrades, buildState);
-    const heroTemplate = getHeroTemplateForEntity(entity);
-    const heroBuildProfile = getHeroBuildProfile(entity, buildState);
-
-    if (heroTemplate) {
-        let regen = 0;
-        if (heroTemplate.resourceModel.regenKind === "flat") {
-            regen = heroTemplate.resourceModel.regenFlat;
-        } else if (heroTemplate.resourceModel.regenKind === "attribute" && heroTemplate.resourceModel.regenAttribute) {
-            const regenAttribute = heroTemplate.resourceModel.regenAttribute as keyof Entity["attributes"];
-            regen = entity.attributes[regenAttribute] * (heroTemplate.resourceModel.regenAttributeMultiplier ?? 0);
+    const blessDefinition = heroTemplate.actionPackage.bless;
+    const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && getCleanseableStatusEffect(ally))
+        ?? livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((statusEffect) => statusEffect.key === "regen"));
+    if (blessDefinition && blessTarget && entity.currentResource.gte(blessDefinition.cost)) {
+        const regenPotency = entity.magicDamage
+            .times(blessDefinition.regenMultiplier + heroBuildProfile.effects.blessRegenMultiplierBonus)
+            .toNumber();
+        const regenConfig = getStatusConfig("regen");
+        const regenEffect: StatusEffect = {
+            key: regenConfig.key,
+            polarity: regenConfig.polarity,
+            remainingTicks: regenConfig.remainingTicks,
+            stacks: regenConfig.stacks,
+            maxStacks: regenConfig.maxStacks,
+            sourceId: entity.id,
+            potency: regenPotency,
+        };
+        const existingRegen = blessTarget.statusEffects.find((statusEffect) => statusEffect.key === "regen");
+        if (existingRegen) {
+            existingRegen.remainingTicks = regenEffect.remainingTicks;
+            existingRegen.potency = Math.max(existingRegen.potency, regenEffect.potency);
+            existingRegen.sourceId = entity.id;
+        } else {
+            blessTarget.statusEffects.push(regenEffect);
         }
-
-        if (regen > 0) {
-            entity.currentResource = entity.currentResource.plus(regen);
-            if (entity.currentResource.gt(entity.maxResource)) {
-                entity.currentResource = entity.maxResource;
-            }
+        setActiveSkill(entity, blessDefinition.name);
+        entity.currentResource = entity.currentResource.minus(blessDefinition.cost);
+        queueStatusEvent({
+            target: blessTarget,
+            statusKey: "regen",
+            statusPhase: "apply",
+            text: getStatusEffectName("regen"),
+        });
+        addLogMessage(`${entity.name} casts Bless on ${blessTarget.name}!`);
+        const cleansedStatus = getCleanseableStatusEffect(blessTarget);
+        if (cleansedStatus) {
+            cleanseStatusEffect(blessTarget, cleansedStatus, queueStatusEvent, addLogMessage);
         }
+        return true;
     }
+    return false;
+};
 
-    if (entity.actionProgress < 100) {
-        return false;
-    }
-
-    entity.actionProgress = 0;
-
-    const livingAllies = allies.filter((ally) => ally.currentHp.gt(0));
-
-    if (!entity.isEnemy && heroTemplate?.actionPackage.id === "cleric") {
-        const healDefinition = heroTemplate.actionPackage.heal;
-        const healTarget = getLowestHpRatioTarget(livingAllies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
-
-        if (healDefinition && healTarget && entity.currentResource.gte(healDefinition.cost) && getHpRatio(healTarget) < healDefinition.hpThreshold) {
-            const rawHealAmount = entity.magicDamage.times(healDefinition.healMultiplier + heroBuildProfile.effects.healMultiplierBonus);
-            const healAmount = rawHealAmount.times(getHealingMultiplier(healTarget));
-            setActiveSkill(entity, healDefinition.name);
-            entity.currentResource = entity.currentResource.minus(healDefinition.cost);
-            healTarget.currentHp = Decimal.min(healTarget.maxHp, healTarget.currentHp.plus(healAmount));
-            queueCombatEvent({
-                sourceId: entity.id,
-                targetId: healTarget.id,
-                kind: "heal",
-                text: `+${healAmount.floor().toString()}`,
-                amount: healAmount.floor().toString(),
-                ttlTicks: COMBAT_EVENT_TICKS,
-            });
-            addLogMessage(`${entity.name} casts Mend on ${healTarget.name} for ${healAmount.floor().toString()}!`);
-            return true;
-        }
-
-        const blessDefinition = heroTemplate.actionPackage.bless;
-        const blessTarget = livingAllies.find((ally) => ally.id !== entity.id && getCleanseableStatusEffect(ally))
-            ?? livingAllies.find((ally) => ally.id !== entity.id && !ally.statusEffects.some((statusEffect) => statusEffect.key === "regen"));
-        if (blessDefinition && blessTarget && entity.currentResource.gte(blessDefinition.cost)) {
-            const regenPotency = entity.magicDamage
-                .times(blessDefinition.regenMultiplier + heroBuildProfile.effects.blessRegenMultiplierBonus)
-                .toNumber();
-            const regenConfig = getStatusConfig("regen");
-            const regenEffect: StatusEffect = {
-                key: regenConfig.key,
-                polarity: regenConfig.polarity,
-                remainingTicks: regenConfig.remainingTicks,
-                stacks: regenConfig.stacks,
-                maxStacks: regenConfig.maxStacks,
-                sourceId: entity.id,
-                potency: regenPotency,
-            };
-            const existingRegen = blessTarget.statusEffects.find((statusEffect) => statusEffect.key === "regen");
-            if (existingRegen) {
-                existingRegen.remainingTicks = regenEffect.remainingTicks;
-                existingRegen.potency = Math.max(existingRegen.potency, regenEffect.potency);
-                existingRegen.sourceId = entity.id;
-            } else {
-                blessTarget.statusEffects.push(regenEffect);
-            }
-            setActiveSkill(entity, blessDefinition.name);
-            entity.currentResource = entity.currentResource.minus(blessDefinition.cost);
-            queueStatusEvent({
-                target: blessTarget,
-                statusKey: "regen",
-                statusPhase: "apply",
-                text: getStatusEffectName("regen"),
-            });
-            addLogMessage(`${entity.name} casts Bless on ${blessTarget.name}!`);
-            const cleansedStatus = getCleanseableStatusEffect(blessTarget);
-            if (cleansedStatus) {
-                cleanseStatusEffect(blessTarget, cleansedStatus, queueStatusEvent, addLogMessage);
-            }
-            return true;
-        }
-    }
-
-    if (entity.isEnemy && entity.enemyArchetype === "Support") {
+const handleEnemyTurn = (
+    entity: Entity,
+    livingAllies: Entity[],
+    setActiveSkill: any,
+    queueCombatEvent: any,
+    addLogMessage: any,
+) => {
+    if (entity.enemyArchetype === "Support") {
         const supportAction = getEnemySupportAction(entity, livingAllies);
 
         if (supportAction?.type === "heal") {
             const rawHealAmount = entity.magicDamage.times(SUPPORT_HEAL_MULTIPLIER);
-            const healAmount = rawHealAmount.times(getHealingMultiplier(supportAction.target));
             setActiveSkill(entity, supportAction.name);
-            supportAction.target.currentHp = Decimal.min(
-                supportAction.target.maxHp,
-                supportAction.target.currentHp.plus(healAmount),
-            );
-            queueCombatEvent({
-                sourceId: entity.id,
-                targetId: supportAction.target.id,
-                kind: "heal",
-                text: `+${healAmount.floor().toString()}`,
-                amount: healAmount.floor().toString(),
-                ttlTicks: COMBAT_EVENT_TICKS,
+            applyHealing({
+                entity,
+                target: supportAction.target,
+                amount: rawHealAmount,
+                skillName: supportAction.name,
+                queueCombatEvent,
+                addLogMessage,
             });
-            addLogMessage(`${entity.name} casts ${supportAction.name} on ${supportAction.target.name} for ${healAmount.floor().toString()}!`);
             return true;
         }
 
@@ -277,21 +267,30 @@ export const resolveCombatTurn = ({
             return true;
         }
     }
+    return false;
+};
 
-    const aliveTargets = targets.filter((target) => target.currentHp.gt(0));
-    if (aliveTargets.length === 0) {
-        return false;
-    }
-
-    let action = getDamageAction(entity, buildState);
-    action = {
-        ...action,
-        damage: action.damage.times(getDamageOutputMultiplier(entity)),
-    };
-    const target = selectTarget(entity, aliveTargets, action, randomSource);
-
-    setActiveSkill(entity, action.name);
-
+const applyFinalDamage = ({
+    entity,
+    target,
+    action,
+    randomSource,
+    buildState,
+    queueCombatEvent,
+    queueStatusEvent,
+    addLogMessage,
+    handleDefeat,
+}: {
+    entity: Entity;
+    target: Entity;
+    action: any;
+    randomSource: SimulationRandomSource;
+    buildState: HeroBuildState;
+    queueCombatEvent: (event: Omit<CombatEvent, "id">) => void;
+    queueStatusEvent: any;
+    addLogMessage: (message: string) => void;
+    handleDefeat: (target: Entity) => void;
+}) => {
     const hitChance = action.deliveryType === "spell"
         ? getSpellHitChance(entity, target)
         : getPhysicalHitChance(entity, target);
@@ -376,4 +375,86 @@ export const resolveCombatTurn = ({
     }
 
     return true;
+};
+export const resolveCombatTurn = ({
+    entity,
+    allies,
+    targets,
+    prestigeUpgrades,
+    buildState,
+    randomSource,
+    setActiveSkill,
+    queueCombatEvent,
+    queueStatusEvent,
+    addLogMessage,
+    handleDefeat,
+}: ResolveCombatTurnParams) => {
+    if (entity.currentHp.lte(0)) {
+        return false;
+    }
+
+    entity.actionProgress += getActionProgressPerTick(entity, prestigeUpgrades, buildState);
+    const heroTemplate = getHeroTemplateForEntity(entity);
+    const heroBuildProfile = getHeroBuildProfile(entity, buildState);
+
+    if (heroTemplate) {
+        let regen = 0;
+        if (heroTemplate.resourceModel.regenKind === "flat") {
+            regen = heroTemplate.resourceModel.regenFlat;
+        } else if (heroTemplate.resourceModel.regenKind === "attribute" && heroTemplate.resourceModel.regenAttribute) {
+            const regenAttribute = heroTemplate.resourceModel.regenAttribute as keyof Entity["attributes"];
+            regen = entity.attributes[regenAttribute] * (heroTemplate.resourceModel.regenAttributeMultiplier ?? 0);
+        }
+
+        if (regen > 0) {
+            entity.currentResource = entity.currentResource.plus(regen);
+            if (entity.currentResource.gt(entity.maxResource)) {
+                entity.currentResource = entity.maxResource;
+            }
+        }
+    }
+
+    if (entity.actionProgress < 100) {
+        return false;
+    }
+
+    entity.actionProgress = 0;
+
+    const livingAllies = allies.filter((ally) => ally.currentHp.gt(0));
+
+    if (!entity.isEnemy && heroTemplate?.actionPackage.id === "cleric") {
+        if (handleHeroTurn(entity, livingAllies, heroTemplate, heroBuildProfile, setActiveSkill, queueCombatEvent, queueStatusEvent, addLogMessage)) {
+            return true;
+        }
+    }
+
+    if (entity.isEnemy && handleEnemyTurn(entity, livingAllies, setActiveSkill, queueCombatEvent, addLogMessage)) {
+        return true;
+    }
+
+    const aliveTargets = targets.filter((target) => target.currentHp.gt(0));
+    if (aliveTargets.length === 0) {
+        return false;
+    }
+
+    let action = getDamageAction(entity, buildState);
+    action = {
+        ...action,
+        damage: action.damage.times(getDamageOutputMultiplier(entity)),
+    };
+    const target = selectTarget(entity, aliveTargets, action, randomSource);
+
+    setActiveSkill(entity, action.name);
+
+    return applyFinalDamage({
+        entity,
+        target,
+        action,
+        randomSource,
+        buildState,
+        queueCombatEvent,
+        queueStatusEvent,
+        addLogMessage,
+        handleDefeat,
+    });
 };
