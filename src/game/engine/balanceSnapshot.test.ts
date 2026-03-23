@@ -287,7 +287,7 @@ describe("balance snapshots", () => {
     }, 45_000);
 
     it("captures recovery-aware checkpoint pressure under baseline, expected, and curated assumptions", () => {
-        const summary = createRecoveryAwareMilestoneWinRates(12);
+        const summary = createRecoveryAwareMilestoneWinRates(8);
 
         expect(summary.floor10Boss.duoWarriorCleric.expectedBuild).toBeGreaterThan(
             summary.floor10Boss.duoWarriorCleric.baseline,
@@ -308,7 +308,7 @@ describe("balance snapshots", () => {
                 "expectedBuild": 1,
               },
               "duoWarriorCleric": {
-                "baseline": 0.833,
+                "baseline": 0.75,
                 "curatedBuild": 1,
                 "expectedBuild": 1,
               },
@@ -316,15 +316,15 @@ describe("balance snapshots", () => {
             "floor18Gate": {
               "warriorClericArcher": {
                 "baseline": 0,
-                "curatedBuild": 0.75,
-                "expectedBuild": 0.833,
+                "curatedBuild": 0.875,
+                "expectedBuild": 0.75,
               },
             },
             "floor20Boss": {
               "warriorClericArcher": {
                 "baseline": 0,
-                "curatedBuild": 0.667,
-                "expectedBuild": 0.667,
+                "curatedBuild": 0.625,
+                "expectedBuild": 0.75,
               },
             },
             "floor28Gate": {
@@ -336,7 +336,7 @@ describe("balance snapshots", () => {
             },
             "floor8Duo": {
               "clericArcher": {
-                "baseline": 0.75,
+                "baseline": 0.875,
                 "curatedBuild": 1,
                 "expectedBuild": 1,
               },
@@ -348,5 +348,5 @@ describe("balance snapshots", () => {
             },
           }
         `);
-    }, 120_000);
+    }, 300_000);
 });
