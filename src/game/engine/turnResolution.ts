@@ -1,7 +1,11 @@
 import Decimal from "decimal.js";
 
-import { getHeroClassTemplate } from "../classTemplates";
-import { getHeroBuildProfile, type HeroBuildState } from "../heroBuilds";
+import { getHeroClassTemplate, type HeroClassTemplate } from "../classTemplates";
+import {
+    getHeroBuildProfile,
+    type HeroBuildProfile,
+    type HeroBuildState,
+} from "../heroBuilds";
 import {
     getStatusEffectName,
     isHeroClass,
@@ -16,6 +20,7 @@ import {
     SKILL_BANNER_TICKS,
 } from "./combatEvents";
 import {
+    type DamageAction,
     getDamageAction,
     getEnemySupportAction,
     getHpRatio,
@@ -67,7 +72,13 @@ interface ResolveCombatTurnParams {
     handleDefeat: (target: Entity) => void;
 }
 
-const getHeroTemplateForEntity = (entity: Entity) => {
+type SetActiveSkill = ResolveCombatTurnParams["setActiveSkill"];
+type QueueCombatEvent = ResolveCombatTurnParams["queueCombatEvent"];
+type QueueStatusEvent = ResolveCombatTurnParams["queueStatusEvent"];
+type AddLogMessage = ResolveCombatTurnParams["addLogMessage"];
+type HandleDefeat = ResolveCombatTurnParams["handleDefeat"];
+
+const getHeroTemplateForEntity = (entity: Entity): HeroClassTemplate | null => {
     if (entity.isEnemy || !isHeroClass(entity.class)) {
         return null;
     }
@@ -142,8 +153,8 @@ const applyHealing = ({
     target: Entity;
     amount: Decimal;
     skillName: string;
-    queueCombatEvent: (event: Omit<CombatEvent, "id">) => void;
-    addLogMessage: (message: string) => void;
+    queueCombatEvent: QueueCombatEvent;
+    addLogMessage: AddLogMessage;
 }) => {
     const healAmount = amount.times(getHealingMultiplier(target));
     target.currentHp = Decimal.min(target.maxHp, target.currentHp.plus(healAmount));
@@ -161,12 +172,12 @@ const applyHealing = ({
 const handleHeroTurn = (
     entity: Entity,
     livingAllies: Entity[],
-    heroTemplate: any,
-    heroBuildProfile: any,
-    setActiveSkill: any,
-    queueCombatEvent: any,
-    queueStatusEvent: any,
-    addLogMessage: any,
+    heroTemplate: HeroClassTemplate,
+    heroBuildProfile: HeroBuildProfile,
+    setActiveSkill: SetActiveSkill,
+    queueCombatEvent: QueueCombatEvent,
+    queueStatusEvent: QueueStatusEvent,
+    addLogMessage: AddLogMessage,
 ) => {
     const healDefinition = heroTemplate.actionPackage.heal;
     const healTarget = getLowestHpRatioTarget(livingAllies.filter((ally) => ally.currentHp.lt(ally.maxHp)));
@@ -232,9 +243,9 @@ const handleHeroTurn = (
 const handleEnemyTurn = (
     entity: Entity,
     livingAllies: Entity[],
-    setActiveSkill: any,
-    queueCombatEvent: any,
-    addLogMessage: any,
+    setActiveSkill: SetActiveSkill,
+    queueCombatEvent: QueueCombatEvent,
+    addLogMessage: AddLogMessage,
 ) => {
     if (entity.enemyArchetype === "Support") {
         const supportAction = getEnemySupportAction(entity, livingAllies);
@@ -283,13 +294,13 @@ const applyFinalDamage = ({
 }: {
     entity: Entity;
     target: Entity;
-    action: any;
+    action: DamageAction;
     randomSource: SimulationRandomSource;
     buildState: HeroBuildState;
-    queueCombatEvent: (event: Omit<CombatEvent, "id">) => void;
-    queueStatusEvent: any;
-    addLogMessage: (message: string) => void;
-    handleDefeat: (target: Entity) => void;
+    queueCombatEvent: QueueCombatEvent;
+    queueStatusEvent: QueueStatusEvent;
+    addLogMessage: AddLogMessage;
+    handleDefeat: HandleDefeat;
 }) => {
     const hitChance = action.deliveryType === "spell"
         ? getSpellHitChance(entity, target)
