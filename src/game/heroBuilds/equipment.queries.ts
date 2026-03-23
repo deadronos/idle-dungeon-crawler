@@ -8,6 +8,7 @@ import type { EquipmentSlot } from "./shared";
 let equipmentOwnerCache = new WeakMap<Record<string, string[]>, Map<string, string>>();
 let inventoryCache = new WeakMap<EquipmentItemInstance[], ResolvedEquipmentItem[]>();
 let equipmentInstanceCache = new WeakMap<EquipmentItemInstance[], Map<string, EquipmentItemInstance | null>>();
+let equippedSlotCache = new WeakMap<Record<string, string[]>, Map<string, Map<EquipmentSlot, ResolvedEquipmentItem | null>>>();
 const isResolvedEquipmentItem = (item: ResolvedEquipmentItem | null): item is ResolvedEquipmentItem => Boolean(item);
 const isEquipmentItemInstance = (item: EquipmentItemInstance | null): item is EquipmentItemInstance => Boolean(item);
 
@@ -15,6 +16,7 @@ export const __resetEquipmentMemoizationCaches = () => {
     equipmentOwnerCache = new WeakMap();
     inventoryCache = new WeakMap();
     equipmentInstanceCache = new WeakMap();
+    equippedSlotCache = new WeakMap();
 };
 
 export const getEquipmentInstance = (itemId: string, equipmentProgression: EquipmentProgressionState) => {
@@ -106,7 +108,24 @@ export const getEquippedItemForSlot = (
     equipmentProgression: EquipmentProgressionState,
     slot: EquipmentSlot,
 ) => {
-    return getHeroEquippedItems(hero, equipmentProgression).find((item) => item.slot === slot) ?? null;
+    const equippedMapping = equipmentProgression.equippedItemInstanceIdsByHeroId;
+    let heroesMap = equippedSlotCache.get(equippedMapping);
+    if (!heroesMap) {
+        heroesMap = new Map<string, Map<EquipmentSlot, ResolvedEquipmentItem | null>>();
+        equippedSlotCache.set(equippedMapping, heroesMap);
+    }
+
+    let slotMap = heroesMap.get(hero.id);
+    if (!slotMap) {
+        slotMap = new Map<EquipmentSlot, ResolvedEquipmentItem | null>();
+        const allEquipped = getHeroEquippedItems(hero, equipmentProgression);
+        for (const item of allEquipped) {
+            slotMap.set(item.slot, item);
+        }
+        heroesMap.set(hero.id, slotMap);
+    }
+
+    return slotMap.get(slot) ?? null;
 };
 
 export const getUnequippedInventoryItems = (
