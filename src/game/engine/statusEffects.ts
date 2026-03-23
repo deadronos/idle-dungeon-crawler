@@ -42,9 +42,15 @@ interface RandomSourceLike {
 const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
 
 export const getStatusPotency = (entity: Entity, key: StatusEffectKey) => {
-    return entity.statusEffects
-        .filter((statusEffect) => statusEffect.key === key)
-        .reduce((highestPotency, statusEffect) => Math.max(highestPotency, statusEffect.potency), 0);
+    let highestPotency = 0;
+    for (const statusEffect of entity.statusEffects) {
+        if (statusEffect.key === key) {
+            if (statusEffect.potency > highestPotency) {
+                highestPotency = statusEffect.potency;
+            }
+        }
+    }
+    return highestPotency;
 };
 
 export const getDamageOutputMultiplier = (entity: Entity) => {
