@@ -165,8 +165,16 @@ export const getStatusApplicationChance = (attacker: Entity, defender: Entity, b
     );
 
 export const getCleanseableStatusEffect = (target: Entity) => {
-    return target.statusEffects.find((statusEffect) => statusEffect.key === "hex")
-        ?? target.statusEffects.find((statusEffect) => statusEffect.polarity === "debuff");
+    let firstDebuff: StatusEffect | undefined;
+    for (const statusEffect of target.statusEffects) {
+        if (statusEffect.key === "hex") {
+            return statusEffect;
+        }
+        if (!firstDebuff && statusEffect.polarity === "debuff") {
+            firstDebuff = statusEffect;
+        }
+    }
+    return firstDebuff;
 };
 
 export const cleanseStatusEffect = (
