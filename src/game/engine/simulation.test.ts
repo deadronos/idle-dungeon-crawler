@@ -995,6 +995,44 @@ describe("simulation engine", () => {
         expect(result.state.party[0]?.activeSkillTicks).toBe(0);
     });
 
+    it("can advance combat silently without recording transient visuals", () => {
+        const cleric = createHero("hero_1", "Ione", "Cleric");
+        cleric.actionProgress = 99;
+
+        const warrior = createHero("hero_2", "Brom", "Warrior");
+        warrior.actionProgress = -999;
+        warrior.currentHp = warrior.currentHp.div(2);
+        const startingHp = warrior.currentHp;
+
+        const enemy = createEnemy(1, "enemy_1");
+        enemy.actionProgress = -999;
+
+        const result = simulateTick(
+            createInitialGameState({
+                party: [cleric, warrior],
+                enemies: [enemy],
+                combatLog: ["existing log"],
+                combatEvents: [
+                    {
+                        id: "combat-event-1",
+                        sourceId: cleric.id,
+                        kind: "skill",
+                        text: "Old Skill",
+                        ttlTicks: 2,
+                    },
+                ],
+            }),
+            createSequenceRandomSource(0),
+            true,
+        );
+
+        expect(result.state.party[1].currentHp.gt(startingHp)).toBe(true);
+        expect(result.state.combatLog).toEqual(["existing log"]);
+        expect(result.state.combatEvents).toEqual([]);
+        expect(result.state.party[0]?.activeSkill).toBeNull();
+        expect(result.state.party[0]?.activeSkillTicks).toBe(0);
+    });
+
     it("returns the original state reference for fully idle victory ticks", () => {
         const state = createInitialGameState({
             party: [createHero("hero_1", "Brom", "Warrior")],

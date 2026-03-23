@@ -42,9 +42,15 @@ interface RandomSourceLike {
 const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
 
 export const getStatusPotency = (entity: Entity, key: StatusEffectKey) => {
-    return entity.statusEffects
-        .filter((statusEffect) => statusEffect.key === key)
-        .reduce((highestPotency, statusEffect) => Math.max(highestPotency, statusEffect.potency), 0);
+    let highestPotency = 0;
+    for (const statusEffect of entity.statusEffects) {
+        if (statusEffect.key === key) {
+            if (statusEffect.potency > highestPotency) {
+                highestPotency = statusEffect.potency;
+            }
+        }
+    }
+    return highestPotency;
 };
 
 export const getDamageOutputMultiplier = (entity: Entity) => {
@@ -165,8 +171,16 @@ export const getStatusApplicationChance = (attacker: Entity, defender: Entity, b
     );
 
 export const getCleanseableStatusEffect = (target: Entity) => {
-    return target.statusEffects.find((statusEffect) => statusEffect.key === "hex")
-        ?? target.statusEffects.find((statusEffect) => statusEffect.polarity === "debuff");
+    let firstDebuff: StatusEffect | undefined;
+    for (const statusEffect of target.statusEffects) {
+        if (statusEffect.key === "hex") {
+            return statusEffect;
+        }
+        if (!firstDebuff && statusEffect.polarity === "debuff") {
+            firstDebuff = statusEffect;
+        }
+    }
+    return firstDebuff;
 };
 
 export const cleanseStatusEffect = (
