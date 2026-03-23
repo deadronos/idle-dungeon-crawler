@@ -119,11 +119,6 @@ export const getHeroTalentRanks = (heroId: string, talentProgression: TalentProg
 export const getTalentRankForHero = (heroId: string, talentId: string, talentProgression: TalentProgressionState) =>
     getHeroTalentRanks(heroId, talentProgression)[talentId] ?? 0;
 
-export const getHeroUnlockedTalentIds = (heroId: string, talentProgression: TalentProgressionState) =>
-    Object.entries(getHeroTalentRanks(heroId, talentProgression))
-        .filter(([, rank]) => rank > 0)
-        .map(([talentId]) => talentId);
-
 export const getSpentTalentRanksForHero = (heroId: string, talentProgression: TalentProgressionState) =>
     Object.values(getHeroTalentRanks(heroId, talentProgression)).reduce((total, rank) => total + rank, 0);
 

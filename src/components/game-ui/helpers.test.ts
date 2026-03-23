@@ -7,6 +7,7 @@ import {
     formatUiStat,
     getEntityHealthBarColorClass,
     getHealthBarColorClass,
+    getStatusChipToneClass,
     ratioToClampedPercent,
 } from "./helpers";
 
@@ -42,5 +43,14 @@ describe("game UI helpers", () => {
                 maxHp: new Decimal(100),
             }),
         ).toBe("bg-red-500");
+    });
+
+    it("returns correct tailwind classes for status chip tones", () => {
+        expect(getStatusChipToneClass("buff")).toBe(
+            "border-emerald-400/40 bg-emerald-500/15 text-emerald-100",
+        );
+        expect(getStatusChipToneClass("debuff")).toBe(
+            "border-red-400/30 bg-red-500/10 text-red-100",
+        );
     });
 });
