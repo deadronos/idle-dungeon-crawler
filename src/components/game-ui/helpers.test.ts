@@ -6,6 +6,7 @@ import {
     formatRatioPercent,
     formatUiStat,
     getEntityHealthBarColorClass,
+    getEntityResourceBarColorClass,
     getHealthBarColorClass,
     ratioToClampedPercent,
 } from "./helpers";
@@ -42,5 +43,12 @@ describe("game UI helpers", () => {
                 maxHp: new Decimal(100),
             }),
         ).toBe("bg-red-500");
+    });
+
+    it("assigns appropriate resource bar colors based on entity class and enemy status", () => {
+        expect(getEntityResourceBarColorClass({ isEnemy: true, class: "Monster" })).toBe("bg-purple-500");
+        expect(getEntityResourceBarColorClass({ isEnemy: false, class: "Warrior" })).toBe("bg-red-500");
+        expect(getEntityResourceBarColorClass({ isEnemy: false, class: "Cleric" })).toBe("bg-blue-500");
+        expect(getEntityResourceBarColorClass({ isEnemy: false, class: "Archer" })).toBe("bg-yellow-500");
     });
 });
