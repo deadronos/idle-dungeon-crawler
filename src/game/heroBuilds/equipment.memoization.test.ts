@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { EquipmentItemInstance, EquipmentProgressionState } from "../store/types";
+
+import type { EquipmentProgressionState } from "../store/types";
 import { getInventoryItems, getEquipmentInstance, __resetEquipmentMemoizationCaches } from "./equipment.queries";
 import { createEquipmentItemInstance, resolveEquipmentItem, __resetResolveEquipmentItemCache } from "./equipment.instances";
 import * as catalog from "./equipment.catalog";

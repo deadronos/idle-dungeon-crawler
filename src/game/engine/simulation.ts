@@ -106,12 +106,13 @@ export const stepSimulationState = (
     state: GameState,
     deltaMs = GAME_TICK_MS,
     randomSource: SimulationRandomSource = defaultRandomSource,
+    silent = false,
 ): GameState => {
     const stepCount = Math.max(1, Math.floor(deltaMs / GAME_TICK_MS));
     let nextState = state;
 
     for (let stepIndex = 0; stepIndex < stepCount; stepIndex += 1) {
-        const result = simulateTick(nextState, randomSource);
+        const result = simulateTick(nextState, randomSource, silent);
         nextState = result.state;
 
         if (result.outcome === "party-wipe") {
@@ -126,9 +127,9 @@ export const stepSimulationState = (
     return nextState;
 };
 
-export const simulateTick = (state: GameState, randomSource: SimulationRandomSource = defaultRandomSource): SimulationResult => {
+export const simulateTick = (state: GameState, randomSource: SimulationRandomSource = defaultRandomSource, silent = false): SimulationResult => {
     const immediateOutcome = getImmediateSimulationOutcome(state);
-    if (immediateOutcome !== "running" && !hasPendingSimulationVisuals(state)) {
+    if (immediateOutcome !== "running" && (silent || !hasPendingSimulationVisuals(state))) {
         return { state, outcome: immediateOutcome };
     }
 
@@ -138,17 +139,21 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
     let anyVisualUpdate = false;
     const logMessages: string[] = [];
     const addLogMessage = (message: string) => {
-        logMessages.push(message);
+        if (!silent) {
+            logMessages.push(message);
+        }
     };
-    const combatEvents: CombatEvent[] = decrementCombatEvents(draft.combatEvents);
-    if (draft.combatEvents.length > 0) {
+    const combatEvents: CombatEvent[] = silent ? [] : decrementCombatEvents(draft.combatEvents);
+    if (!silent && draft.combatEvents.length > 0) {
         anyVisualUpdate = true;
     }
     draft.combatEvents = combatEvents;
 
     const queueCombatEvent = (event: Omit<CombatEvent, "id">) => {
-        draft.combatEvents.push(createCombatEvent(event));
-        anyVisualUpdate = true;
+        if (!silent) {
+            draft.combatEvents.push(createCombatEvent(event));
+            anyVisualUpdate = true;
+        }
     };
 
     const queueStatusEvent = ({
@@ -188,16 +193,20 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
     };
 
     const setActiveSkill = (entity: Entity, skill: string) => {
-        anyVisualUpdate = true;
-        applyActiveSkill(entity, skill, queueCombatEvent);
+        if (!silent) {
+            anyVisualUpdate = true;
+            applyActiveSkill(entity, skill, queueCombatEvent);
+        }
     };
 
-    draft.party.forEach((hero) => {
-        anyVisualUpdate = updateSkillBanner(hero) || anyVisualUpdate;
-    });
-    draft.enemies.forEach((enemy) => {
-        anyVisualUpdate = updateSkillBanner(enemy) || anyVisualUpdate;
-    });
+    if (!silent) {
+        draft.party.forEach((hero) => {
+            anyVisualUpdate = updateSkillBanner(hero) || anyVisualUpdate;
+        });
+        draft.enemies.forEach((enemy) => {
+            anyVisualUpdate = updateSkillBanner(enemy) || anyVisualUpdate;
+        });
+    }
 
     let livingHeroes = draft.party.filter((hero) => hero.currentHp.gt(0));
     let livingEnemies = draft.enemies.filter((enemy) => enemy.currentHp.gt(0));
@@ -221,14 +230,14 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
     livingEnemies = draft.enemies.filter((enemy) => enemy.currentHp.gt(0));
 
     if (livingHeroes.length === 0) {
-        if (logMessages.length > 0) {
+        if (!silent && logMessages.length > 0) {
             draft.combatLog = prependCombatMessages(draft.combatLog, ...logMessages);
         }
         return { state: draft, outcome: "party-wipe" };
     }
 
     if (livingEnemies.length === 0) {
-        if (logMessages.length > 0) {
+        if (!silent && logMessages.length > 0) {
             draft.combatLog = prependCombatMessages(draft.combatLog, ...logMessages);
         }
         return { state: draft, outcome: "victory" };
@@ -266,7 +275,7 @@ export const simulateTick = (state: GameState, randomSource: SimulationRandomSou
         });
     });
 
-    if (logMessages.length > 0) {
+    if (!silent && logMessages.length > 0) {
         draft.combatLog = prependCombatMessages(draft.combatLog, ...logMessages);
     }
 
