@@ -6,6 +6,7 @@ import {
     formatRatioPercent,
     formatUiStat,
     getEntityHealthBarColorClass,
+    getEntityResourceBarColorClass,
     getHealthBarColorClass,
     getStatusChipToneClass,
     ratioToClampedPercent,
@@ -44,6 +45,13 @@ describe("game UI helpers", () => {
             }),
         ).toBe("bg-red-500");
     });
+});
+    it("assigns appropriate resource bar colors based on entity class and enemy status", () => {
+        expect(getEntityResourceBarColorClass({ isEnemy: true, class: "Monster" })).toBe("bg-purple-500");
+        expect(getEntityResourceBarColorClass({ isEnemy: false, class: "Warrior" })).toBe("bg-red-500");
+        expect(getEntityResourceBarColorClass({ isEnemy: false, class: "Cleric" })).toBe("bg-blue-500");
+        expect(getEntityResourceBarColorClass({ isEnemy: false, class: "Archer" })).toBe("bg-yellow-500");
+    });
 
     it("returns correct tailwind classes for status chip tones", () => {
         expect(getStatusChipToneClass("buff")).toBe(
@@ -53,4 +61,3 @@ describe("game UI helpers", () => {
             "border-red-400/30 bg-red-500/10 text-red-100",
         );
     });
-});
