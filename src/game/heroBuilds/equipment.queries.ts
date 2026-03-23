@@ -23,17 +23,14 @@ export const getEquipmentInstance = (itemId: string, equipmentProgression: Equip
     const items = equipmentProgression.inventoryItems;
     let map = equipmentInstanceCache.get(items);
     if (!map) {
-        map = new Map<string, EquipmentItemInstance | null>();
+        map = new Map<string, EquipmentItemInstance>();
+        for (const item of items) {
+            map.set(item.instanceId, item);
+        }
         equipmentInstanceCache.set(items, map);
     }
 
-    if (map.has(itemId)) {
-        return map.get(itemId) ?? null;
-    }
-
-    const found = items.find((item) => item.instanceId === itemId) ?? null;
-    map.set(itemId, found);
-    return found;
+    return map.get(itemId) ?? null;
 };
 
 export const getInventoryItems = (equipmentProgression: EquipmentProgressionState) => {
