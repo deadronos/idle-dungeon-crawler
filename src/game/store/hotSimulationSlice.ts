@@ -60,7 +60,8 @@ export const createHotSimulationSlice = (
                 ...selectProgressionState(get()),
                 activeSection: get().activeSection,
             };
-            set(stepSimulationState(state, deltaMs));
+            const silent = deltaMs > GAME_TICK_MS * 10;
+            set(stepSimulationState(state, deltaMs, undefined, silent));
         },
     });
 };
