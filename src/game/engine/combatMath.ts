@@ -95,6 +95,6 @@ export const getActionProgressPerTick = (
   return formulaCalcActionProgressPerTick(
     combatRatings.haste,
     prestigeUpgrades?.gameSpeed ?? 0,
-    getStatusPotency(entity, "slow")
+    0
   ) * getAtbMultiplier(entity);
 };

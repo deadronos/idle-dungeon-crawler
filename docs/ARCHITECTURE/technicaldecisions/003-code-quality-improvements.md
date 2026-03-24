@@ -15,6 +15,7 @@ The codebase had accumulated several areas for improvement across code quality, 
 **Problem:** Combat calculations were scattered across multiple files with hard-coded magic numbers, making balance tuning difficult and prone to inconsistencies.
 
 **Solution:** Created `src/game/engine/combatFormulas.ts` as a single source of truth for all combat formulas:
+
 - ATB configuration constants
 - Hit chance formulas with min/max bounds
 - Parry, penetration, and tenacity calculations
@@ -24,6 +25,7 @@ The codebase had accumulated several areas for improvement across code quality, 
 - Rating attribute multipliers
 
 **Benefits:**
+
 - Balance tuning now requires changes in only one location
 - Formulas are self-documenting with clear naming
 - Eliminated duplication between `entity.combat.ts` and `combatMath.ts`
@@ -33,12 +35,14 @@ The codebase had accumulated several areas for improvement across code quality, 
 **Problem:** `getCombatRatings()` was being called repeatedly for the same entity states, causing unnecessary recalculation during combat simulation.
 
 **Solution:** Implemented a `CombatRatingCache` class in `entity.combat.ts`:
-- LRU-style cache with 1000 entry limit
+
+- LRU cache with 1000 entry limit
 - Cache keys based on entity ID, attributes, and build state
 - Automatic cache invalidation on entity changes
 - Exposed `clearCombatRatingCache()` for manual invalidation
 
 **Benefits:**
+
 - Reduced CPU load during idle progression
 - Particularly effective for simulations with many combat ticks
 - No impact on memory footprint due to size limit
@@ -46,17 +50,21 @@ The codebase had accumulated several areas for improvement across code quality, 
 ### 3. UI Performance Improvements
 
 **Problem:** Entity cards were re-rendering excessively due to:
+
 - Calculating ratios on every render
 - Passing all combat events to every card
 - Expensive `getHeroBuildProfile` calls
 
 **Solution:**
+
 - Memoized `EntityCard` with `React.memo`
 - Added `useMemo` for ratio calculations (HP, resource, XP)
 - Filtered combat events per entity with memoization
 - Memoized build profile calculation
+- Memoized roster build-state objects so `EntityCard` memoization can hold
 
 **Benefits:**
+
 - Reduced React re-render cycles
 - Smoother UI updates during active combat
 - Better perceived performance
@@ -66,6 +74,7 @@ The codebase had accumulated several areas for improvement across code quality, 
 **Problem:** Combat calculations lacked comprehensive edge case coverage.
 
 **Solution:** Added `src/game/engine/combatFormulas.test.ts` with 42 test cases covering:
+
 - Configuration constant validation
 - Boundary conditions (min/max hit chances)
 - Negative values and zero handling
@@ -74,6 +83,7 @@ The codebase had accumulated several areas for improvement across code quality, 
 - Critical hit calculations
 
 **Benefits:**
+
 - Early detection of formula regressions
 - Documentation via test cases
 - Confidence in combat system correctness
@@ -83,6 +93,7 @@ The codebase had accumulated several areas for improvement across code quality, 
 **Problem:** No systematic way to evaluate hero build viability or identify overpowered/underpowered combinations.
 
 **Solution:** Created `src/game/buildAnalysis.ts` with:
+
 - 8 predefined build configurations across all classes
 - Effectiveness scoring based on focus and balance
 - Class-by-class summary statistics
@@ -90,6 +101,7 @@ The codebase had accumulated several areas for improvement across code quality, 
 - Automated recommendations for balance issues
 
 **Usage:**
+
 ```typescript
 import { analyzeBuildDiversity, compareBuilds } from "@/game/buildAnalysis";
 
@@ -101,6 +113,7 @@ const comparison = compareBuilds("Tank Warrior", "DPS Archer");
 ```
 
 **Benefits:**
+
 - Data-driven balance decisions
 - Quantitative build viability metrics
 - Automated detection of class imbalances
@@ -108,13 +121,15 @@ const comparison = compareBuilds("Tank Warrior", "DPS Archer");
 ## Backward Compatibility
 
 All changes maintain backward compatibility:
+
 - Constants are re-exported from new locations
 - Existing function signatures unchanged
 - No breaking changes to save files or game state
 
 ## Testing
 
-All 219 tests pass, including:
+All 250 tests pass, including:
+
 - 42 new combat formula tests
 - 26 new build analysis tests
 - All existing integration and unit tests
@@ -125,6 +140,11 @@ All 219 tests pass, including:
 - **Faster:** Combat simulation performance, UI render cycles
 - **Safer:** Comprehensive edge case testing prevents regressions
 - **No Impact:** Save compatibility, existing functionality
+
+## Validation Notes
+
+- Slow/status ATB modifiers are applied once in the runtime path to avoid double-scaling action progress.
+- `EntityRoster` passes a stable build-state object so the card-level memoization is effective.
 
 ## Future Work
 

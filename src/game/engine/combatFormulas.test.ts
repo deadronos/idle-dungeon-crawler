@@ -276,6 +276,13 @@ describe("Combat Formulas", () => {
       const expectedMin = (ATB_CONFIG.BASE_RATE + 10 * ATB_CONFIG.HASTE_RATE) * ATB_CONFIG.SLOW_MIN_MULTIPLIER;
       expect(result).toBeGreaterThanOrEqual(expectedMin * 0.99); // Allow small floating point variance
     });
+
+    it("should apply slow only once at the formula layer", () => {
+      const base = calculateActionProgressPerTick(10, 0, 0);
+      const slowed = calculateActionProgressPerTick(10, 0, 0.5);
+
+      expect(slowed).toBeCloseTo(base * 0.5, 5);
+    });
   });
 
   describe("Clamp Function", () => {

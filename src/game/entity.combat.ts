@@ -33,18 +33,32 @@ class CombatRatingCache {
   private cache: Map<string, CombatRatings> = new Map();
   private maxSize = 1000;
 
-  generateKey(entityId: string, attributes: Attributes, buildStateKey: string | undefined): string {
+  generateKey(
+    entityId: string,
+    entityClass: EntityClass,
+    isEnemy: boolean,
+    enemyArchetype: string | undefined,
+    attributes: Attributes,
+    buildStateKey: string | undefined,
+  ): string {
     const attrKey = `${attributes.vit},${attributes.str},${attributes.dex},${attributes.int},${attributes.wis}`;
-    return `${entityId}:${attrKey}:${buildStateKey || ""}`;
+    return `${entityId}:${entityClass}:${isEnemy ? 1 : 0}:${enemyArchetype || ""}:${attrKey}:${buildStateKey || ""}`;
   }
 
   get(key: string): CombatRatings | undefined {
-    return this.cache.get(key);
+    const cached = this.cache.get(key);
+    if (!cached) {
+      return undefined;
+    }
+
+    this.cache.delete(key);
+    this.cache.set(key, cached);
+    return cached;
   }
 
   set(key: string, ratings: CombatRatings): void {
     if (this.cache.size >= this.maxSize) {
-      // Remove oldest entries (FIFO)
+      // Remove the least recently used entry
       const firstKey = this.cache.keys().next().value;
       if (firstKey) {
         this.cache.delete(firstKey);
@@ -93,7 +107,14 @@ export const getCombatRatings = (
 ): CombatRatings => {
   // Generate cache key
   const buildStateKey = buildState ? JSON.stringify(buildState) : undefined;
-  const cacheKey = ratingCache.generateKey(entity.id, entity.attributes, buildStateKey);
+  const cacheKey = ratingCache.generateKey(
+    entity.id,
+    entity.class,
+    entity.isEnemy,
+    entity.enemyArchetype,
+    entity.attributes,
+    buildStateKey,
+  );
 
   // Check cache
   const cached = ratingCache.get(cacheKey);
