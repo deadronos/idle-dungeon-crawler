@@ -161,3 +161,44 @@ describe("entity model", () => {
         expect(getEnemyArchetypeLabel(caster)).toBe("Fire Caster");
     });
 });
+
+describe("entity factories edge cases", () => {
+    it("assigns the next highest numeric id even when the party includes non-standard hero ids", () => {
+        const party = createStarterParty("Ayla", "Warrior");
+        // Inject an entity with a non-standard id that should be ignored by getNextHeroId
+        (party as Array<{ id: string }>).push({ ...party[0], id: "imported_hero" } as (typeof party)[number]);
+
+        const recruit = createRecruitHero("Cleric", party);
+
+        // Non-standard id is ignored; the highest numeric id is still 1 → next is 2
+        expect(recruit.id).toBe("hero_2");
+    });
+
+    it("appends a numeric suffix when all names in the class pool are already taken", () => {
+        const party = createStarterParty("Brom", "Warrior");
+        // Exhaust the entire Warrior name pool (5 names)
+        const warriorNamePool = ["Brom", "Tarin", "Mira", "Hale", "Sable"];
+        for (const name of warriorNamePool.slice(1)) {
+            party.push({ ...party[0], id: `hero_${party.length + 1}`, name });
+        }
+
+        // All pool names are taken → should generate "Brom 2"
+        const overflow = createRecruitHero("Warrior", party);
+
+        expect(overflow.name).toBe("Brom 2");
+    });
+
+    it("increments the suffix past 2 when the first suffixed name is also taken", () => {
+        const party = createStarterParty("Brom", "Warrior");
+        const warriorNamePool = ["Brom", "Tarin", "Mira", "Hale", "Sable"];
+        for (const name of warriorNamePool.slice(1)) {
+            party.push({ ...party[0], id: `hero_${party.length + 1}`, name });
+        }
+        // Also take "Brom 2"
+        party.push({ ...party[0], id: `hero_${party.length + 1}`, name: "Brom 2" });
+
+        const overflow = createRecruitHero("Warrior", party);
+
+        expect(overflow.name).toBe("Brom 3");
+    });
+});

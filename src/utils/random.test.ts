@@ -34,4 +34,12 @@ describe("secureRandom", () => {
 
         vi.restoreAllMocks();
     });
+
+    it("throws an error when crypto.getRandomValues is not available", () => {
+        vi.stubGlobal("crypto", {});
+
+        expect(() => secureRandom()).toThrow("Secure random not available in this environment");
+
+        vi.unstubAllGlobals();
+    });
 });

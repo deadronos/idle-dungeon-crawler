@@ -25,6 +25,7 @@ import {
     simulateTick,
     stepSimulationState,
 } from "./simulation";
+import { getEffectiveArmor, getEffectiveResistance } from "./combatMath";
 import { getInsightXpMultiplier } from "../progressionMath";
 
 const advanceUntilLogs = (state = createInitialGameState(), randomSource = createSequenceRandomSource(0), logCount = 1) => {
@@ -1557,5 +1558,29 @@ describe("simulation engine", () => {
         expect(nextState.gold.eq(0)).toBe(true);
         expect(nextState.party[0].currentHp.eq(nextState.party[0].maxHp)).toBe(true);
         expect(nextState.combatLog[0]).toMatch(/wiped out/i);
+    });
+});
+
+describe("combatMath helpers", () => {
+    it("getEffectiveArmor reduces armor proportionally to penetration", () => {
+        const baseArmor = new Decimal(100);
+
+        const zeroPen = getEffectiveArmor(baseArmor, 0);
+        expect(zeroPen.toNumber()).toBe(100);
+
+        const halfPen = getEffectiveArmor(baseArmor, 50);
+        expect(halfPen.toNumber()).toBeLessThan(100);
+        expect(halfPen.toNumber()).toBeGreaterThan(0);
+    });
+
+    it("getEffectiveResistance reduces resistance proportionally to elemental penetration", () => {
+        const baseResistance = 0.5;
+
+        const zeroPen = getEffectiveResistance(baseResistance, 0);
+        expect(zeroPen).toBe(0.5);
+
+        const halfPen = getEffectiveResistance(baseResistance, 50);
+        expect(halfPen).toBeLessThan(0.5);
+        expect(halfPen).toBeGreaterThanOrEqual(0);
     });
 });

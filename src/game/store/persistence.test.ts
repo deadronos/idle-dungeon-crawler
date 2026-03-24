@@ -9,8 +9,11 @@ import { getExpRequirement } from "@/game/entity";
 import {
     deserializeGameState,
     GAME_STATE_EXPORT_VERSION,
+    GAME_STATE_STORAGE_KEY,
     LEGACY_UNVERSIONED_SAVE_VERSION,
+    loadGameStateFromStorage,
     MAX_SAVE_SIZE_BYTES,
+    saveGameStateToStorage,
     SAVE_MIGRATIONS,
     serializeGameState,
 } from "./persistence";
@@ -326,5 +329,72 @@ describe("game-state persistence", () => {
 
         expect(restoredHero?.expToNext.eq(expectedExpToNext)).toBe(true);
         expect(restoredHero?.exp.toString()).toBe(expectedExp.toString());
+    });
+});
+
+describe("deserializeGameState error handling", () => {
+    it("throws when the serialized state exceeds the maximum save size", () => {
+        const oversizedPayload = "x".repeat(MAX_SAVE_SIZE_BYTES + 1);
+        expect(() => deserializeGameState(oversizedPayload)).toThrow("Save file is too large.");
+    });
+
+    it("throws when the serialized state is not valid JSON", () => {
+        expect(() => deserializeGameState("{not valid json}")).toThrow("Save file is not valid JSON.");
+    });
+
+    it("throws when the parsed state field is not a valid object", () => {
+        const payload = JSON.stringify({
+            version: GAME_STATE_EXPORT_VERSION,
+            savedAt: new Date().toISOString(),
+            state: "not-an-object",
+        });
+        expect(() => deserializeGameState(payload)).toThrow("Save file is missing required game-state data.");
+    });
+});
+
+describe("loadGameStateFromStorage", () => {
+    it("returns null when storage has no saved game state", () => {
+        const emptyStorage = { getItem: () => null };
+        expect(loadGameStateFromStorage(emptyStorage)).toBeNull();
+    });
+
+    it("returns null when the stored data cannot be deserialized", () => {
+        const brokenStorage = { getItem: () => "{corrupted}" };
+        expect(loadGameStateFromStorage(brokenStorage)).toBeNull();
+    });
+
+    it("returns the deserialized game state when storage holds valid data", () => {
+        const party = createStarterParty("Lara", "Warrior");
+        const validState = createInitialGameState({ party });
+        const serialized = serializeGameState(validState);
+
+        const storage = { getItem: () => serialized };
+        const result = loadGameStateFromStorage(storage);
+
+        expect(result).not.toBeNull();
+        expect(result?.party[0]?.name).toBe("Lara");
+    });
+});
+
+describe("saveGameStateToStorage", () => {
+    it("serializes the game state and stores it under the canonical storage key", () => {
+        const party = createStarterParty("Mira", "Cleric");
+        const gameState = createInitialGameState({ party });
+
+        let storedKey = "";
+        let storedValue = "";
+        const storage = {
+            setItem: (key: string, value: string) => {
+                storedKey = key;
+                storedValue = value;
+            },
+        };
+
+        saveGameStateToStorage(storage, gameState);
+
+        expect(storedKey).toBe(GAME_STATE_STORAGE_KEY);
+        expect(storedValue.length).toBeGreaterThan(0);
+        const parsed = JSON.parse(storedValue) as { state: { party: Array<{ name: string }> } };
+        expect(parsed.state.party[0]?.name).toBe("Mira");
     });
 });
