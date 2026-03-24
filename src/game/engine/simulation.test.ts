@@ -621,6 +621,28 @@ describe("simulation engine", () => {
         expect(getStatusApplicationChance(cleric, enemy, 0.45)).toBeGreaterThan(getStatusApplicationChance(warrior, enemy, 0.45));
     });
 
+    it("applies slow to action progress only once", () => {
+        const warrior = createHero("hero_1", "Brom", "Warrior");
+        const slowedWarrior = createHero("hero_2", "Brom", "Warrior");
+
+        slowedWarrior.statusEffects = [
+            {
+                key: "slow",
+                polarity: "debuff",
+                sourceId: "enemy_1",
+                remainingTicks: 5,
+                stacks: 1,
+                maxStacks: 1,
+                potency: 0.5,
+            },
+        ];
+
+        const baseProgress = getActionProgressPerTick(warrior);
+        const slowedProgress = getActionProgressPerTick(slowedWarrior);
+
+        expect(slowedProgress).toBeCloseTo(baseProgress * 0.5, 5);
+    });
+
     it("keeps spell hit only modestly above physical hit for the same matchup", () => {
         const warrior = createHero("hero_1", "Brom", "Warrior");
         const cleric = createHero("hero_2", "Ayla", "Cleric");

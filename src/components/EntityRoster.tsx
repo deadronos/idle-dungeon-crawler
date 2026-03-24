@@ -1,6 +1,7 @@
 import { useShallow } from "zustand/react/shallow";
 
 import { EntityCard } from "@/components/entity-roster/EntityCard";
+import { useMemoizedBuildState } from "@/components/entity-roster/useMemoizedBuildState";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { Entity } from "@/game/entity";
 import { useGameStore } from "@/game/store/gameStore";
@@ -17,7 +18,7 @@ export function EntityRoster({ title, entities, alignRight, className }: Props) 
     const { combatEvents, talentProgression, equipmentProgression, retireHero } = useGameStore(
         useShallow(selectEntityRosterState),
     );
-    const buildState = { talentProgression, equipmentProgression };
+    const buildState = useMemoizedBuildState({ talentProgression, equipmentProgression });
     const sortedEntities = [...entities].sort(
         (a, b) => Number(b.currentHp.gt(0)) - Number(a.currentHp.gt(0)),
     );

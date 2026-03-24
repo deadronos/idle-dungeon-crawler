@@ -31,6 +31,7 @@ We use a format inspired by Architecture Decision Records (ADRs) to document sig
 
 - [001 - Web Stack](technicaldecisions/001-web-stack.md)
 - [002 - State Management Evolution](technicaldecisions/002-state-management-evolution.md)
+- [003 - Code Quality and Performance Improvements](technicaldecisions/003-code-quality-improvements.md)
 
 ## Decision Record Format
 
