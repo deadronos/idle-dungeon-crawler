@@ -85,7 +85,9 @@ Those future regions may safely introduce:
 * new bosses and milestone structures
 * new progression layers that scale heroes beyond the current first-region endgame
 
-The currently proposed long-horizon answer for that higher-order scaling is a future **Ascension** layer above Hero Souls. See [013 - Regional Progression and Ascension Direction](013-regional-progression-and-ascension-direction.md).
+The region-definition, per-region handoff, and region-local milestone model for that future content is now captured in [015 - Regional Progression Architecture](015-regional-progression-architecture.md).
+
+The currently proposed long-horizon answer for higher-order meta scaling above the first-region Hero Souls layer remains a future **Ascension** system. See [013 - Regional Progression and Ascension Direction](013-regional-progression-and-ascension-direction.md).
 
 ### Persistent Gold Upgrades
 
