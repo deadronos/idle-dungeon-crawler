@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { createStarterParty, createEnemy } from "./game/entity";
 import { createInitialGameState } from "./game/engine/simulation";
-import { serializeGameState } from "./game/store/persistence";
+import { GAME_STATE_STORAGE_KEY, serializeGameState } from "./game/store/persistence";
 
 describe("App integration", () => {
     beforeEach(() => {
@@ -103,5 +103,60 @@ describe("App integration", () => {
         expect(createObjectURL).toHaveBeenCalledOnce();
         expect(revokeObjectURL).toHaveBeenCalledOnce();
         expect(screen.getByRole("status")).toHaveTextContent(/save exported/i);
+    });
+
+    it("uses the mobile save menu and party navigation when resuming a saved run", async () => {
+        const user = userEvent.setup();
+        const savedState = createInitialGameState({
+            party: createStarterParty("Ayla", "Warrior"),
+            enemies: [createEnemy(2, "enemy_2")],
+            gold: new Decimal(123),
+            floor: 2,
+            activeSection: "dungeon",
+        });
+        const originalMatchMedia = window.matchMedia;
+
+        Object.defineProperty(window, "matchMedia", {
+            configurable: true,
+            writable: true,
+            value: vi.fn().mockImplementation((query: string) => ({
+                matches: query === "(max-width: 1023px)",
+                media: query,
+                onchange: null,
+                addEventListener: vi.fn(),
+                removeEventListener: vi.fn(),
+                addListener: vi.fn(),
+                removeListener: vi.fn(),
+                dispatchEvent: vi.fn(),
+            })),
+        });
+
+        window.localStorage.setItem(GAME_STATE_STORAGE_KEY, serializeGameState(savedState));
+
+        try {
+            render(<App />);
+
+            expect(screen.queryByRole("button", { name: /export save/i })).not.toBeInTheDocument();
+
+            await user.click(screen.getByRole("button", { name: /open save menu/i }));
+
+            expect(screen.getByRole("button", { name: /export save/i })).toBeInTheDocument();
+            expect(screen.getByRole("status")).toHaveTextContent(/autosaves every 10s/i);
+
+            await user.keyboard("{Escape}");
+
+            expect(screen.queryByRole("button", { name: /export save/i })).not.toBeInTheDocument();
+
+            await user.click(screen.getByRole("button", { name: /party/i }));
+
+            expect(screen.getByText(/basic stats/i)).toBeInTheDocument();
+            expect(screen.getByText("Ayla")).toBeInTheDocument();
+        } finally {
+            Object.defineProperty(window, "matchMedia", {
+                configurable: true,
+                writable: true,
+                value: originalMatchMedia,
+            });
+        }
     });
 });

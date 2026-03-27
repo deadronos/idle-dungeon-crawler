@@ -129,6 +129,26 @@ describe("createGameStore", () => {
         expect(state.combatLog.some((entry) => /moved to floor 5/i.test(entry))).toBe(true);
     });
 
+    it("toggles automation settings and appends combat messages through store actions", () => {
+        const store = createGameStore({
+            combatLog: ["Older log entry"],
+        });
+
+        store.getState().toggleAutoFight();
+        store.getState().toggleAutoAdvance();
+        store.getState().previousFloor();
+        store.getState().appendCombatLog("Manual log entry");
+        store.getState().addMessage("Queued log entry");
+
+        const state = store.getState();
+
+        expect(state.autoFight).toBe(false);
+        expect(state.autoAdvance).toBe(false);
+        expect(state.floor).toBe(1);
+        expect(state.combatLog[0]).toBe("Queued log entry");
+        expect(state.combatLog[1]).toBe("Manual log entry");
+    });
+
     it("unlocks party slots and recruits duplicate classes after the retuned milestone clears", () => {
         const store = createGameStore({
             gold: new Decimal(500),
@@ -317,6 +337,71 @@ describe("createGameStore", () => {
 
         expect(state.equipmentProgression.inventoryItems).toEqual([]);
         expect(state.gold.toString()).toBe(String(10 + sellValue));
+    });
+
+    it("supports the remaining progression actions for fortification, inventory, retirement, and prestige", () => {
+        const starterParty = createStarterParty("Ayla", "Cleric");
+        const recruit = createRecruitHero("Warrior", starterParty);
+        recruit.level = 10;
+
+        const store = createGameStore({
+            gold: new Decimal(500),
+            heroSouls: new Decimal(40),
+            highestFloorCleared: 8,
+            party: [...starterParty, recruit],
+            partyCapacity: 2,
+            equipmentProgression: createLegacyEquipmentProgression(["sunlit-censer", "pilgrim-vestments"], {}),
+            combatLog: [],
+        });
+
+        expect(store.getState().getFortificationUpgradeCost().toString()).toBe("35");
+        expect(store.getState().getNextPartySlotUnlock()).toMatchObject({ capacity: 3, cost: 180, milestoneFloor: 8 });
+        expect(store.getState().getRecruitCost().toString()).toBe("90");
+        expect(store.getState().getInventoryCapacityUpgradeCost()).toBe(40);
+        expect(store.getState().getPrestigeUpgradeCost("costReducer")).toBe(10);
+
+        store.getState().buyFortificationUpgrade();
+
+        let state = store.getState();
+        expect(state.metaUpgrades.fortification).toBe(1);
+        expect(state.gold.toString()).toBe("465");
+
+        store.getState().equipItem("hero_1", "sunlit-censer");
+
+        state = store.getState();
+        const equippedWeaponId = state.equipmentProgression.equippedItemInstanceIdsByHeroId.hero_1?.[0];
+        expect(equippedWeaponId).toBeDefined();
+        expect(getEquipmentOwnerId(equippedWeaponId ?? "", state.equipmentProgression)).toBe("hero_1");
+
+        store.getState().unequipItem("hero_1", "weapon");
+
+        state = store.getState();
+        expect(state.equipmentProgression.equippedItemInstanceIdsByHeroId.hero_1 ?? []).toEqual([]);
+
+        const vestmentsId = state.equipmentProgression.inventoryItems.find(
+            (item) => item.definitionId === "pilgrim-vestments",
+        )?.instanceId;
+        if (!vestmentsId) {
+            throw new Error("Expected Pilgrim Vestments to exist in the inventory.");
+        }
+
+        store.getState().sellInventoryItem(vestmentsId);
+
+        state = store.getState();
+        expect(state.equipmentProgression.inventoryItems.some((item) => item.instanceId === vestmentsId)).toBe(false);
+        expect(state.gold.toString()).toBe("483");
+
+        store.getState().buyInventoryCapacityUpgrade();
+        store.getState().buyPrestigeUpgrade("costReducer");
+        store.getState().retireHero(recruit.id);
+
+        state = store.getState();
+        expect(state.equipmentProgression.inventoryCapacityLevel).toBe(1);
+        expect(state.equipmentProgression.inventoryCapacity).toBe(18);
+        expect(state.prestigeUpgrades.costReducer).toBe(1);
+        expect(state.party).toHaveLength(1);
+        expect(state.heroSouls.toString()).toBe("50");
+        expect(state.combatLog[0]).toMatch(/retired.*20 hero souls/i);
     });
 
     it("awards dropped loot through the victory loop", () => {
