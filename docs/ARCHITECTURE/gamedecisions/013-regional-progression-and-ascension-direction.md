@@ -24,7 +24,7 @@ Each region should own its own local floor range rather than extending a single 
 Examples:
 
 * **Dank Cellar:** Floors `1-50`
-* **Dark Tunnels:** Floors `1-50`
+* **Forgotten Tunnels:** Floors `1-50`
 * later towers or regions can follow the same pattern
 
 Under this model:
@@ -92,7 +92,7 @@ This record suggests two major follow-up tracks after the current first-region b
 
 1. **Regional progression architecture**
    * define how regions/towers own local floor bands, enemy families, and handoff rules
-   * tracked in issue `#99`
+   * now specified in [015 - Regional Progression Architecture](015-regional-progression-architecture.md)
 2. **Ascension meta-progression design**
    * define how Ascension interacts with Hero Souls, scaling, resets, and future-region unlocks
    * tracked in issue `#100`
