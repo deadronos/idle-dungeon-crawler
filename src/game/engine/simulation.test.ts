@@ -1478,10 +1478,10 @@ describe("simulation engine", () => {
         expect(result.state.combatLog.some((entry) => /Hex is cleansed/i.test(entry))).toBe(true);
     });
 
-    it("spends mana up to CLERIC_BLESS_COST when casting Bless and falls back to Smite if mana is low", () => {
+    it("spends mana when casting Bless and falls back to Smite if mana is low", () => {
         const cleric = createHero("hero_1", "Ione", "Cleric");
         cleric.actionProgress = 99;
-        // Set mana low enough that even after per-tick wis regen it can't reach CLERIC_BLESS_COST
+        // Set mana low enough that even after per-tick wis regen it can't reach Bless cost
         cleric.currentResource = new Decimal(0);
 
         const warrior = createHero("hero_2", "Brom", "Warrior");

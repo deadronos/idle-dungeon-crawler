@@ -1,4 +1,3 @@
-import { getHeroClassTemplate } from "../classTemplates";
 import { prependCombatMessages } from "../combatLog";
 import {
     type Entity,
@@ -62,14 +61,6 @@ export {
     HEX_DURATION_TICKS,
     REGEN_DURATION_TICKS,
 } from "./statusEffects";
-
-export const WARRIOR_RAGE_STRIKE_COST = getHeroClassTemplate("Warrior").actionPackage.specialAttack?.cost ?? 40;
-export const WARRIOR_RAGE_PER_ATTACK = getHeroClassTemplate("Warrior").resourceModel.gainOnResolvedAttack;
-export const WARRIOR_RAGE_WHEN_HIT = getHeroClassTemplate("Warrior").resourceModel.gainOnTakeDamage;
-export const ARCHER_PIERCING_SHOT_COST = getHeroClassTemplate("Archer").actionPackage.specialAttack?.cost ?? 35;
-export const ARCHER_PIERCING_SHOT_CRIT_BONUS = getHeroClassTemplate("Archer").actionPackage.specialAttack?.critChanceBonus ?? 0.15;
-export const ARCHER_CUNNING_REGEN_PER_TICK = getHeroClassTemplate("Archer").resourceModel.regenFlat;
-export const CLERIC_BLESS_COST = getHeroClassTemplate("Cleric").actionPackage.bless?.cost ?? 25;
 
 export type SimulationOutcome = "running" | "paused" | "victory" | "party-wipe";
 
