@@ -1,5 +1,6 @@
 import Decimal from "decimal.js";
 
+import { type SecureRandomSource } from "../../utils/random";
 import { prependCombatMessages } from "../combatLog";
 import { getHeroClassTemplate } from "../classTemplates";
 import { getEarnedTalentPointTotal, type HeroBuildState } from "../heroBuilds";
@@ -11,9 +12,7 @@ import { getInsightXpMultiplier } from "../progressionMath";
 import type { GameState } from "../store/types";
 import { getPostVictoryFloorReplayState, getPostVictoryFloorTransitionState } from "./encounter";
 
-interface RandomSourceLike {
-    next: () => number;
-}
+interface RandomSourceLike extends SecureRandomSource {}
 
 const getVictoryLootMessages = ({
     previousHighestTier,

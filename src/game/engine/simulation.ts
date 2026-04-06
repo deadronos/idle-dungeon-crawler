@@ -4,7 +4,7 @@ import {
     type StatusEffectKey,
 } from "../entity";
 import type { CombatEvent, GameState } from "../store/types";
-import { secureRandom } from "../../utils/random";
+import { secureRandom, type SecureRandomSource, SECURE_RANDOM_BRAND } from "../../utils/random";
 
 import {
     COMBAT_EVENT_TICKS,
@@ -69,11 +69,10 @@ export interface SimulationResult {
     outcome: SimulationOutcome;
 }
 
-export interface SimulationRandomSource {
-    next: () => number;
-}
+export interface SimulationRandomSource extends SecureRandomSource {}
 
 const defaultRandomSource: SimulationRandomSource = {
+    [SECURE_RANDOM_BRAND]: true,
     next: () => secureRandom(),
 };
 
@@ -81,6 +80,7 @@ export const createSequenceRandomSource = (...rolls: number[]): SimulationRandom
     let index = 0;
 
     return {
+        [SECURE_RANDOM_BRAND]: true,
         next: () => {
             if (rolls.length === 0) {
                 return 0;

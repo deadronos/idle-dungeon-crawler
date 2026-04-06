@@ -14,6 +14,7 @@ import {
     type StatusEffectKey,
 } from "../entity";
 import type { CombatEvent, PrestigeUpgrades } from "../store/types";
+import { type SecureRandomSource } from "../../utils/random";
 
 import {
     COMBAT_EVENT_TICKS,
@@ -48,9 +49,7 @@ import {
     getStatusKeyForElement,
 } from "./statusEffects";
 
-interface SimulationRandomSource {
-    next: () => number;
-}
+interface SimulationRandomSource extends SecureRandomSource {}
 
 interface ResolveCombatTurnParams {
     entity: Entity;
