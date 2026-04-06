@@ -157,6 +157,7 @@ export const getSlotLockedReason = (
     hero: Pick<Entity, "id" | "class" | "isEnemy">,
     item: ResolvedEquipmentItem,
     equipmentProgression: EquipmentProgressionState,
+    providedOwnerId?: string | null,
 ) => {
     if (!isHeroEligibleForEquipment(hero)) {
         return "Only heroes can equip items.";
@@ -167,7 +168,10 @@ export const getSlotLockedReason = (
         return `${heroClass} cannot equip ${item.name}.`;
     }
 
-    const ownerId = getEquipmentOwnerId(item.id, equipmentProgression);
+    const ownerId = providedOwnerId !== undefined
+        ? providedOwnerId
+        : getEquipmentOwnerId(item.id, equipmentProgression);
+
     if (ownerId && ownerId !== hero.id) {
         return "Equipped by another hero.";
     }
