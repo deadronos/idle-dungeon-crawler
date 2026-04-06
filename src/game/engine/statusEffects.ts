@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 
 import { getStatusEffectName, type DamageElement, type Entity, type StatusEffect, type StatusEffectKey } from "../entity";
 import type { CombatEventStatusPhase } from "../store/types";
+import { type SecureRandomSource } from "../../utils/random";
 
 import { GAME_TICK_RATE } from "./constants";
 
@@ -35,9 +36,7 @@ interface StatusEventContext {
     amount?: string;
 }
 
-interface RandomSourceLike {
-    next: () => number;
-}
+interface RandomSourceLike extends SecureRandomSource {}
 
 const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
 

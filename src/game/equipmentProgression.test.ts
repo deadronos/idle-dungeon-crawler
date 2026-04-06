@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { SECURE_RANDOM_BRAND } from "../utils/random";
 import { createStarterParty } from "./entity";
 import {
     createLegacyEquipmentProgression,
@@ -10,12 +11,13 @@ import { createEmptyEquipmentProgressionState } from "./store/types";
 const createSequenceRandom = (...rolls: number[]) => {
     let index = 0;
     return {
+        [SECURE_RANDOM_BRAND]: true,
         next: () => {
             const roll = rolls[Math.min(index, rolls.length - 1)] ?? 0;
             index += 1;
             return roll;
         },
-    };
+    } as any;
 };
 
 describe("equipment progression", () => {

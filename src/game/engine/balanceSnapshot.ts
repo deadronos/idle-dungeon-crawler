@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 
 import { getHeroClassTemplate, type HeroCombatRating } from "../classTemplates";
+import { SECURE_RANDOM_BRAND } from "../../utils/random";
 import {
     HERO_CLASSES,
     createHero,
@@ -200,11 +201,12 @@ const createSeededRandomSource = (seed: number): SimulationRandomSource => {
     let state = seed >>> 0;
 
     return {
+        [SECURE_RANDOM_BRAND]: true,
         next: () => {
             state = (1664525 * state + 1013904223) >>> 0;
             return state / 0x100000000;
         },
-    };
+    } as SimulationRandomSource;
 };
 
 const getCurrentHero = (heroClass: HeroClass, attributes?: Attributes): Entity => {

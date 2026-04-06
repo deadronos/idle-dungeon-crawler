@@ -1,3 +1,4 @@
+import { type SecureRandomSource } from "../utils/random";
 import type { Entity, HeroClass } from "./entity";
 import {
     EQUIPMENT_DEFINITIONS,
@@ -16,9 +17,7 @@ export interface InventoryCapacityUpgrade {
     capacity: number;
 }
 
-export interface RandomSourceLike {
-    next: () => number;
-}
+export interface RandomSourceLike extends SecureRandomSource {}
 
 export interface GrantedLootResult {
     equipmentProgression: EquipmentProgressionState;

@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 
 import { getHeroClassTemplate } from "../classTemplates";
+import { type SecureRandomSource } from "../../utils/random";
 import { inferEnemyArchetype, type DamageElement, type EnemyArchetype, type Entity } from "../entity";
 import { getHeroBuildProfile, type HeroBuildState } from "../heroBuilds";
 
@@ -160,7 +161,7 @@ export const getEnemySupportAction = (entity: Entity, allies: Entity[]): Support
     return null;
 };
 
-export const selectTarget = (entity: Entity, targets: Entity[], action: DamageAction, randomSource: { next: () => number }) => {
+export const selectTarget = (entity: Entity, targets: Entity[], action: DamageAction, randomSource: SecureRandomSource) => {
     if (!entity.isEnemy) {
         return targets[Math.floor(randomSource.next() * targets.length)];
     }
