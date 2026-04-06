@@ -135,6 +135,7 @@ export const EquipmentPanel: React.FC<{
                                         hero,
                                         item,
                                         equipmentProgression,
+                                        ownerId,
                                     );
                                     const isEquippedHere = equippedItem?.id === item.id;
                                     return (
