@@ -49,7 +49,7 @@ import {
     getStatusKeyForElement,
 } from "./statusEffects";
 
-interface SimulationRandomSource extends SecureRandomSource {}
+type SimulationRandomSource = SecureRandomSource;
 
 interface ResolveCombatTurnParams {
     entity: Entity;

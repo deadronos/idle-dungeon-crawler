@@ -36,7 +36,7 @@ interface StatusEventContext {
     amount?: string;
 }
 
-interface RandomSourceLike extends SecureRandomSource {}
+type RandomSourceLike = SecureRandomSource;
 
 const clampChance = (min: number, max: number, value: number) => Math.max(min, Math.min(max, value));
 

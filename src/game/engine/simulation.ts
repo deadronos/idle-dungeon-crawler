@@ -69,7 +69,7 @@ export interface SimulationResult {
     outcome: SimulationOutcome;
 }
 
-export interface SimulationRandomSource extends SecureRandomSource {}
+export type SimulationRandomSource = SecureRandomSource;
 
 const defaultRandomSource: SimulationRandomSource = {
     [SECURE_RANDOM_BRAND]: true,

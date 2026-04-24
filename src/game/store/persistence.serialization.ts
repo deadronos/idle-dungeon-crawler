@@ -49,7 +49,7 @@ export const deserializeGameState = (serializedState: string): GameState => {
             throw error;
         }
 
-        throw new Error("Save file is missing required game-state data.");
+        throw new Error("Save file is missing required game-state data.", { cause: error });
     }
 };
 

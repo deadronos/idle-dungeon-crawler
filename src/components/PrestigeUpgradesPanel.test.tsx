@@ -93,7 +93,7 @@ describe("PrestigeUpgradesPanel", () => {
         );
 
         // Target the Greed card specifically to find its button
-        const greedCard = screen.getByText(/Greed/i).closest("div");
+        const greedCard = screen.getByText(/Greed/i).closest(".rounded-xl") as HTMLElement;
         if (!greedCard) throw new Error("Could not find Greed card");
 
         const imbueButton = within(greedCard).getByRole("button", { name: /Imbue/i });
