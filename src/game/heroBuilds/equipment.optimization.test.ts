@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach } from "vitest";
-import { getEquipmentOwnerId, getSlotLockedReason, __resetEquipmentMemoizationCaches } from "./equipment.queries";
+import { getSlotLockedReason, __resetEquipmentMemoizationCaches } from "./equipment.queries";
 import { createEquipmentItemInstance, resolveEquipmentItem, __resetResolveEquipmentItemCache } from "./equipment.instances";
 import type { EquipmentProgressionState } from "../store/types";
 
@@ -12,7 +12,7 @@ describe("getSlotLockedReason optimization", () => {
     it("returns null when item is not equipped", () => {
         const item = createEquipmentItemInstance("greatblade-of-embers", { instanceId: "item1" })!;
         const resolved = resolveEquipmentItem(item)!;
-        const hero = { id: "hero1", class: "Warrior", isEnemy: false } as any;
+        const hero = { id: "hero1", class: "Warrior", isEnemy: false } as unknown as import("../entity.types").Entity;
         const state: EquipmentProgressionState = {
             inventoryItems: [item],
             equippedItemInstanceIdsByHeroId: {},
@@ -29,8 +29,7 @@ describe("getSlotLockedReason optimization", () => {
     it("returns locked reason when item is equipped by another hero", () => {
         const item = createEquipmentItemInstance("greatblade-of-embers", { instanceId: "item1" })!;
         const resolved = resolveEquipmentItem(item)!;
-        const hero1 = { id: "hero1", class: "Warrior", isEnemy: false } as any;
-        const hero2 = { id: "hero2", class: "Warrior", isEnemy: false } as any;
+        const hero1 = { id: "hero1", class: "Warrior", isEnemy: false } as unknown as import("../entity.types").Entity;
         const state: EquipmentProgressionState = {
             inventoryItems: [item],
             equippedItemInstanceIdsByHeroId: {
@@ -50,7 +49,7 @@ describe("getSlotLockedReason optimization", () => {
     it("returns null when item is equipped by the same hero", () => {
         const item = createEquipmentItemInstance("greatblade-of-embers", { instanceId: "item1" })!;
         const resolved = resolveEquipmentItem(item)!;
-        const hero1 = { id: "hero1", class: "Warrior", isEnemy: false } as any;
+        const hero1 = { id: "hero1", class: "Warrior", isEnemy: false } as unknown as import("../entity.types").Entity;
         const state: EquipmentProgressionState = {
             inventoryItems: [item],
             equippedItemInstanceIdsByHeroId: {
@@ -69,7 +68,7 @@ describe("getSlotLockedReason optimization", () => {
     it("still checks class eligibility", () => {
         const item = createEquipmentItemInstance("greatblade-of-embers", { instanceId: "item1" })!; // Warrior only
         const resolved = resolveEquipmentItem(item)!;
-        const hero = { id: "hero1", class: "Cleric", isEnemy: false } as any;
+        const hero = { id: "hero1", class: "Cleric", isEnemy: false } as unknown as import("../entity.types").Entity;
         const state: EquipmentProgressionState = {
             inventoryItems: [item],
             equippedItemInstanceIdsByHeroId: {},

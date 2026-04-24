@@ -17,7 +17,7 @@ const createSequenceRandom = (...rolls: number[]) => {
             index += 1;
             return roll;
         },
-    } as any;
+    } as unknown as import("../utils/random").SecureRandomSource;
 };
 
 describe("equipment progression", () => {

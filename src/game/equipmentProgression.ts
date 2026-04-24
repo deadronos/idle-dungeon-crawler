@@ -17,7 +17,7 @@ export interface InventoryCapacityUpgrade {
     capacity: number;
 }
 
-export interface RandomSourceLike extends SecureRandomSource {}
+export type RandomSourceLike = SecureRandomSource;
 
 export interface GrantedLootResult {
     equipmentProgression: EquipmentProgressionState;

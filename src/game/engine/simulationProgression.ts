@@ -12,7 +12,7 @@ import { getInsightXpMultiplier } from "../progressionMath";
 import type { GameState } from "../store/types";
 import { getPostVictoryFloorReplayState, getPostVictoryFloorTransitionState } from "./encounter";
 
-interface RandomSourceLike extends SecureRandomSource {}
+type RandomSourceLike = SecureRandomSource;
 
 const getVictoryLootMessages = ({
     previousHighestTier,
