@@ -13,7 +13,7 @@ export type HeroCombatRating =
 export type HeroActionPackageId = "warrior" | "cleric" | "archer";
 export type ResourceRegenKind = "none" | "flat" | "attribute";
 export type CombatDamageStat = "physicalDamage" | "magicDamage";
-export type CombatDeliveryType = "melee" | "ranged" | "spell";
+type CombatDeliveryType = "melee" | "ranged" | "spell";
 
 export interface HeroResourceModel {
     id: "rage" | "mana" | "cunning";

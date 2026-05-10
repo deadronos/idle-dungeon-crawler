@@ -8,3 +8,10 @@ export const secureRandom = (): number => {
     globalThis.crypto.getRandomValues(uint32Buffer);
     return uint32Buffer[0] / 0x100000000;
 };
+
+export const SECURE_RANDOM_BRAND = Symbol("SecureRandom");
+
+export interface SecureRandomSource {
+    readonly [SECURE_RANDOM_BRAND]: true;
+    next(): number;
+}
