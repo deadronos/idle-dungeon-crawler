@@ -36,8 +36,8 @@ export const deserializeGameState = (serializedState: string): GameState => {
 
     try {
         parsed = JSON.parse(serializedState) as unknown;
-    } catch {
-        throw new Error("Save file is not valid JSON.");
+    } catch (cause) {
+        throw new Error("Save file is not valid JSON.", { cause });
     }
 
     const migratedEnvelope = migrateSaveEnvelope(normalizeSaveEnvelope(parsed));
@@ -49,7 +49,7 @@ export const deserializeGameState = (serializedState: string): GameState => {
             throw error;
         }
 
-        throw new Error("Save file is missing required game-state data.");
+        throw new Error("Save file is missing required game-state data.", { cause: error });
     }
 };
 
