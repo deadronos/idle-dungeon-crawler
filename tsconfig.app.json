@@ -13,8 +13,7 @@
       "vite/client"
     ],
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "ignoreDeprecations": "6.0",
+    "rootDir": "./src",
     "paths": {
       "@/*": [
         "./src/*"
@@ -29,7 +28,6 @@
     "jsx": "react-jsx",
     /* Linting */
     "strict": true,
-    "ignoreDeprecations": "6.0",
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
