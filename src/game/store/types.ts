@@ -4,6 +4,7 @@ import type { StateCreator } from "zustand";
 import type { Entity, HeroClass, MetaUpgrades, StatusEffectKey } from "../entity";
 import type { EquipmentSlot } from "../heroBuilds";
 import type { PartySlotUnlock } from "../partyProgression";
+import type { RegionProgress } from "../regions";
 
 export type AppSection = "dungeon" | "shop" | "party";
 export type CombatEventKind = "damage" | "heal" | "dodge" | "parry" | "crit" | "defeat" | "skill" | "status";
@@ -78,6 +79,13 @@ export const createEmptyEquipmentProgressionState = (): EquipmentProgressionStat
     nextInstanceSequence: 1,
 });
 
+export interface RegionSlice {
+    currentRegionId: string;
+    currentRegionFloor: number;
+    regionProgress: Record<string, RegionProgress>;
+    highestRegionFloorCleared: number;
+}
+
 export interface ProgressionSlice {
     metaUpgrades: MetaUpgrades;
     partyCapacity: number;
@@ -94,6 +102,12 @@ export interface UiSlice {
 }
 
 export type GameState = HotSimulationSlice & ProgressionSlice & UiSlice;
+
+export interface RegionActions {
+    advanceToNextFloor: () => void;
+    changeRegion: (regionId: string) => void;
+    completeCurrentRegion: () => void;
+}
 
 export interface HotSimulationActions {
     toggleAutoFight: () => void;
@@ -135,7 +149,10 @@ export interface StoreLifecycleActions {
     reset: (overrides?: Partial<GameState>) => void;
 }
 
-export type GameActions = HotSimulationActions & ProgressionActions & UiActions & StoreLifecycleActions;
+export type GameActions = HotSimulationActions & ProgressionActions & RegionActions & UiActions & StoreLifecycleActions;
 export type GameStore = GameState & GameActions;
+
+export type RegionState = RegionSlice;
+export type RegionStateCreator = GameStateCreator<RegionSlice & RegionActions>;
 
 export type GameStateCreator<TSlice> = StateCreator<GameStore, [], [], TSlice>;
