@@ -24,12 +24,17 @@ import {
     type GameState,
 } from "../store/types";
 import { prependCombatMessages } from "../combatLog";
+import { getRegionDefinition, type FloorContext } from "../regions";
 
 export const POST_VICTORY_HP_RECOVERY_RATIO = 0.25;
 
-export const isBossFloor = (floor: number) => floor % 10 === 0;
+export const isBossFloor = (context: number | FloorContext) => {
+    const floor = typeof context === "number" ? context : context.localFloor;
+    return floor % 10 === 0;
+};
 
-export const getEncounterSize = (floor: number) => {
+export const getEncounterSize = (context: number | FloorContext) => {
+    const floor = typeof context === "number" ? context : context.localFloor;
     if (isBossFloor(floor)) {
         return 1;
     }
@@ -38,7 +43,8 @@ export const getEncounterSize = (floor: number) => {
     return floorCap;
 };
 
-export const createEncounter = (floor: number) => {
+export const createEncounter = (context: number | FloorContext) => {
+    const floor = typeof context === "number" ? context : context.localFloor;
     const encounterSize = getEncounterSize(floor);
     const archetypes = getEncounterArchetypes(floor, encounterSize);
 
