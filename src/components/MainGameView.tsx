@@ -1,4 +1,5 @@
 import React from "react";
+import { getRegionDefinition } from "../game/regions";
 import { getEnemyArchetypeLabel } from "../game/entity";
 import { useGameStore } from "../game/store/gameStore";
 import { EntityRoster } from "./EntityRoster";
@@ -10,6 +11,8 @@ export const MainGameView: React.FC = () => {
     const party = useGameStore((state) => state.party);
     const enemies = useGameStore((state) => state.enemies);
     const floor = useGameStore((state) => state.floor);
+    const currentRegionId = useGameStore((state) => state.currentRegionId);
+    const regionName = React.useMemo(() => currentRegionId ? getRegionDefinition(currentRegionId).name : "", [currentRegionId]);
     const autoFight = useGameStore((state) => state.autoFight);
     const autoAdvance = useGameStore((state) => state.autoAdvance);
     const previousFloor = useGameStore((state) => state.previousFloor);
@@ -45,7 +48,7 @@ export const MainGameView: React.FC = () => {
                                 <ChevronLeft className="size-5" />
                             </Button>
                             <div className="text-center">
-                                <p className="text-[10px] sm:text-xs uppercase tracking-[0.28em] text-amber-300/80">Current Descent</p>
+                                <p className="text-[10px] sm:text-xs uppercase tracking-[0.28em] text-amber-300/80">{regionName}</p>
                                 <p className="text-2xl lg:text-4xl font-black tracking-widest uppercase">Floor {floor}</p>
                             </div>
                             <Button
