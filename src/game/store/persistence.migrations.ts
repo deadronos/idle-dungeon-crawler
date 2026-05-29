@@ -4,6 +4,7 @@ import {
     LEGACY_UNVERSIONED_SAVE_VERSION,
 } from "./persistence.types";
 import {
+    getRegionProgress,
     hasOwn,
     isRecord,
     normalizeHeroProgressionToCurrentCurve,
@@ -33,6 +34,13 @@ export const SAVE_MIGRATIONS = [
     ((state) => ({
         ...state,
         party: Array.isArray(state.party) ? state.party.map(normalizeHeroProgressionToCurrentCurve) : state.party,
+    })) satisfies SaveMigration,
+    ((state) => ({
+        ...state,
+        currentRegionId: "dank cellar",
+        currentRegionFloor: typeof state.floor === "number" ? state.floor : 1,
+        regionProgress: getRegionProgress(state.regionProgress, state.highestFloorCleared),
+        highestRegionFloorCleared: typeof state.highestFloorCleared === "number" ? state.highestFloorCleared : 0,
     })) satisfies SaveMigration,
 ] as const;
 

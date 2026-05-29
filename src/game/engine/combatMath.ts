@@ -92,9 +92,10 @@ export const getActionProgressPerTick = (
   buildState?: HeroBuildState,
 ) => {
   const combatRatings = getCombatRatings(entity, buildState);
+  const gameSpeed = entity.isEnemy ? 0 : (prestigeUpgrades?.gameSpeed ?? 0);
   return formulaCalcActionProgressPerTick(
     combatRatings.haste,
-    prestigeUpgrades?.gameSpeed ?? 0,
+    gameSpeed,
     0
   ) * getAtbMultiplier(entity);
 };

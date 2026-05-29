@@ -7,6 +7,7 @@ import { GAME_TICK_MS, createInitialGameState } from "../engine/simulation";
 import { createHotSimulationSlice, selectHotSimulationState } from "./hotSimulationSlice";
 import { GAME_STATE_AUTOSAVE_MS, getGameStateSnapshot, loadGameStateFromStorage, saveGameStateToStorage } from "./persistence";
 import { createProgressionSlice, selectProgressionState } from "./progressionSlice";
+import { createRegionSlice, selectRegionState } from "./regionSlice";
 import type { GameActions, GameState, GameStore } from "./types";
 import { createUiSlice, selectUiState } from "./uiSlice";
 
@@ -18,6 +19,7 @@ export const createGameStore = (initialState?: Partial<GameState>) => {
     return createStore<GameStore>()((set, get, api) => ({
         ...createHotSimulationSlice(selectHotSimulationState(resolvedInitialState))(set, get, api),
         ...createProgressionSlice(selectProgressionState(resolvedInitialState))(set, get, api),
+        ...createRegionSlice(selectRegionState(resolvedInitialState))(set, get, api),
         ...createUiSlice(selectUiState(resolvedInitialState))(set, get, api),
         reset: (overrides) => {
             set(createInitialGameState(overrides));
@@ -98,6 +100,10 @@ export const useGame = () => {
         maxPartySize: useGameStore((store) => store.maxPartySize),
         highestFloorCleared: useGameStore((store) => store.highestFloorCleared),
         activeSection: useGameStore((store) => store.activeSection),
+        currentRegionId: useGameStore((store) => store.currentRegionId),
+        currentRegionFloor: useGameStore((store) => store.currentRegionFloor),
+        regionProgress: useGameStore((store) => store.regionProgress),
+        highestRegionFloorCleared: useGameStore((store) => store.highestRegionFloorCleared),
         heroSouls: useGameStore((store) => store.heroSouls),
         prestigeUpgrades: useGameStore((store) => store.prestigeUpgrades),
         talentProgression: useGameStore((store) => store.talentProgression),
@@ -132,6 +138,9 @@ export const useGame = () => {
         sellInventoryItem: useGameStore((store) => store.sellInventoryItem),
         getPrestigeUpgradeCost: useGameStore((store) => store.getPrestigeUpgradeCost),
         buyPrestigeUpgrade: useGameStore((store) => store.buyPrestigeUpgrade),
+        advanceToNextFloor: useGameStore((store) => store.advanceToNextFloor),
+        changeRegion: useGameStore((store) => store.changeRegion),
+        completeCurrentRegion: useGameStore((store) => store.completeCurrentRegion),
         reset: useGameStore((store) => store.reset),
     };
 

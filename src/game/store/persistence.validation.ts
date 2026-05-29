@@ -9,6 +9,32 @@ import {
 import type { GameState } from "./types";
 
 export const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const sanitizeRegionProgress = (value: unknown, highestFloorCleared?: unknown): Record<string, { highestLocalFloorCleared: number; unlocked: boolean; completed: boolean }> => {
+    if (!isRecord(value)) {
+        const floor = typeof highestFloorCleared === "number" ? highestFloorCleared : 0;
+        return {
+            "dank cellar": { highestLocalFloorCleared: floor, unlocked: true, completed: false },
+        };
+    }
+    const result: Record<string, { highestLocalFloorCleared: number; unlocked: boolean; completed: boolean }> = {};
+    for (const [key, entry] of Object.entries(value)) {
+        if (isRecord(entry)) {
+            result[key] = {
+                highestLocalFloorCleared: typeof entry.highestLocalFloorCleared === "number" ? entry.highestLocalFloorCleared : 0,
+                unlocked: typeof entry.unlocked === "boolean" ? entry.unlocked : false,
+                completed: typeof entry.completed === "boolean" ? entry.completed : false,
+            };
+        }
+    }
+    if (!result["dank cellar"]) {
+        const floor = typeof highestFloorCleared === "number" ? highestFloorCleared : 0;
+        result["dank cellar"] = { highestLocalFloorCleared: floor, unlocked: true, completed: false };
+    }
+    return result;
+};
+
+export const getRegionProgress = (value: unknown, highestFloorCleared?: unknown) => sanitizeRegionProgress(value, highestFloorCleared);
 export const hasOwn = <TKey extends string>(value: Record<string, unknown>, key: TKey): value is Record<TKey, unknown> =>
     Object.prototype.hasOwnProperty.call(value, key);
 
