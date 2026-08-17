@@ -101,7 +101,7 @@ export interface UiSlice {
     activeSection: AppSection;
 }
 
-export type GameState = HotSimulationSlice & ProgressionSlice & UiSlice;
+export type GameState = HotSimulationSlice & RegionSlice & ProgressionSlice & UiSlice;
 
 export interface RegionActions {
     advanceToNextFloor: () => void;

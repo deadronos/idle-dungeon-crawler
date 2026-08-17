@@ -1,5 +1,5 @@
 import type { GameState, GameStateCreator } from "./types";
-import { getRegionDefinition, getStartingFloorContext } from "../regions";
+import { getRegionDefinition } from "../regions";
 import type { RegionActions, RegionSlice } from "./types";
 
 export const selectRegionState = (state: GameState): RegionSlice => ({
@@ -12,7 +12,7 @@ export const selectRegionState = (state: GameState): RegionSlice => ({
 export const createRegionSlice = (
     initialState: RegionSlice,
 ): GameStateCreator<RegionSlice & RegionActions> => {
-    return (set, get) => ({
+    return (set) => ({
         ...initialState,
         advanceToNextFloor: () => {
             set((state) => {

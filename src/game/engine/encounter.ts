@@ -24,7 +24,7 @@ import {
     type GameState,
 } from "../store/types";
 import { prependCombatMessages } from "../combatLog";
-import { getRegionDefinition, type FloorContext } from "../regions";
+import { getDefaultRegionProgress, type FloorContext } from "../regions";
 
 export const POST_VICTORY_HP_RECOVERY_RATIO = 0.25;
 
@@ -193,6 +193,10 @@ export const createInitialGameState = (overrides?: Partial<GameState>): GameStat
         autoAdvance: overrides?.autoAdvance ?? true,
         combatLog: overrides?.combatLog ? [...overrides.combatLog] : [],
         combatEvents: overrides?.combatEvents ? overrides.combatEvents.map((event) => ({ ...event })) : [],
+        currentRegionId: overrides?.currentRegionId ?? "dank cellar",
+        currentRegionFloor: overrides?.currentRegionFloor ?? 1,
+        regionProgress: overrides?.regionProgress ?? getDefaultRegionProgress(),
+        highestRegionFloorCleared: overrides?.highestRegionFloorCleared ?? 0,
         metaUpgrades,
         partyCapacity: overrides?.partyCapacity ?? 1,
         maxPartySize: overrides?.maxPartySize ?? MAX_PARTY_SIZE,

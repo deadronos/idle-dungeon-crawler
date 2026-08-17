@@ -9,7 +9,7 @@ const createMockStore = (initial: RegionSlice) => {
         state = { ...state, ...patch };
     };
     const get = () => state as typeof state & RegionSlice;
-    const slice = createRegionSlice(initial)(set, get);
+    const slice = createRegionSlice(initial)(set as never, get as never, {} as never);
     return { slice, getState: () => state as typeof state & RegionSlice };
 };
 

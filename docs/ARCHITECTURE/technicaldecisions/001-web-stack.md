@@ -22,3 +22,9 @@ We chose the following specific web stack:
 
 - **Easier:** Rapid UI development, strict type enforcement prevents many runtime errors related to stat calculations, and `decimal.js` future-proofs the game's economy. Tailwind plus component primitives also makes it faster to iterate on the dense battle UI.
 - **Difficult:** `zustand` removes the worst full-tree rerender pressure, but the game still performs frequent immutable updates across `party` and `enemies`. As combat systems multiply, we will need to keep selector boundaries disciplined and continue extracting pure engine helpers to avoid regressing into a giant all-knowing store file. While TypeScript 7.0 is in beta, compiler behavior and ecosystem package compatibility should be rechecked before dependency upgrades.
+
+## Dependency Baseline (2026-08-17)
+
+The direct dependencies were upgraded to the latest registry releases compatible with the current application and toolchain. This includes React 19.2, Vite 8.2, Vitest 4.1, Tailwind CSS 4.3, ESLint 10.8, and the current testing, state-management, UI, and build-plugin releases.
+
+The ecosystem-facing `typescript` package remains on the latest 6.0.x release because the current `typescript-eslint` peer range does not yet accept stable TypeScript 7. The production build continues to use the separately installed TypeScript 7 native preview through `tsgo`. The Vite alias now uses a standards-based `import.meta.url` path so the upgraded Vite config loader emits no deprecation warning.
