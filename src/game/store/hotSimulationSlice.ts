@@ -7,6 +7,7 @@ import {
     stepSimulationState,
 } from "../engine/simulation";
 import { selectProgressionState } from "./progressionSlice";
+import { selectRegionState } from "./regionSlice";
 import type { GameState, GameStateCreator, HotSimulationActions, HotSimulationSlice } from "./types";
 
 export const selectHotSimulationState = (state: GameState): HotSimulationSlice => ({
@@ -58,6 +59,7 @@ export const createHotSimulationSlice = (
             const state: GameState = {
                 ...selectHotSimulationState(get()),
                 ...selectProgressionState(get()),
+                ...selectRegionState(get()),
                 activeSection: get().activeSection,
             };
             const silent = deltaMs > GAME_TICK_MS * 10;
