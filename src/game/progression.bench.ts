@@ -1,4 +1,4 @@
-import { bench, describe } from "vitest";
+import { describe, test } from "vitest";
 import { createStarterParty, createRecruitHero } from "./entity";
 import { createLegacyEquipmentProgression } from "./equipmentProgression";
 import { getEquipItemState, getUnequipItemState } from "./progressionRules.equipment";
@@ -20,11 +20,15 @@ describe("Progression Rules Performance", () => {
     const heroId = "hero_1";
     const itemId = equipmentProgression.inventoryItems[0].instanceId;
 
-    bench("getEquipItemState", () => {
-        getEquipItemState(state, heroId, itemId);
+    test("getEquipItemState", async ({ bench }) => {
+        await bench("getEquipItemState", () => {
+            getEquipItemState(state, heroId, itemId);
+        }).run();
     });
 
-    bench("getUnequipItemState", () => {
-        getUnequipItemState(state, heroId, "weapon");
+    test("getUnequipItemState", async ({ bench }) => {
+        await bench("getUnequipItemState", () => {
+            getUnequipItemState(state, heroId, "weapon");
+        }).run();
     });
 });

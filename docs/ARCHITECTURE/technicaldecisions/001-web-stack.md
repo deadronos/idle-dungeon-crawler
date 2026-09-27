@@ -21,10 +21,12 @@ We chose the following specific web stack:
 ## Consequences
 
 - **Easier:** Rapid UI development, strict type enforcement prevents many runtime errors related to stat calculations, and `decimal.js` future-proofs the game's economy. Tailwind plus component primitives also makes it faster to iterate on the dense battle UI.
-- **Difficult:** `zustand` removes the worst full-tree rerender pressure, but the game still performs frequent immutable updates across `party` and `enemies`. As combat systems multiply, we will need to keep selector boundaries disciplined and continue extracting pure engine helpers to avoid regressing into a giant all-knowing store file. While TypeScript 7.0 is in beta, compiler behavior and ecosystem package compatibility should be rechecked before dependency upgrades.
+- **Difficult:** `zustand` removes the worst full-tree rerender pressure, but the game still performs frequent immutable updates across `party` and `enemies`. As combat systems multiply, we will need to keep selector boundaries disciplined and continue extracting pure engine helpers to avoid regressing into a giant all-knowing store file. TypeScript 7.0 is now stable, but ecosystem package compatibility (notably `typescript-eslint`'s peer range) still lags and should be rechecked before each dependency upgrade.
 
-## Dependency Baseline (2026-08-17)
+## Dependency Baseline (2026-09-28)
 
-The direct dependencies were upgraded to the latest registry releases compatible with the current application and toolchain. This includes React 19.2, Vite 8.2, Vitest 4.1, Tailwind CSS 4.3, ESLint 10.8, and the current testing, state-management, UI, and build-plugin releases.
+The direct dependencies were upgraded to the latest registry releases compatible with the current application and toolchain. This includes React 19.3, Vite 8.3, Vitest 5.0, Tailwind CSS 4.3, ESLint 10.11, and the current testing, state-management, UI, and build-plugin releases.
 
-The ecosystem-facing `typescript` package remains on the latest 6.0.x release because the current `typescript-eslint` peer range does not yet accept stable TypeScript 7. The production build continues to use the separately installed TypeScript 7 native preview through `tsgo`. The Vite alias now uses a standards-based `import.meta.url` path so the upgraded Vite config loader emits no deprecation warning.
+Vitest 5 rewrote the benchmarking API: `bench` is no longer a top-level export. `src/game/progression.bench.ts` was migrated to the new test-context fixture form (`test("...", async ({ bench }) => bench(...).run())`). Benchmark files are only executed via `vitest bench` (or with `benchmark.enabled`), so they remain outside the default `npm test` run.
+
+The ecosystem-facing `typescript` package remains on the latest 6.0.x release because the current `typescript-eslint` peer range (`>=4.8.4 <6.1.0`) does not yet accept stable TypeScript 7. The production build continues to use the separately installed TypeScript 7 native preview through `tsgo`.
