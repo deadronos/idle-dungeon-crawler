@@ -1,5 +1,6 @@
 import Decimal from 'decimal.js';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
 import { createEnemy, createStarterParty } from '@/game/entity';
@@ -28,6 +29,41 @@ describe('MainGameView', () => {
     expect(screen.getByText(/encounter cleared/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^log$/i })).toBeInTheDocument();
     expect(screen.getByText(new RegExp(`${defeatedEnemy.name} was defeated!`, 'i'))).toBeInTheDocument();
+  });
+
+  it('toggles autofight and autoadvance from the run behavior controls', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <GameProvider
+        initialState={{
+          party: createStarterParty('Ayla', 'Warrior'),
+          enemies: [createEnemy(1, 'enemy_1')],
+          combatLog: [],
+          autoFight: false,
+          autoAdvance: false,
+        }}
+      >
+        <MainGameView />
+      </GameProvider>,
+    );
+
+    const autofightToggle = screen.getByRole('button', { name: /fight automatically/i });
+    const autoadvanceToggle = screen.getByRole('button', { name: /push deeper automatically/i });
+
+    expect(autofightToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(autoadvanceToggle).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByText(/manual control enabled/i)).toBeInTheDocument();
+
+    await user.click(autofightToggle);
+
+    expect(autofightToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/run will stop after this floor/i)).toBeInTheDocument();
+
+    await user.click(autoadvanceToggle);
+
+    expect(autoadvanceToggle).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText(/auto-advance enabled/i)).toBeInTheDocument();
   });
 
   it('shows the primary enemy archetype beneath the encounter stage art', () => {
