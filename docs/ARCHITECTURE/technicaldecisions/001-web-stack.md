@@ -23,10 +23,14 @@ We chose the following specific web stack:
 - **Easier:** Rapid UI development, strict type enforcement prevents many runtime errors related to stat calculations, and `decimal.js` future-proofs the game's economy. Tailwind plus component primitives also makes it faster to iterate on the dense battle UI.
 - **Difficult:** `zustand` removes the worst full-tree rerender pressure, but the game still performs frequent immutable updates across `party` and `enemies`. As combat systems multiply, we will need to keep selector boundaries disciplined and continue extracting pure engine helpers to avoid regressing into a giant all-knowing store file. TypeScript 7.0 is now stable, but ecosystem package compatibility (notably `typescript-eslint`'s peer range) still lags and should be rechecked before each dependency upgrade.
 
-## Dependency Baseline (2026-09-28)
+## Dependency Baseline (2026-10-05)
 
-The direct dependencies were upgraded to the latest registry releases compatible with the current application and toolchain. This includes React 19.3, Vite 8.3, Vitest 5.0, Tailwind CSS 4.3, ESLint 10.11, and the current testing, state-management, UI, and build-plugin releases.
+The direct dependencies were upgraded to the latest registry releases compatible with the current application and toolchain: React 19.3, Vite 8.3, Vitest 5.0, Tailwind CSS 4.3, ESLint 10.12, TypeScript ESLint 8.71, Base UI 1.8, Lucide 1.52, jsdom 30.1, and shadcn 4.21, alongside the current testing, state-management, and build-plugin releases. Lint, the `tsgo -b` + Vite production build, and the full 280-test Vitest suite all pass on this baseline.
+
+`framer-motion` was removed. It had been declared as a dependency since 13.x but was never imported anywhere under `src/`; the UI achieves its motion through CSS transitions. Dropping it avoids pulling a large animation runtime into the bundle for no benefit.
 
 Vitest 5 rewrote the benchmarking API: `bench` is no longer a top-level export. `src/game/progression.bench.ts` was migrated to the new test-context fixture form (`test("...", async ({ bench }) => bench(...).run())`). Benchmark files are only executed via `vitest bench` (or with `benchmark.enabled`), so they remain outside the default `npm test` run.
 
-The ecosystem-facing `typescript` package remains on the latest 6.0.x release because the current `typescript-eslint` peer range (`>=4.8.4 <6.1.0`) does not yet accept stable TypeScript 7. The production build continues to use the separately installed TypeScript 7 native preview through `tsgo`.
+The ecosystem-facing `typescript` package remains on the latest 6.0.x release. Stable TypeScript 7.0.2 is published, but no released or canary build of `typescript-eslint` widens its peer range beyond `>=4.8.4 <6.1.0`, so adopting TypeScript 7 would break `npm run lint`. The production build already type-checks through the separately installed TypeScript 7 native preview via `tsgo`, so this deferral does not reduce the type-safety the build provides. Revisit once `typescript-eslint` publishes a release that accepts TypeScript 7.
+
+`npm audit` reports 7 high-severity advisories, all transitive through the dev-only `shadcn` CLI (`fast-glob` → `micromatch` → `braces`). They do not reach the shipped bundle, and `npm audit fix --force` would resolve them by pinning `shadcn` to 1.0.0, so they are tracked rather than force-fixed.
