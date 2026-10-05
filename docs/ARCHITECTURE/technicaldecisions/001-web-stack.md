@@ -25,9 +25,9 @@ We chose the following specific web stack:
 
 ## Dependency Baseline (2026-10-05)
 
-The direct dependencies were upgraded to the latest registry releases compatible with the current application and toolchain: React 19.3, Vite 8.3, Vitest 5.0, Tailwind CSS 4.3, ESLint 10.12, TypeScript ESLint 8.71, Base UI 1.8, Lucide 1.52, jsdom 30.1, shadcn 4.21, and framer-motion 14.0, alongside the current testing, state-management, and build-plugin releases. Lint, the `tsgo -b` + Vite production build, and the full 280-test Vitest suite all pass on this baseline.
+The direct dependencies were upgraded to the latest registry releases compatible with the current application and toolchain: React 19.3, Vite 8.3, Vitest 5.0, Tailwind CSS 4.3, ESLint 10.12, TypeScript ESLint 8.71, Base UI 1.8, Lucide 1.52, jsdom 30.1, and shadcn 4.21, alongside the current testing, state-management, and build-plugin releases. Lint, the `tsgo -b` + Vite production build, and the full 280-test Vitest suite all pass on this baseline.
 
-`framer-motion` was moved to 14.0 (peer-compatible with React 19). Note that it is currently declared but not imported anywhere under `src/`; it is retained pending a decision on whether animation utilities are still needed, since the UI currently relies on CSS transitions.
+`framer-motion` was removed. It had been declared as a dependency since 13.x but was never imported anywhere under `src/`; the UI achieves its motion through CSS transitions. Dropping it avoids pulling a large animation runtime into the bundle for no benefit.
 
 Vitest 5 rewrote the benchmarking API: `bench` is no longer a top-level export. `src/game/progression.bench.ts` was migrated to the new test-context fixture form (`test("...", async ({ bench }) => bench(...).run())`). Benchmark files are only executed via `vitest bench` (or with `benchmark.enabled`), so they remain outside the default `npm test` run.
 
